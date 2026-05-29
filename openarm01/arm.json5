@@ -1,0 +1,129 @@
+{
+  // This same interface is shared between the real robot and the sim implementations
+  peppy_schema: "interface_v1",
+  manifest: {
+    name: "openarm01_arm",
+    tag: "v1"
+  },
+  interfaces: {
+    actions: [
+      {
+        name: "move_arm",
+        goal_service: {
+          request_message_format: {
+            // The frequency in hertz at which the feedback is being sent
+            feedback_frequency: "u32",
+            // x, y, z
+            desired_position: {
+              $type: "array",
+              $items: "f64",
+              $length: 3
+            },
+            // quaternion x, y, z, w
+            desired_orientation: {
+              $type: "array",
+              $items: "f64",
+              $length: 4
+            }
+          },
+          response_message_format: {
+            accepted: "bool"
+          }
+        },
+        // Streamed as the arm moves toward the goal
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            joint_positions: {
+              $type: "array",
+              $items: "f64",
+              $length: 7
+            },
+            current_ee_position: {
+              $type: "array",
+              $items: "f64",
+              $length: 3
+            },
+            action_time: "f64"
+          }
+        },
+        result_service: {
+          response_message_format: {
+            success: "bool",
+            message: "string",
+            final_joint_positions: {
+              $type: "array",
+              $items: "f64",
+              $length: 7
+            },
+            final_ee_position: {
+              $type: "array",
+              $items: "f64",
+              $length: 3
+            },
+            action_time: "f64"
+          }
+        }
+      },
+      // Joint-space motion: backbone calls this after IK resolves joint angles.
+      {
+        name: "move_arm_joints",
+        goal_service: {
+          request_message_format: {
+            feedback_frequency: "u32",
+            joint_positions: {
+              $type: "array",
+              $items: "f64",
+              $length: 7
+            }
+          },
+          response_message_format: {
+            accepted: "bool"
+          }
+        },
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            joint_positions: {
+              $type: "array",
+              $items: "f64",
+              $length: 7
+            },
+            action_time: "f64"
+          }
+        },
+        result_service: {
+          response_message_format: {
+            success: "bool",
+            message: "string",
+            final_joint_positions: {
+              $type: "array",
+              $items: "f64",
+              $length: 7
+            },
+            action_time: "f64"
+          }
+        }
+      }
+    ],
+    services: [
+      {
+        // Returns the runtime arm_id set in `execution.parameters` (allows `openarm01_backbone` to differentiate between the arms)
+        name: "get_arm_id",
+        response_message_format: {
+          arm_id: "u8"
+        }
+      },
+      {
+        name: "get_joint_positions",
+        response_message_format: {
+          joint_positions: {
+            $type: "array",
+            $items: "f64",
+            $length: 7
+          }
+        }
+      }
+    ]
+  }
+}
