@@ -7,64 +7,6 @@
   },
   interfaces: {
     actions: [
-      {
-        name: "move_arm",
-        goal_service: {
-          request_message_format: {
-            // The frequency in hertz at which the feedback is being sent
-            feedback_frequency: "u32",
-            // x, y, z
-            desired_position: {
-              $type: "array",
-              $items: "f64",
-              $length: 3
-            },
-            // quaternion x, y, z, w
-            desired_orientation: {
-              $type: "array",
-              $items: "f64",
-              $length: 4
-            }
-          },
-          response_message_format: {
-            accepted: "bool"
-          }
-        },
-        // Streamed as the arm moves toward the goal
-        feedback_topic: {
-          qos_profile: "standard",
-          message_format: {
-            joint_positions: {
-              $type: "array",
-              $items: "f64",
-              $length: 7
-            },
-            current_ee_position: {
-              $type: "array",
-              $items: "f64",
-              $length: 3
-            },
-            action_time: "f64"
-          }
-        },
-        result_service: {
-          response_message_format: {
-            success: "bool",
-            message: "string",
-            final_joint_positions: {
-              $type: "array",
-              $items: "f64",
-              $length: 7
-            },
-            final_ee_position: {
-              $type: "array",
-              $items: "f64",
-              $length: 3
-            },
-            action_time: "f64"
-          }
-        }
-      },
       // Joint-space motion: backbone calls this after IK resolves joint angles.
       {
         name: "move_arm_joints",
@@ -76,9 +18,6 @@
               $items: "f64",
               $length: 7
             }
-          },
-          response_message_format: {
-            accepted: "bool"
           }
         },
         feedback_topic: {

@@ -15,9 +15,6 @@
             feedback_frequency: "u32",
             // Target gripper opening in meters (0.0 = closed, 0.044 = fully open on V10).
             position: "f64"
-          },
-          response_message_format: {
-            accepted: "bool"
           }
         },
         // Streamed as the gripper moves toward the goal
