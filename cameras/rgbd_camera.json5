@@ -1,0 +1,162 @@
+// RGB-D camera contract: a device that emits synchronized color + depth
+// streams (e.g. Intel RealSense D4xx, or a simulated/mock RGB-D node). Color
+// and depth share a frame_id (a capture-pair counter, not a coordinate frame)
+// so consumers can correlate paired frames without timestamp matching. Cameras
+// that emit only color conform to uvc_camera;
+// cameras that emit only depth conform to depth_camera. Depth-derived stereo IR
+// and IMU streams are out of scope; an implementation exposing them should
+// conform to an additional interface for those.
+{
+  peppy_schema: "interface_v1",
+  manifest: {
+    name: "rgbd_camera",
+    tag: "v1"
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "color_stream",
+        qos_profile: "sensor_data",
+        message_format: {
+          header: {
+            $type: "object",
+            stamp: "time",
+            frame_id: "u32",
+            align_mode: "string",   // e.g. "none" | "depth_to_color" | "color_to_depth"
+          },
+          encoding: "string",   // e.g. "rgb8" | "bgr8" | "yuyv" | "mjpeg"
+          width: "u32",
+          height: "u32",
+          frame: {
+            $type: "array",
+            $items: "u8",
+          },
+        },
+      },
+      {
+        name: "depth_stream",
+        qos_profile: "sensor_data",
+        message_format: {
+          header: {
+            $type: "object",
+            stamp: "time",
+            frame_id: "u32",
+            align_mode: "string",   // e.g. "none" | "depth_to_color" | "color_to_depth"
+          },
+          encoding: "string",   // e.g. "z16" (u16 little-endian)
+          width: "u32",
+          height: "u32",
+          frame: {
+            $type: "array",
+            $items: "u8",
+          },
+        },
+      },
+    ],
+    services: [
+      {
+        name: "color_stream_info",
+        response_message_format: {
+          width: "u32",
+          height: "u32",
+          frames_per_second: "u8",
+          encoding: "string",
+        }
+      },
+      {
+        name: "depth_stream_info",
+        response_message_format: {
+          width: "u32",
+          height: "u32",
+          frames_per_second: "u8",
+          encoding: "string",
+          depth_unit: "f32",   // meters per LSB, e.g. 0.001 = 1mm
+        }
+      },
+      {
+        name: "set_color_exposure",
+        request_message_format: {
+          mode: "string",   // "auto" | "manual"
+          value: "i32",     // microseconds (used when mode = "manual")
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        name: "set_color_white_balance",
+        request_message_format: {
+          mode: "string",        // "auto" | "manual"
+          temperature: "i32",    // Kelvin (used when mode = "manual")
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_temperature: "i32",
+        },
+      },
+      {
+        name: "set_color_gain",
+        request_message_format: { value: "i32" },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        name: "set_color_brightness",
+        request_message_format: { value: "i32" },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        name: "set_color_contrast",
+        request_message_format: { value: "i32" },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        name: "set_depth_gain",
+        request_message_format: { value: "i32" },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        name: "set_depth_laser_power_mw",
+        request_message_format: { value: "i32" },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      // Toggle spatial alignment between the color and depth streams at runtime:
+      // "none" emits raw streams in their native sensor frames;
+      // "depth_to_color" warps depth into color's viewpoint+resolution;
+      // "color_to_depth" is the inverse.
+      {
+        name: "set_align_mode",
+        request_message_format: {
+          mode: "string",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_mode: "string",
+        },
+      },
+    ]
+  }
+}
