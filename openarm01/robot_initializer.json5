@@ -1,0 +1,22 @@
+{
+  // Readiness signal every robot_initializer implementation exposes. Backbone polls
+  // is_ready and waits for ready:true before doing anything; the real implementation
+  // returns ready:true instantly (no-op health check) and sim implementations return
+  // ready:false while the engine loads, ready:true once the scene is ready. Lets
+  // backbone be sim/real agnostic.
+  peppy_schema: "interface_v1",
+  manifest: {
+    name: "openarm01_robot_initializer",
+    tag: "v1"
+  },
+  interfaces: {
+    services: [
+      {
+        name: "is_ready",
+        response_message_format: {
+          ready: "bool"
+        }
+      }
+    ]
+  }
+}
