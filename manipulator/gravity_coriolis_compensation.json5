@@ -1,0 +1,49 @@
+// Feedforward compensation torques for a serial robot: per-joint gravity and
+// Coriolis/centripetal terms. Generic across robots and providers: the joint
+// count is unspecified, and the result depends only on joint state and the
+// provider's rigid-body model (masses + inertials, e.g. from a URDF), not on any
+// particular robot geometry or solver.
+{
+  peppy_schema: "interface_v1",
+  manifest: {
+    name: "gravity_coriolis_compensation",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // gravity + coriolis in one round trip (total = gravity + coriolis), for a
+        // per-tick control loop that wants both.
+        name: "get_compensation",
+        request_message_format: {
+          joint_positions: { $type: "array", $items: "f64" },
+          joint_velocities: { $type: "array", $items: "f64" },
+        },
+        response_message_format: {
+          gravity: { $type: "array", $items: "f64" },
+          coriolis: { $type: "array", $items: "f64" },
+          total: { $type: "array", $items: "f64" },
+        },
+      },
+      {
+        name: "get_gravity",
+        request_message_format: {
+          joint_positions: { $type: "array", $items: "f64" },
+        },
+        response_message_format: {
+          torques: { $type: "array", $items: "f64" },
+        },
+      },
+      {
+        name: "get_coriolis",
+        request_message_format: {
+          joint_positions: { $type: "array", $items: "f64" },
+          joint_velocities: { $type: "array", $items: "f64" },
+        },
+        response_message_format: {
+          torques: { $type: "array", $items: "f64" },
+        },
+      },
+    ],
+  },
+}
