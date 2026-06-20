@@ -51,8 +51,8 @@
       // so callers command Cartesian goals directly without a separate IK round
       // trip. Frame conventions match the kinematics interface: poses are in the
       // WORLD frame, quaternion is [x, y, z, w] (non-unit inputs are normalized),
-      // lengths in meters. No feedback topic: progress is observable on the
-      // always-on `cartesian_states` stream, and only one motion runs at a time.
+      // lengths in meters. joint-space progress is observable on the always-on
+      // `joint_states` stream.
       {
         name: "move_arm",
         goal_service: {
