@@ -8,24 +8,14 @@
   interfaces: {
     actions: [
       {
+        // No feedback topic: progress is observed on the always-on
+        // openarm01_gripper_state_source gripper_states stream, which any
+        // consumer can subscribe to and tell grippers apart by gripper_id.
         name: "move_gripper",
         goal_service: {
           request_message_format: {
-            // The frequency in hertz at which the feedback is being sent
-            feedback_frequency: "u32",
             // Target gripper opening in meters (0.0 = closed, 0.044 = fully open on V10).
             position: "f64"
-          }
-        },
-        // Streamed as the gripper moves toward the goal
-        feedback_topic: {
-          qos_profile: "standard",
-          message_format: {
-            joint_positions: {
-              $type: "array",
-              $items: "f64"
-            },
-            action_time: "f64"
           }
         },
         result_service: {
