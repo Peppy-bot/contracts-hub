@@ -8,16 +8,13 @@
   interfaces: {
     actions: [
       // Joint-space motion: backbone calls this after IK resolves joint angles.
-      // Only one motion runs at a time. Progress is also observable on the
-      // always-on `openarm01_joint_state_source.joint_states` stream; the
-      // feedback topic stays for the backbone relay until consumers move to the
-      // stream.
+      // Only one motion runs at a time. No feedback topic: progress is observable
+      // on the always-on `openarm01_joint_state_source.joint_states` stream, which
+      // any consumer can subscribe to and tell arms apart by `arm_id`.
       {
         name: "move_arm_joints",
         goal_service: {
           request_message_format: {
-            // Rate (Hz) the arm publishes feedback while this goal runs.
-            feedback_frequency: "u32",
             joint_positions: {
               $type: "array",
               $items: "f64",
@@ -27,17 +24,6 @@
             // duration implied by its per-joint velocity limits, so a too-fast
             // request is slowed to a safe move rather than rejected.
             duration_s: "f64"
-          }
-        },
-        feedback_topic: {
-          qos_profile: "standard",
-          message_format: {
-            joint_positions: {
-              $type: "array",
-              $items: "f64",
-              $length: 7
-            },
-            action_time: "f64"
           }
         },
         result_service: {
