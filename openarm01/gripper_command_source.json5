@@ -1,0 +1,36 @@
+// Streamed opening setpoints for one openarm01 gripper. A producer (teleop
+// leader, planner, calibration script) conforms to this interface and emits
+// `gripper_commands` continuously; the gripper follows them whenever no move is
+// running, locking to the first producer instance it sees. The lock releases
+// two ways, so producers can fail over and hand off: a move_gripper goal
+// preempts the stream (the gripper resumes following when the move ends), and
+// the gripper drops the lock once its configured stream timeout passes with no
+// new message, freeing it for a replacement producer if the current one dies or
+// stalls. Messages carry the target `gripper_id` so one producer can drive
+// either gripper and each gripper ignores commands addressed to the other. The
+// return direction of this bidirectional pattern is openarm01_gripper_state_source.
+{
+  peppy_schema: "interface_v1",
+  manifest: {
+    name: "openarm01_gripper_command_source",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "gripper_commands",
+        // High-frequency stream where only the latest setpoint matters;
+        // occasional drops are acceptable.
+        qos_profile: "sensor_data",
+        message_format: {
+          // Which gripper this command addresses (0 = left, 1 = right).
+          gripper_id: "u8",
+          // Desired opening (m), matching the gripper_state unit: 0.0 = closed,
+          // ~0.044 = fully open on V1.0. The gripper clamps it to its range and
+          // drives the fingers toward it.
+          position: "f64"
+        }
+      }
+    ]
+  }
+}
