@@ -1,0 +1,41 @@
+// Sim-internal passthrough: the resolved actuator setpoint an openarm01 arm node
+// hands to the simulation engine. NOT the public command contract
+// (openarm01_joint_command_source is what the commander streams) — this is the
+// downstream leg, after the arm node has clamped, rate-limited, and applied any
+// move-action override. Sim-only: real hardware drives the motors over CAN. The
+// sim consumes this from any arm instance and tells the two arms apart by
+// arm_id, so one sim process drives both.
+{
+  peppy_schema: "interface_v1",
+  manifest: {
+    name: "openarm01_arm_sim_passthrough",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "arm_sim_passthrough",
+        // Latest setpoint wins; the sim applies the most recent each step and an
+        // occasional drop is self-healed by the next message.
+        qos_profile: "sensor_data",
+        message_format: {
+          // Which arm this setpoint addresses (0 = left, 1 = right).
+          arm_id: "u8",
+          // Desired joint positions (rad), j1..j7.
+          positions: {
+            $type: "array",
+            $items: "f64",
+            $length: 7
+          },
+          // Desired joint velocities (rad/s), j1..j7, the feedforward the sim
+          // actuator applies alongside the position target.
+          velocities: {
+            $type: "array",
+            $items: "f64",
+            $length: 7
+          }
+        }
+      }
+    ]
+  }
+}

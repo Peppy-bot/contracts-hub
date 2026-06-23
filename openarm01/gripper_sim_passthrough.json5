@@ -1,0 +1,32 @@
+// Sim-internal passthrough: the resolved aperture an openarm01 gripper node hands
+// to the simulation engine. NOT the public command contract
+// (openarm01_gripper_command_source is what the commander streams) — this is the
+// downstream leg, after the gripper node has clamped and applied any move-action
+// override. Sim-only: real hardware drives the fingers over CAN. The sim splits
+// the aperture across the two finger joints, consumes this from any gripper
+// instance, and tells the two grippers apart by gripper_id, so one sim process
+// drives both.
+{
+  peppy_schema: "interface_v1",
+  manifest: {
+    name: "openarm01_gripper_sim_passthrough",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "gripper_sim_passthrough",
+        // Latest setpoint wins; the sim applies the most recent each step and an
+        // occasional drop is self-healed by the next message.
+        qos_profile: "sensor_data",
+        message_format: {
+          // Which gripper this setpoint addresses (0 = left, 1 = right).
+          gripper_id: "u8",
+          // Desired opening (m): 0.0 = closed, ~0.044 = fully open on V1.0. The
+          // single aperture value, not per-finger joint positions.
+          position: "f64"
+        }
+      }
+    ]
+  }
+}
