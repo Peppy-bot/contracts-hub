@@ -1,0 +1,23 @@
+{
+  // Component-level readiness. Each real-hardware component (arm, gripper) returns
+  // ready:true once its motors are enabled and its control loop is serving. The
+  // real robot_initializer aggregates these into the robot-level is_ready that
+  // backbone gates on. Sim backends gate on scene load instead and do not use this
+  // interface. Structurally identical to robot_initializer's is_ready but a
+  // distinct contract: component readiness, not robot readiness.
+  peppy_schema: "interface/v1",
+  manifest: {
+    name: "openarm01_hardware_ready",
+    tag: "v1"
+  },
+  interfaces: {
+    services: [
+      {
+        name: "is_ready",
+        response_message_format: {
+          ready: "bool"
+        }
+      }
+    ]
+  }
+}
