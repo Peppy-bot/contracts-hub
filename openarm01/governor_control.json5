@@ -1,0 +1,27 @@
+// Live tuning bus for the bimanual coordination hub (openarm01_backbone):
+// produced by an operator surface, consumed by the hub.
+{
+  peppy_schema: "interface/v1",
+  manifest: {
+    name: "openarm01_governor_control",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "governor_control",
+        qos_profile: "sensor_data",
+        message_format: {
+          // Collision governor on/off. False = passthrough, no throttling.
+          collision_governor_enabled: "bool",
+          // Governor band (m): full stop at/under d_stop, unthrottled at/over
+          // d_safe, linear between. Require 0 < d_stop < d_safe.
+          d_stop: "f64",
+          d_safe: "f64",
+          // End-effector linear-speed cap (m/s). Require > 0.
+          max_ee_velocity_m_s: "f64"
+        }
+      }
+    ]
+  }
+}

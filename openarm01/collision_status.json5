@@ -1,0 +1,25 @@
+// Nearest self-collision proximity from openarm01_backbone, for operator display.
+// Readout only; consumed via `from_any`.
+{
+  peppy_schema: "interface/v1",
+  manifest: {
+    name: "openarm01_collision_status",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "collision_status",
+        qos_profile: "sensor_data",
+        message_format: {
+          // Signed surface distance (m) of the nearest checked pair: positive is
+          // clearance, negative is penetration depth.
+          distance: "f64",
+          // The two links forming that nearest pair.
+          link_a: "string",
+          link_b: "string"
+        }
+      }
+    ]
+  }
+}
