@@ -1,10 +1,10 @@
 // Measured opening of one openarm01 gripper, addressed by `gripper_id`. Emitted
 // continuously at the gripper's `state_rate_hz`; consumed via `from_any`. The
-// return direction of openarm01_gripper_command_source.
+// return direction of openarm01_gripper_commands.
 {
   peppy_schema: "interface/v1",
   manifest: {
-    name: "openarm01_gripper_state_source",
+    name: "openarm01_gripper_states",
     tag: "v1",
   },
   interfaces: {

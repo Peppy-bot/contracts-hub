@@ -1,10 +1,10 @@
 // Streamed opening setpoints for one openarm01 gripper, addressed by `gripper_id`.
 // A producer (teleop leader, planner, calibration script) conforms to this; the
-// return direction is openarm01_gripper_state_source.
+// return direction is openarm01_gripper_states.
 {
   peppy_schema: "interface/v1",
   manifest: {
-    name: "openarm01_gripper_command_source",
+    name: "openarm01_gripper_commands",
     tag: "v1",
   },
   interfaces: {

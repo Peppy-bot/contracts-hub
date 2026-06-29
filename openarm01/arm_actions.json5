@@ -1,5 +1,5 @@
 // Goal-based arm motion for openarm01: a joint-space move (move_arm_joints) and a
-// Cartesian move (move_arm). Separate from the openarm01_arm_command_source
+// Cartesian move (move_arm). Separate from the openarm01_arm_joint_commands
 // stream; use these for discrete goals that return a result.
 {
   peppy_schema: "interface/v1",

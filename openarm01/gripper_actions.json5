@@ -1,5 +1,5 @@
 // Goal-based gripper motion for openarm01: the move_gripper action. Separate from
-// the openarm01_gripper_command_source stream; use this for a discrete goal that
+// the openarm01_gripper_commands stream; use this for a discrete goal that
 // returns a result.
 {
   peppy_schema: "interface/v1",

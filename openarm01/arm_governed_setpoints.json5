@@ -1,27 +1,26 @@
-// Measured joint state of one openarm01 arm, addressed by `arm_id`. Emitted
-// continuously at the arm's `state_rate_hz`; consumed via `from_any`. The return
-// direction of openarm01_arm_command_source.
+// Per-arm governed joint setpoints, addressed by `arm_id`. Produced by
+// openarm01_backbone (the bimanual coordination hub); consumed via `from_any`.
 {
   peppy_schema: "interface/v1",
   manifest: {
-    name: "openarm01_arm_state_source",
+    name: "openarm01_arm_governed_setpoints",
     tag: "v1",
   },
   interfaces: {
     topics: [
       {
-        name: "arm_states",
+        name: "arm_governed_setpoints",
         qos_profile: "sensor_data",
         message_format: {
           // Which arm (0 = left, 1 = right).
           arm_id: "u8",
-          // Measured joint positions (rad), j1..j7.
+          // Desired joint positions (rad), j1..j7.
           positions: {
             $type: "array",
             $items: "f64",
             $length: 7
           },
-          // Measured joint velocities (rad/s), j1..j7.
+          // Desired joint velocities (rad/s), j1..j7 (feedforward).
           velocities: {
             $type: "array",
             $items: "f64",
