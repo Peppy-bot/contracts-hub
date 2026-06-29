@@ -1,5 +1,5 @@
-// Nearest self-collision proximity from openarm01_backbone, for operator display.
-// Readout only; consumed via `from_any`.
+// Nearest self-collision pair for one openarm01 robot: the signed surface distance
+// between the two arms and the two links forming that pair.
 {
   peppy_schema: "interface/v1",
   manifest: {

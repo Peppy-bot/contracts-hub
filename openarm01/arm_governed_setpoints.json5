@@ -1,5 +1,5 @@
-// Per-arm governed joint setpoints, addressed by `arm_id`. Produced by
-// openarm01_backbone (the bimanual coordination hub); consumed via `from_any`.
+// Collision-governed joint setpoint for one openarm01 arm: target positions and
+// velocity feedforward, addressed by `arm_id`.
 {
   peppy_schema: "interface/v1",
   manifest: {

@@ -1,5 +1,5 @@
-// Live tuning bus for the bimanual coordination hub (openarm01_backbone):
-// produced by an operator surface, consumed by the hub.
+// Runtime self-collision governor controls for one openarm01 robot: the on/off
+// toggle, the band, and the end-effector speed cap.
 {
   peppy_schema: "interface/v1",
   manifest: {

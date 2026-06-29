@@ -1,6 +1,6 @@
-// Goal-based arm motion for openarm01: a joint-space move (move_arm_joints) and a
-// Cartesian move (move_arm). Separate from the openarm01_arm_joint_commands
-// stream; use these for discrete goals that return a result.
+// Goal-based arm motion for openarm01, addressed by `arm_id`: a joint-space move
+// (move_arm_joints) and a Cartesian move (move_arm). Discrete goals that return a
+// result, distinct from the openarm01_arm_joint_commands stream.
 {
   peppy_schema: "interface/v1",
   manifest: {
@@ -13,19 +13,24 @@
         name: "move_arm_joints",
         goal_service: {
           request_message_format: {
+            // Which arm (0 = left, 1 = right).
+            arm_id: "u8",
             // Target joint positions (rad), j1..j7.
             joint_positions: {
               $type: "array",
               $items: "f64",
               $length: 7
             },
-            // Trajectory duration (s).
+            // Requested trajectory duration (s); floored at the per-joint
+            // velocity-limit duration. 0 = fastest.
             duration_s: "f64"
+          },
+          response_message_format: {
+            accepted: "bool"
           }
         },
         result_service: {
           response_message_format: {
-            // Whether the trajectory ran to completion.
             success: "bool",
             message: "string",
             // Measured joint positions (rad) when the action ended, j1..j7.
@@ -43,6 +48,8 @@
         name: "move_arm",
         goal_service: {
           request_message_format: {
+            // Which arm (0 = left, 1 = right).
+            arm_id: "u8",
             // Target end-effector position in the world frame: x, y, z (m).
             position: {
               $type: "array",
@@ -55,13 +62,16 @@
               $items: "f64",
               $length: 4
             },
-            // Trajectory duration (s).
+            // Requested trajectory duration (s); floored at the velocity-limit
+            // duration. 0 = fastest.
             duration_s: "f64"
+          },
+          response_message_format: {
+            accepted: "bool"
           }
         },
         result_service: {
           response_message_format: {
-            // Whether the trajectory ran to completion.
             success: "bool",
             message: "string",
             // Measured end-effector position when the action ended: x, y, z (m).

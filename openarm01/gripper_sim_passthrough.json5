@@ -1,6 +1,5 @@
-// Sim-only: the aperture an openarm01 gripper node hands to the simulation engine,
-// addressed by `gripper_id`. Not the public command contract; that is
-// openarm01_gripper_commands.
+// Sim-only aperture setpoint for one openarm01 gripper, addressed by `gripper_id`.
+// Internal sim plumbing, not the public command contract (openarm01_gripper_commands).
 {
   peppy_schema: "interface/v1",
   manifest: {

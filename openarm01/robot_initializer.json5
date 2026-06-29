@@ -1,10 +1,7 @@
 {
-  // Readiness signal every robot_initializer implementation exposes. Backbone polls
-  // is_ready and waits for ready:true before doing anything; the real implementation
-  // aggregates per-component openarm01_hardware_ready signals (ready:true once every
-  // arm/gripper has enabled its motors) and sim implementations return ready:false
-  // while the sim loads, ready:true once the scene is ready. Lets backbone be
-  // sim/real agnostic.
+  // Robot-level readiness for openarm01. `ready` is true once the robot is ready
+  // for motion (real: every hardware component has its motors enabled; sim: the
+  // scene has loaded), false otherwise.
   peppy_schema: "interface/v1",
   manifest: {
     name: "openarm01_robot_initializer",

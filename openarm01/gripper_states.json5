@@ -1,6 +1,4 @@
-// Measured opening of one openarm01 gripper, addressed by `gripper_id`. Emitted
-// continuously at the gripper's `state_rate_hz`; consumed via `from_any`. The
-// return direction of openarm01_gripper_commands.
+// Measured opening of one openarm01 gripper, addressed by `gripper_id`.
 {
   peppy_schema: "interface/v1",
   manifest: {

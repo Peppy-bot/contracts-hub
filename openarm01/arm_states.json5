@@ -1,6 +1,5 @@
-// Measured joint state of one openarm01 arm, addressed by `arm_id`. Emitted
-// continuously at the arm's `state_rate_hz`; consumed via `from_any`. The return
-// direction of openarm01_arm_joint_commands.
+// Measured joint state of one openarm01 arm (positions + velocities), addressed
+// by `arm_id`.
 {
   peppy_schema: "interface/v1",
   manifest: {

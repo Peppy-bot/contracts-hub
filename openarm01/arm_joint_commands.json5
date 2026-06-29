@@ -1,6 +1,4 @@
-// Streamed joint commands for one openarm01 arm, addressed by `arm_id`. A producer
-// (teleop leader, planner, calibration script) conforms to this; the return
-// direction is openarm01_arm_states.
+// Streamed joint position commands for one openarm01 arm, addressed by `arm_id`.
 {
   peppy_schema: "interface/v1",
   manifest: {
