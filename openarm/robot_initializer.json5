@@ -1,10 +1,10 @@
 {
-  // Robot-level readiness for openarm01. `ready` is true once the robot is ready
+  // Robot-level readiness for openarm. `ready` is true once the robot is ready
   // for motion (real: every hardware component has its motors enabled; sim: the
   // scene has loaded), false otherwise.
   peppy_schema: "interface/v1",
   manifest: {
-    name: "openarm01_robot_initializer",
+    name: "openarm_robot_initializer",
     tag: "v1"
   },
   interfaces: {

@@ -1,9 +1,9 @@
-// Goal-based gripper motion for openarm01: the move_gripper action, a discrete
-// goal that returns a result. Distinct from the openarm01_gripper_commands stream.
+// Goal-based gripper motion for openarm: the move_gripper action, a discrete
+// goal that returns a result. Distinct from the openarm_gripper_commands stream.
 {
   peppy_schema: "interface/v1",
   manifest: {
-    name: "openarm01_gripper_actions",
+    name: "openarm_gripper_actions",
     tag: "v1"
   },
   interfaces: {

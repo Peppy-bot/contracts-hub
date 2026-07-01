@@ -1,16 +1,15 @@
-// Sim-only actuator setpoint for one openarm01 arm (positions + velocity
-// feedforward), addressed by `arm_id`. Internal sim plumbing, not the public
-// command contract (openarm01_arm_joint_commands).
+// Collision-governed joint setpoint for one openarm arm: target positions and
+// velocity feedforward, addressed by `arm_id`.
 {
   peppy_schema: "interface/v1",
   manifest: {
-    name: "openarm01_arm_sim_passthrough",
+    name: "openarm_arm_governed_setpoints",
     tag: "v1",
   },
   interfaces: {
     topics: [
       {
-        name: "arm_sim_passthrough",
+        name: "arm_governed_setpoints",
         qos_profile: "sensor_data",
         message_format: {
           // Which arm (0 = left, 1 = right).

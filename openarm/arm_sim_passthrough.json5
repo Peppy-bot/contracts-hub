@@ -1,26 +1,27 @@
-// Measured joint state of one openarm01 arm (positions + velocities), addressed
-// by `arm_id`.
+// Sim-only actuator setpoint for one openarm arm (positions + velocity
+// feedforward), addressed by `arm_id`. Internal sim plumbing, not the public
+// command contract (openarm_arm_joint_commands).
 {
   peppy_schema: "interface/v1",
   manifest: {
-    name: "openarm01_arm_states",
+    name: "openarm_arm_sim_passthrough",
     tag: "v1",
   },
   interfaces: {
     topics: [
       {
-        name: "arm_states",
+        name: "arm_sim_passthrough",
         qos_profile: "sensor_data",
         message_format: {
           // Which arm (0 = left, 1 = right).
           arm_id: "u8",
-          // Measured joint positions (rad), j1..j7.
+          // Desired joint positions (rad), j1..j7.
           positions: {
             $type: "array",
             $items: "f64",
             $length: 7
           },
-          // Measured joint velocities (rad/s), j1..j7.
+          // Desired joint velocities (rad/s), j1..j7 (feedforward).
           velocities: {
             $type: "array",
             $items: "f64",

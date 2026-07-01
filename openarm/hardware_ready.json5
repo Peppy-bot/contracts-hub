@@ -1,11 +1,11 @@
 {
-  // Component-level hardware readiness for openarm01. `ready` is true once the
+  // Component-level hardware readiness for openarm. `ready` is true once the
   // component (an arm or gripper) has its motors enabled and its control loop
-  // serving, false otherwise. A distinct contract from openarm01_robot_initializer:
+  // serving, false otherwise. A distinct contract from openarm_robot_initializer:
   // component readiness, not robot readiness.
   peppy_schema: "interface/v1",
   manifest: {
-    name: "openarm01_hardware_ready",
+    name: "openarm_hardware_ready",
     tag: "v1"
   },
   interfaces: {
