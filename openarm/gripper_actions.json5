@@ -21,7 +21,7 @@
             // Whether the move ran to completion.
             success: "bool",
             message: "string",
-            // Measured finger joint positions (rad) when the action ended.
+            // Measured opening (m) when the action ended.
             final_joint_positions: {
               $type: "array",
               $items: "f64"
