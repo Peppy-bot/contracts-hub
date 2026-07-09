@@ -17,7 +17,12 @@
           distance: "f64",
           // The two links forming that nearest pair.
           link_a: "string",
-          link_b: "string"
+          link_b: "string",
+          // Disposition of the commanded motion, mutually exclusive: throttled
+          // means it is being scaled down to hold the band, stopped means it is
+          // fully denied at the stop floor. Both false when motion is unrestricted.
+          throttled: "bool",
+          stopped: "bool"
         }
       }
     ]
