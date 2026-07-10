@@ -1,5 +1,5 @@
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "depth_camera",
     tag: "v1"

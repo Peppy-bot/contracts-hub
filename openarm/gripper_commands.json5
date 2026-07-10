@@ -1,6 +1,6 @@
 // Streamed opening commands for one openarm gripper, addressed by `gripper_id`.
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "openarm_gripper_commands",
     tag: "v1",

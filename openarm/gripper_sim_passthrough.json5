@@ -1,7 +1,7 @@
 // Sim-only aperture setpoint for one openarm gripper, addressed by `gripper_id`.
 // Internal sim plumbing, not the public command contract (openarm_gripper_commands).
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "openarm_gripper_sim_passthrough",
     tag: "v1",

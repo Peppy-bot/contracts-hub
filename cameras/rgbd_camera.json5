@@ -5,9 +5,9 @@
 // that emit only color conform to uvc_camera;
 // cameras that emit only depth conform to depth_camera. Depth-derived stereo IR
 // and IMU streams are out of scope; an implementation exposing them should
-// conform to an additional interface for those.
+// conform to an additional contract for those.
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "rgbd_camera",
     tag: "v1"

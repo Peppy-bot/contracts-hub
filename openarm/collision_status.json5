@@ -1,7 +1,7 @@
 // Nearest self-collision pair for one openarm robot: the signed surface distance
 // between the two arms and the two links forming that pair.
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "openarm_collision_status",
     tag: "v1",

@@ -1,6 +1,6 @@
 // Streamed joint position commands for one openarm arm, addressed by `arm_id`.
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "openarm_arm_joint_commands",
     tag: "v1",

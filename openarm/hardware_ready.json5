@@ -3,7 +3,7 @@
   // component (an arm or gripper) has its motors enabled and its control loop
   // serving, false otherwise. A distinct contract from openarm_robot_initializer:
   // component readiness, not robot readiness.
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "openarm_hardware_ready",
     tag: "v1"

@@ -1,7 +1,7 @@
 // Runtime self-collision governor controls for one openarm robot: the on/off
 // toggle, the band, and the end-effector speed cap.
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "openarm_governor_control",
     tag: "v1",
