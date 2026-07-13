@@ -1,17 +1,17 @@
-# interfaces_hub
+# Contracts Hub
 
-A repository of Peppy **conformance interfaces** (`peppy_schema: "interface/v1"`).
+A repository of Peppy **contracts** (`peppy_schema: "contract/v1"`).
 
-An interface declares the topics, services, and actions a node must expose to "conform" to it. A producer node claims an interface by listing it under `interfaces.conforms_to` in its `peppy.json5`; a consumer depends on the interface through `manifest.depends_on.interfaces` rather than on a specific node, so any conforming implementation can satisfy it.
+A contract declares the topics, services, and actions a node must expose to implement it. A producer claims a contract in `manifest.implements` and lists every contract member as an explicit contract-backed entry in its `interfaces` section, using the implementation's `link_id`. A consumer depends on the contract through `manifest.depends_on.contracts` rather than on a specific node, so any implementing producer can satisfy it.
 
-## Adding an interface
+## Adding a contract
 
 Create a new `.json5` file under the relevant category:
 
 ```json5
 {
-  peppy_schema: "interface/v1",
-  manifest: { name: "<interface_name>", tag: "<tag>" }, // tag is a contract identifier like "v1" — not semver (dots forbidden)
+  peppy_schema: "contract/v1",
+  manifest: { name: "<contract_name>", tag: "<tag>" }, // tag is a contract identifier like "v1", not semver (dots forbidden)
   interfaces: {
     topics:   [ /* ... */ ],
     services: [ /* ... */ ],
@@ -22,4 +22,4 @@ Create a new `.json5` file under the relevant category:
 
 ## Use
 
-This repo is consumed by `peppy repo update` alongside node and launcher repositories.
+This repo is consumed by `peppy repo refresh` alongside node and launcher repositories.

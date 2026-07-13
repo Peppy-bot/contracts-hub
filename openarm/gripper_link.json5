@@ -1,12 +1,12 @@
 // The exclusive control conversation between one commander instance and ONE
 // openarm gripper, as a pairing: the commander streams opening setpoints and
 // the gripper streams its measured aperture back, both directions scoped to
-// the pair — no gripper_id demux, no producer lock-in. Pairs are established
+// the pair: no gripper_id demux, no producer lock-in. Pairs are established
 // at instance start (`--pair` / launcher `pairings:`) and dissolve
 // automatically when either endpoint dies; the survivor's slot goes silent
 // until a new peer is paired.
 //
-// The always-on broadcast `openarm_gripper_states` interface remains the
+// The always-on broadcast `openarm_gripper_states` contract remains the
 // observer surface; this pairing is the exclusive command loop.
 {
   peppy_schema: "pairing/v1",

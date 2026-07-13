@@ -1,8 +1,8 @@
 // Sim-only actuator setpoint for one openarm arm (positions + velocity
 // feedforward), addressed by `arm_id`. Internal sim plumbing, not the public
-// command contract (openarm_arm_joint_commands).
+// command contract (openarm_commands).
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "openarm_arm_sim_passthrough",
     tag: "v1",

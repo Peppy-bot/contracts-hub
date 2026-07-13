@@ -1,7 +1,9 @@
 // Runtime self-collision governor controls for one openarm robot: the on/off
-// toggle, the band, and the end-effector speed cap.
+// toggle, the band, and the end-effector speed cap. A contract rather than an
+// operator-node topic so the backbone names no operator node, which keeps the
+// backbone <-> operator dependency graph acyclic.
 {
-  peppy_schema: "interface/v1",
+  peppy_schema: "contract/v1",
   manifest: {
     name: "openarm_governor_control",
     tag: "v1",
