@@ -2,10 +2,10 @@
 // streams (e.g. Intel RealSense D4xx, or a simulated/mock RGB-D node). Color
 // and depth share a frame_id (a capture-pair counter, not a coordinate frame)
 // so consumers can correlate paired frames without timestamp matching. Cameras
-// that emit only color conform to uvc_camera;
-// cameras that emit only depth conform to depth_camera. Depth-derived stereo IR
+// that emit only color implement uvc_camera;
+// cameras that emit only depth implement depth_camera. Depth-derived stereo IR
 // and IMU streams are out of scope; an implementation exposing them should
-// conform to an additional contract for those.
+// implement an additional contract for those.
 {
   peppy_schema: "contract/v1",
   manifest: {
