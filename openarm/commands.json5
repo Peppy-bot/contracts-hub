@@ -31,8 +31,9 @@
         message_format: {
           // Which gripper (0 = left, 1 = right).
           gripper_id: "u8",
-          // Target opening (m): 0.0 = closed, 0.044 = fully open on V1.0.
-          position: "f64"
+          // Target opening as a fraction of full jaw travel, any generation:
+          // 0 = closed, 1 = fully open.
+          opening: "f64"
         }
       }
     ]

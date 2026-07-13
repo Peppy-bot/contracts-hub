@@ -23,10 +23,9 @@
       // occasional drops are acceptable.
       qos_profile: "sensor_data",
       message_format: {
-        // Desired opening (m), matching the gripper_states unit: 0.0 = closed,
-        // increasing toward fully open. The gripper clamps it to its range and
-        // drives the fingers toward it.
-        position: "f64"
+        // Desired opening as a fraction of full jaw travel, matching the
+        // gripper_states unit: 0 = closed, 1 = fully open.
+        opening: "f64"
       }
     },
     {
@@ -36,9 +35,10 @@
       // occasional drops are acceptable.
       qos_profile: "sensor_data",
       message_format: {
-        // Measured opening (m): 0.0 = closed, increasing toward fully open.
-        // Not the per-finger joint positions; this is the single aperture value.
-        position: "f64"
+        // Measured opening as a fraction of full jaw travel: 0 = closed,
+        // 1 = fully open. Not the per-finger joint positions; this is the
+        // single aperture value.
+        opening: "f64"
       }
     }
   ]
