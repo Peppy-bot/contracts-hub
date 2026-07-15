@@ -13,16 +13,11 @@
         name: "joint_commands",
         qos_profile: "sensor_data",
         message_format: {
-          // Target positions, one per joint in this group, in the same units
-          // and order a matching `joint_states` producer reports.
+          // Target positions, one per joint in this group, in the same order the
+          // matching joint_states producer reports.
           positions: {
             $type: "array",
             $items: "f64",
-          },
-          // Human-readable name per joint, aligned with `positions`.
-          names: {
-            $type: "array",
-            $items: "string",
           },
         },
       }
