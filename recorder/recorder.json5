@@ -1,8 +1,8 @@
-// Episode control and status for a dataset recorder. start/stop bracket one
-// recorded episode; status is republished periodically so a late-joining
-// consumer still sees the current state. Robot-agnostic: the recorder that
-// implements this consumes whatever joint_states / joint_commands / camera
-// producers a launcher binds to it.
+// Episode control and status for a dataset recorder: the start_episode /
+// stop_episode services bracket one recorded episode, and recorder_status
+// carries the current recording state. peppy has no enum or optional field
+// type, so `state` is a string over a fixed value set and "no episode yet" is
+// encoded as episode_index -1.
 {
   peppy_schema: "contract/v1",
   manifest: {

@@ -1,6 +1,7 @@
-// Commanded (target) positions for one joint group, the operator or policy
-// intent that pairs with `joint_states` as the action a dataset records.
-// Robot-agnostic and self-describing, like `joint_states`.
+// Commanded (target) positions for one joint group. Robot-agnostic and
+// self-describing like joint_states: the joint count is producer-defined, with
+// no id or names field and the joint order matching the producer's
+// joint_states.
 {
   peppy_schema: "contract/v1",
   manifest: {

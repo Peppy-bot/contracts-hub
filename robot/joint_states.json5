@@ -1,9 +1,8 @@
-// Measured proprioceptive state of one joint group (an arm, a gripper, a
-// hand, a mobile base's wheels, ...). Robot-agnostic: the producer decides how
-// many joints it reports, so a consumer records or displays any robot without
-// knowing its morphology. One producer instance is one joint group; a consumer
-// with a multi-producer slot sees each group tagged by its producer identity
-// and derives dimension names from that identity plus the joint index.
+// Measured proprioceptive state of one joint group (an arm, a gripper, a hand,
+// a mobile base's wheels). Robot-agnostic and self-describing: the joint count
+// is producer-defined and equal to positions.len(). There is no id or names
+// field; a joint group's identity is its producer and the joint order is the
+// producer's own.
 {
   peppy_schema: "contract/v1",
   manifest: {
