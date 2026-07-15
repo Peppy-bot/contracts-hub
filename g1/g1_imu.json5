@@ -1,0 +1,30 @@
+// Torso IMU of one Unitree G1, from the hg LowState imu_state. Every backend
+// emits it (real from the sensor, sim from the physics engine), so consumers
+// bind one IMU readout across real / MuJoCo / Isaac.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "g1_imu",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "g1_imu",
+        qos_profile: "sensor_data",
+        message_format: {
+          // Orientation quaternion (w, x, y, z).
+          quaternion: { $type: "array", $items: "f64", $length: 4 },
+          // Angular velocity (rad/s), body frame (x, y, z).
+          gyroscope: { $type: "array", $items: "f64", $length: 3 },
+          // Linear acceleration (m/s^2), body frame (x, y, z).
+          accelerometer: { $type: "array", $items: "f64", $length: 3 },
+          // Roll, pitch, yaw (rad).
+          rpy: { $type: "array", $items: "f64", $length: 3 },
+          // IMU temperature (deg C).
+          temperature: "i32"
+        }
+      }
+    ]
+  }
+}

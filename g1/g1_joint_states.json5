@@ -1,0 +1,33 @@
+// Per-motor state of one Unitree G1, from the hg LowState motor_state array.
+// The array is the hg capacity (35); the G1 populates the joints its
+// configuration uses and leaves the rest zero. Every backend emits it (real
+// from the motors, sim from the engine), one joint readout across all backends.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "g1_joint_states",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "g1_joint_states",
+        qos_profile: "sensor_data",
+        message_format: {
+          // Joint positions (rad), motor_state[*].q.
+          q: { $type: "array", $items: "f64", $length: 35 },
+          // Joint velocities (rad/s), motor_state[*].dq.
+          dq: { $type: "array", $items: "f64", $length: 35 },
+          // Estimated joint torques (Nm), motor_state[*].tau_est.
+          tau_est: { $type: "array", $items: "f64", $length: 35 },
+          // Motor temperature (deg C), motor_state[*].temperature[0].
+          temperature: { $type: "array", $items: "i32", $length: 35 },
+          // Motor bus voltage (V), motor_state[*].vol.
+          voltage: { $type: "array", $items: "f64", $length: 35 },
+          // Per-motor mode/error flag, motor_state[*].mode.
+          motor_mode: { $type: "array", $items: "u8", $length: 35 }
+        }
+      }
+    ]
+  }
+}

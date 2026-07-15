@@ -1,0 +1,30 @@
+// Base (pelvis) odometry of one Unitree G1: world-frame pose and body-frame
+// twist. The sim backends emit this from the physics engine's ground truth; the
+// real backend wires it once the base-state DDS channel is confirmed on
+// hardware (not present in the hg LowState). Shared contract so consumers bind
+// odometry identically regardless of backend.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "g1_odometry",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "g1_odometry",
+        qos_profile: "sensor_data",
+        message_format: {
+          // World-frame base position (m): x, y, z.
+          position: { $type: "array", $items: "f64", $length: 3 },
+          // World-frame base orientation quaternion (w, x, y, z).
+          orientation: { $type: "array", $items: "f64", $length: 4 },
+          // Body-frame linear velocity (m/s): vx, vy, vz.
+          linear_velocity: { $type: "array", $items: "f64", $length: 3 },
+          // Body-frame angular velocity (rad/s): wx, wy, wz.
+          angular_velocity: { $type: "array", $items: "f64", $length: 3 }
+        }
+      }
+    ]
+  }
+}
