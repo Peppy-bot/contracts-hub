@@ -15,6 +15,10 @@
         name: "joint_states",
         qos_profile: "sensor_data",
         message_format: {
+          // When this sample was measured, on the producer's peppy-synchronized
+          // clock (sim time under a simulated clock), so samples from different
+          // producers and hosts are directly comparable.
+          stamp: "time",
           // Measured positions, one per joint in this group (radians for
           // revolute joints, metres for prismatic, or a unitless fraction for
           // normalized actuators such as a gripper opening).

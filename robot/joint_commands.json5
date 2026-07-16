@@ -14,6 +14,10 @@
         name: "joint_commands",
         qos_profile: "sensor_data",
         message_format: {
+          // When this command took effect at the producer, on the producer's
+          // peppy-synchronized clock (sim time under a simulated clock), so it
+          // aligns with joint_states stamps.
+          stamp: "time",
           // Target positions, one per joint in this group, in the same order the
           // matching joint_states producer reports.
           positions: {
