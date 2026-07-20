@@ -1,7 +1,7 @@
 {
   peppy_schema: "contract/v1",
   manifest: {
-    name: "uvc_camera",
+    name: "rgb_camera",
     tag: "v1"
   },
   interfaces: {
@@ -13,9 +13,9 @@
           header: {
             $type: "object",
             stamp: "time",
-            frame_id: "u32",
+            frame_id: "u32",   // capture counter, not a coordinate frame
           },
-          encoding: "string",
+          encoding: "string",   // e.g. "rgb8" | "bgr8" | "yuyv" | "mjpeg"
           width: "u32",
           height: "u32",
           frame: {
