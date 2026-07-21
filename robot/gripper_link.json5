@@ -38,8 +38,9 @@
         stamp: "time",
         // Measured opening fraction, 0 = closed, 1 = fully open.
         opening: "f64",
-        // Measured grip effort (N*m at the motor shaft); 0.0 when the
-        // gripper does not sense effort.
+        // Measured grip effort (N*m at the motor shaft) in the opening
+        // frame: positive drives toward open, regardless of the motor's
+        // mechanical direction. 0.0 when the gripper does not sense effort.
         effort: "f64",
       },
     },
