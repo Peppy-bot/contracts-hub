@@ -25,6 +25,11 @@
         stamp: "time",
         // Desired opening fraction, 0 = closed, 1 = fully open.
         opening: "f64",
+        // Maximum effort the follower may exert toward the commanded opening
+        // (magnitude, in the follower's effort unit: the unit of
+        // gripper_states effort). 0 = no preference; the follower applies
+        // its configured ceiling.
+        max_effort: "f64",
       },
     },
     {
@@ -38,10 +43,14 @@
         stamp: "time",
         // Measured opening fraction, 0 = closed, 1 = fully open.
         opening: "f64",
-        // Measured grip effort (N*m at the motor shaft) in the opening
-        // frame: positive drives toward open, regardless of the motor's
-        // mechanical direction. 0.0 when the gripper does not sense effort.
+        // Measured grip effort in this follower's effort unit (e.g. N*m at
+        // the motor shaft, N at the jaws), in the opening frame: positive
+        // drives toward open, regardless of the mechanism's direction.
+        // 0.0 when the gripper does not sense effort.
         effort: "f64",
+        // Active effort ceiling (magnitude, same unit as effort): the
+        // largest effort this follower will exert. 0 = no effort control.
+        max_effort: "f64",
       },
     },
   ],

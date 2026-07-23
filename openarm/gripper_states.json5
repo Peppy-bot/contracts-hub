@@ -18,7 +18,10 @@
           opening: "f64",
           // Measured grip force, from the gripper motor's torque estimate (N·m at the
           // motor shaft). 0.0 when the gripper does not sense force.
-          force: "f64"
+          force: "f64",
+          // Active effort ceiling (N·m at the motor shaft, magnitude): the largest
+          // effort this gripper will exert. 0 = no effort control.
+          max_effort: "f64"
         }
       }
     ]

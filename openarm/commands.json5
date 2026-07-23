@@ -33,7 +33,11 @@
           gripper_id: "u8",
           // Target opening as a fraction of full jaw travel, any generation:
           // 0 = closed, 1 = fully open.
-          opening: "f64"
+          opening: "f64",
+          // Maximum effort the gripper may exert toward the target (magnitude,
+          // in the gripper's effort unit). 0 = no preference; the gripper
+          // applies its configured ceiling.
+          max_effort: "f64"
         }
       }
     ]
