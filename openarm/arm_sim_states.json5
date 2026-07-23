@@ -1,9 +1,10 @@
-// Measured joint state of one openarm arm (positions + velocities), addressed
-// by `arm_id`.
+// Sim-engine internal: the engine's measured joint state for both arms,
+// addressed by `arm_id` and demuxed by the per-side sim arm nodes. The robot's
+// state surface is the joint_link pairing; this never leaves the simulation.
 {
   peppy_schema: "contract/v1",
   manifest: {
-    name: "openarm_arm_states",
+    name: "openarm_arm_sim_states",
     tag: "v1",
   },
   interfaces: {

@@ -1,8 +1,11 @@
-// Measured opening of one openarm gripper, addressed by `gripper_id`.
+// Sim-engine internal: the engine's measured opening for both grippers,
+// addressed by `gripper_id` and demuxed by the per-side sim gripper nodes. The
+// robot's state surface is the gripper_link pairing; this never leaves the
+// simulation.
 {
   peppy_schema: "contract/v1",
   manifest: {
-    name: "openarm_gripper_states",
+    name: "openarm_gripper_sim_states",
     tag: "v1",
   },
   interfaces: {
@@ -18,10 +21,7 @@
           opening: "f64",
           // Measured grip force, from the gripper motor's torque estimate (N·m at the
           // motor shaft). 0.0 when the gripper does not sense force.
-          force: "f64",
-          // Active effort ceiling (N·m at the motor shaft, magnitude): the largest
-          // effort this gripper will exert. 0 = no effort control.
-          max_effort: "f64"
+          force: "f64"
         }
       }
     ]
