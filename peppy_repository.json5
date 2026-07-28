@@ -72,6 +72,16 @@
       v1: {
         path: "robot/pose_link.json5"
       }
+    },
+    sim_rgb_camera_link: {
+      v1: {
+        path: "cameras/sim_rgb_camera_link.json5"
+      }
+    },
+    sim_rgbd_camera_link: {
+      v1: {
+        path: "cameras/sim_rgbd_camera_link.json5"
+      }
     }
   }
 }
