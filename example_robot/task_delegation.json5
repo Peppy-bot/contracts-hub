@@ -1,0 +1,88 @@
+// The escalation conversation between a reactive executor and a deliberative
+// planner, as a pairing: the executor streams what it is currently facing and
+// asks for help when a situation exceeds its own horizon, and the planner
+// streams subgoals back.
+//
+// Why a pairing and not two producer links: the relationship is genuinely
+// bidirectional and exclusive. Each side holds a pinned view of the other for
+// the life of the pair, an escalation is answered by the planner that received
+// it, and a subgoal is addressed to the executor that will act on it. A pair
+// of one-way feeds would model neither the exclusivity nor the correspondence.
+//
+// The two roles are deliberately asymmetric in rate and in authority:
+// - The executor runs fast (hundreds of Hz), owns the control loop, and is
+//   never blocked on the deliberator. It acts on its last authoritative
+//   subgoal and falls back to its own local behavior when that subgoal goes
+//   stale.
+// - The deliberator runs slow (order 1 Hz), plans over a long horizon, and
+//   only ever advises. It cannot command actuators.
+//
+// This asymmetry is what makes the pair safe to span a WAN: the executor
+// degrades rather than stops when the link does. Freshness is the EXECUTOR's
+// responsibility, which is why every subgoal carries `valid_for_ms` rather
+// than the framework promising timely delivery. A partition cannot be
+// distinguished from a slow planner in bounded time, so the contract does not
+// pretend otherwise.
+{
+  peppy_schema: "pairing/v1",
+  manifest: {
+    name: "task_delegation",
+    tag: "v1",
+  },
+  roles: ["executor", "deliberator"],
+  topics: [
+    {
+      emitted_by: "executor",
+      name: "situation",
+      // The planner only ever needs the current picture; a dropped frame is
+      // superseded by the next one.
+      qos_profile: "sensor_data",
+      message_format: {
+        // Executor-side capture time of this report.
+        stamp: "time",
+        // The subgoal the executor is currently servoing on, echoed back so
+        // the planner can tell whether its last subgoal was actually adopted
+        // rather than assuming delivery implies adoption.
+        active_subgoal_id: "string",
+        // Free-form description of what the executor observes right now, in
+        // whatever vocabulary the deployed pair shares. Deliberately a string:
+        // the contract fixes the CONVERSATION, not the world model, so an
+        // executor and planner can be swapped for a differently-represented
+        // pair without a new contract.
+        observation: "string",
+        // True when the executor has hit something it cannot resolve within
+        // its own horizon and wants a new subgoal. The planner may also push
+        // subgoals unprompted; this only marks the urgent case.
+        escalating: "bool",
+      },
+    },
+    {
+      emitted_by: "deliberator",
+      name: "subgoal",
+      // Subgoals are sparse and each one matters: losing one would leave the
+      // executor on a stale goal until the next plan cycle.
+      qos_profile: "reliable",
+      message_format: {
+        // Planner-side issue time.
+        stamp: "time",
+        // Identity of this subgoal, echoed by the executor in
+        // `situation.active_subgoal_id` so adoption is observable rather than
+        // assumed.
+        subgoal_id: "string",
+        // What the executor should work toward, in the pair's shared
+        // vocabulary.
+        directive: "string",
+        // How long this subgoal stays authoritative after `stamp`. Once it
+        // expires the executor falls back to its own local behavior instead of
+        // acting on a stale plan.
+        //
+        // This is the contract's honest answer to partition: the framework
+        // notifies a peer of a cleanly stopped or dead instance, but an
+        // unreachable daemon cannot send anything, so a node whose correctness
+        // depends on freshness owns its own watchdog. This field is what that
+        // watchdog reads.
+        valid_for_ms: "u32",
+      },
+    },
+  ],
+}
