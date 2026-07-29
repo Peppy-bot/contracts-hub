@@ -27,6 +27,16 @@
           $items: "f64",
           $length: 3
         },
+        // The subgoal the executor is currently servoing on, echoed back from
+        // `subgoal.subgoal_id`, or 0 when nothing is authoritative.
+        //
+        // Adoption is reported by the side that adopts rather than inferred by
+        // the side that sent: delivery is not adoption, and an adopted subgoal
+        // can lapse on the executor's own staleness bound without the planner
+        // sending anything. This field is also what lets a third party watching
+        // this role tell a newly adopted subgoal from a redelivery of the
+        // previous one.
+        active_subgoal_id: "u32",
         // Set when the executor could not resolve what it is facing inside its
         // own horizon and is asking the planner for a subgoal. The stream runs
         // either way, so the planner always has recent state to plan against.
