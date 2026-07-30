@@ -1,0 +1,52 @@
+// The exclusive Cartesian control conversation between one leader instance
+// and one device's end-effector, as a pairing: the leader streams the desired
+// pose and the follower streams its measured pose back, both directions
+// scoped to the pair.
+// A joint vector is not a pose; it has its own joint_link pairing.
+//
+// Pose conventions, identical in both directions:
+// - position is meters, [x, y, z].
+// - orientation is a unit quaternion [x, y, z, w], scalar last.
+// - Both are in the follower's world frame; the frame, the end-effector link,
+//   and the kinematic chain are fixed properties of the follower, not carried
+//   per message.
+{
+  peppy_schema: "pairing/v1",
+  manifest: {
+    name: "pose_link",
+    tag: "v1",
+  },
+  roles: ["leader", "follower"],
+  topics: [
+    {
+      emitted_by: "leader",
+      name: "pose_setpoints",
+      // High-frequency stream where only the latest setpoint matters;
+      // occasional drops are acceptable.
+      qos_profile: "sensor_data",
+      message_format: {
+        // Leader-side capture time of this setpoint.
+        stamp: "time",
+        // Desired end-effector position.
+        position: { $type: "array", $items: "f64", $length: 3 },
+        // Desired end-effector orientation.
+        orientation: { $type: "array", $items: "f64", $length: 4 },
+      },
+    },
+    {
+      emitted_by: "follower",
+      name: "pose_states",
+      // High-frequency stream where only the latest state matters;
+      // occasional drops are acceptable.
+      qos_profile: "sensor_data",
+      message_format: {
+        // Follower-side capture time of this measurement.
+        stamp: "time",
+        // Measured end-effector position.
+        position: { $type: "array", $items: "f64", $length: 3 },
+        // Measured end-effector orientation.
+        orientation: { $type: "array", $items: "f64", $length: 4 },
+      },
+    },
+  ],
+}

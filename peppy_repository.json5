@@ -42,6 +42,11 @@
       v1: {
         path: "robot/joint_link.json5"
       }
+    },
+    pose_link: {
+      v1: {
+        path: "robot/pose_link.json5"
+      }
     }
   }
 }

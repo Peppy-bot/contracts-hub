@@ -36,7 +36,7 @@ bidirectional relationship. Two instances, one per role, are paired 1:1 over it.
 }
 ```
 
-Pairings declare topics only: no services, no actions. See `robot/joint_link.json5`, `robot/gripper_link.json5`, and `example_robot/deliberation.json5`.
+Pairings declare topics only: no services, no actions. See `robot/joint_link.json5`, `robot/pose_link.json5`, `robot/gripper_link.json5`, and `example_robot/deliberation.json5`.
 
 ## Use
 
@@ -51,9 +51,9 @@ that is not listed there is invisible to peppy, so after adding, moving, or rena
 peppy repo index .
 ```
 
-Commit the updated `peppy_repository.json5` alongside your change. CI runs `peppy repo index --check`
-on every pull request and fails if the index has drifted from the repository, naming the file and the
-identity involved.
+Commit the updated `peppy_repository.json5` alongside your change, and run
+`peppy repo index --check` before pushing: it fails if the index has drifted
+from the repository, naming the file and the identity involved.
 
 Generation refuses, naming both files, if your change claims a `name:tag` another one already
 publishes. Rename yours: within one repository, a `name:tag` is claimed by exactly one file.

@@ -2,7 +2,8 @@
 // jointed device (an arm or any actuated kinematic chain), as a pairing: the
 // leader streams the desired joint setpoint and the follower streams its
 // measured joint state back, both directions scoped to the pair. A gripper
-// opening is not a joint vector; it has its own gripper_link pairing.
+// opening is not a joint vector and a pose is not a joint vector; they have
+// their own gripper_link and pose_link pairings.
 //
 // Joint conventions, identical in both directions:
 // - Vectors are index-aligned across positions/velocities/efforts and carry
