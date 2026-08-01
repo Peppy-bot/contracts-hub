@@ -2,46 +2,30 @@
   peppy_schema: "repository/v1",
   contracts: {
     openarm_governor_control: {
-      v1: {
-        path: "openarm/governor_control.json5"
-      }
+      v1: "openarm/governor_control.json5"
     },
     openarm_hardware_ready: {
-      v1: {
-        path: "openarm/hardware_ready.json5"
-      }
+      v1: "openarm/hardware_ready.json5"
     },
     openarm_robot_initializer: {
-      v1: {
-        path: "openarm/robot_initializer.json5"
-      }
+      v1: "openarm/robot_initializer.json5"
     },
     rgb_camera: {
-      v1: {
-        path: "cameras/rgb_camera.json5"
-      }
+      v1: "cameras/rgb_camera.json5"
     },
     rgbd_camera: {
-      v1: {
-        path: "cameras/rgbd_camera.json5"
-      }
+      v1: "cameras/rgbd_camera.json5"
     }
   },
   pairings: {
     deliberation: {
-      v1: {
-        path: "example_robot/deliberation.json5"
-      }
+      v1: "example_robot/deliberation.json5"
     },
     gripper_link: {
-      v1: {
-        path: "robot/gripper_link.json5"
-      }
+      v1: "robot/gripper_link.json5"
     },
     joint_link: {
-      v1: {
-        path: "robot/joint_link.json5"
-      }
+      v1: "robot/joint_link.json5"
     }
   }
 }
