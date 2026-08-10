@@ -16,6 +16,11 @@
         path: "openarm/robot_initializer.json5"
       }
     },
+    postures: {
+      v1: {
+        path: "robot/postures.json5"
+      }
+    },
     rgb_camera: {
       v1: {
         path: "cameras/rgb_camera.json5"
@@ -41,6 +46,11 @@
     joint_link: {
       v1: {
         path: "robot/joint_link.json5"
+      }
+    },
+    pose_link: {
+      v1: {
+        path: "robot/pose_link.json5"
       }
     }
   }

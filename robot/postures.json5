@@ -1,0 +1,57 @@
+// The whole-robot posture moves: a robot that can plan and execute a motion
+// bringing every limb to a named posture. Two postures cover the operating
+// loop:
+// - home: the rest posture, the robot's natural pose to start from and power
+//   down at. For an arm, hanging at its sides.
+// - ready: the working posture, out in the robot's main workspace and poised
+//   to take commands. For an arm, raised out in front.
+// The exact joint values behind each name are the implementer's business.
+// Distinct from the streamed setpoints on the *_link pairings: these are
+// discrete planned moves with a result.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "postures",
+    tag: "v1",
+  },
+  interfaces: {
+    actions: [
+      {
+        name: "move_to_ready",
+        goal_service: {
+          request_message_format: {
+            // Requested move duration (s); floored at the implementer's
+            // velocity-limit duration. 0 = fastest.
+            duration_s: "f64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the move was refused, failed, or cancelled;
+            // message says which.
+            success: "bool",
+            message: "string",
+          },
+        },
+      },
+      {
+        name: "move_to_home",
+        goal_service: {
+          request_message_format: {
+            // Requested move duration (s); floored at the implementer's
+            // velocity-limit duration. 0 = fastest.
+            duration_s: "f64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the move was refused, failed, or cancelled;
+            // message says which.
+            success: "bool",
+            message: "string",
+          },
+        },
+      },
+    ],
+  },
+}
