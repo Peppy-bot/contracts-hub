@@ -1,8 +1,13 @@
 // The whole-robot posture moves: a robot that can plan and execute a motion
-// bringing every limb to a named posture. What each posture means is the
-// implementer's business: ready is the operational stance, home is the safe
-// rest to power down from. Distinct from the streamed setpoints on the *_link
-// pairings: these are discrete planned moves with a result.
+// bringing every limb to a named posture. Two postures cover the operating
+// loop:
+// - home: the rest posture, the robot's natural pose to start from and power
+//   down at. For an arm, hanging at its sides.
+// - ready: the working posture, out in the robot's main workspace and poised
+//   to take commands. For an arm, raised out in front.
+// The exact joint values behind each name are the implementer's business.
+// Distinct from the streamed setpoints on the *_link pairings: these are
+// discrete planned moves with a result.
 {
   peppy_schema: "contract/v1",
   manifest: {
