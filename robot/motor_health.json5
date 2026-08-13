@@ -1,0 +1,77 @@
+// Per-motor health telemetry for one motor-bearing component: an evaluated
+// severity per motor plus the load and temperature readings behind it. Any
+// device with motors can produce this; a consumer that only needs the raw
+// effort reads it off the device's own joint_link instead.
+//
+// The producing instance is the component: a report covers every motor of
+// the instance that sent it, as the transport identifies it.
+//
+// Vector conventions:
+// - Vectors are index-aligned and carry one entry per motor in the
+//   component's fixed motor order, matching the order its joint_link uses.
+//   A reading vector is either empty or exactly as long as `level`;
+//   consumers reject any other length rather than guessing an alignment.
+// - level is always present, and carries 4 for a motor that is not
+//   reporting, so one quiet motor is named rather than hiding the rest.
+// - the reading vectors are empty when the producer has no sensing for them
+//   (a simulated device). A motor that stopped reporting carries the
+//   readings it was last measured at; its level is what says they are not
+//   current.
+//
+// Reports repeat on a fixed cadence of at least one every 500 ms, whether or
+// not anything changed: the cadence is what lets a consumer tell a steady
+// robot from a dead producer. A consumer ages a report out a fixed multiple
+// of that mandated cadence after its arrival, on its own clock, and may
+// refuse a report whose `stamp` is already older than its window (every
+// stamp comes from the daemon-resolved clock, so a backlog is detectable);
+// an aged-out report means the producer went quiet, not that the motors
+// are healthy.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "motor_health",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "motor_health",
+        // Periodic telemetry where only the latest report matters.
+        qos_profile: "sensor_data",
+        message_format: {
+          // Producer-side capture time of this report.
+          stamp: "time",
+          // Evaluated severity per motor: 0 nominal, 1 warning, 2 critical,
+          // 3 fault, 4 not reporting. A faulted motor is no longer acting on
+          // commands; one that is not reporting has sent nothing recently,
+          // so its readings are last-known rather than current.
+          level: { $type: "array", $items: "u8" },
+          // Instantaneous |effort| as a fraction of the motor's continuous
+          // rating: the sample measured at `stamp`, in the same effort sense
+          // joint_link carries (N*m revolute, N prismatic). 1.0 is the rated
+          // limit, not the maximum.
+          effort_fraction_rated: { $type: "array", $items: "f64" },
+          // The sustained |effort| fraction of the same rating: the
+          // producer's filtered value (an EWMA over seconds) that `level`
+          // judges, so a consumer can show the number a warning actually
+          // latched on next to the live sample approaching it.
+          effort_fraction_rated_sustained: { $type: "array", $items: "f64" },
+          // Instantaneous |effort| as a fraction of the motor's effective
+          // peak: the lesser of the datasheet peak and the motor's derated
+          // trip point, the same threshold the peak-critical level fires
+          // at. 1.0 is that threshold, at or below the motor's own cutout,
+          // not the rated limit.
+          effort_fraction_peak: { $type: "array", $items: "f64" },
+          // Motor driver (MOS) temperature, degrees C.
+          driver_temp_c: { $type: "array", $items: "f64" },
+          // Motor winding temperature, degrees C. The vendor's feedback
+          // frame names this byte T_Rotor and ties its protection to "coil
+          // overtemperature"; either way it is the temperature of the
+          // electromagnetically active part, which is what the thresholds
+          // are about.
+          winding_temp_c: { $type: "array", $items: "f64" },
+        },
+      },
+    ],
+  },
+}

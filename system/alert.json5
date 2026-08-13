@@ -1,0 +1,47 @@
+// Operator-facing alerts from any node: a condition that needs attention,
+// raised and cleared by whoever detects it. Robot-agnostic on purpose, so one
+// consumer (a panel, a headset overlay, a logger) renders every producer's
+// alerts without knowing what any of them measure.
+//
+// An alert is identified by (source, kind): a producer raises one by emitting
+// a non-zero severity and retires it by emitting severity 0 for the same pair,
+// so a consumer holds at most one alert per pair. Producers re-emit every
+// active alert at least every 2000 ms, since a consumer that starts late
+// cannot receive a transition that already happened; a consumer ages an
+// alert out a fixed multiple of that ceiling after its arrival, on its own
+// clock, so a producer that dies takes its alerts off every surface rather
+// than leaving them burned in. An aged-out alert means the producer went
+// quiet and its condition is UNKNOWN, not cleared: only severity 0 says
+// cleared.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "alert",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "alerts",
+        // Individually meaningful and low rate: dropping a raise leaves the
+        // operator unwarned and dropping a clear leaves a phantom alert.
+        qos_profile: "reliable",
+        message_format: {
+          // Producer-side time this alert was raised, re-emitted, or cleared.
+          stamp: "time",
+          // What the alert is about, in operator language: the component
+          // and, for a per-motor alert, the motor ("left arm j2").
+          source: "string",
+          // Category of condition, stable per producer: "motor_condition".
+          // Consumers group and route on this without parsing the message.
+          kind: "string",
+          // 0 clears the (source, kind) alert; 1 warning, 2 critical,
+          // 3 fault (the condition already stopped the component).
+          severity: "u8",
+          // Operator-facing one-liner naming the actual measurement.
+          message: "string",
+        },
+      },
+    ],
+  },
+}
