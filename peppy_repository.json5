@@ -1,9 +1,19 @@
 {
   peppy_schema: "repository/v1",
   contracts: {
+    alert: {
+      v1: {
+        path: "system/alert.json5"
+      }
+    },
     episode_recording: {
       v1: {
         path: "recording/episode_recording.json5"
+      }
+    },
+    motor_health: {
+      v1: {
+        path: "robot/motor_health.json5"
       }
     },
     openarm_governor_control: {
