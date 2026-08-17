@@ -1,0 +1,87 @@
+// Episodic dataset recording: a recorder that captures its observed sources
+// into episodes and groups them into sessions. One session is open at a time
+// and record_episode appends one episode to it. The session lifecycle is part
+// of the capability, so the contract carries the full loop: record episodes,
+// finalize the open session into a loadable dataset, and reopen a past
+// session to append more. What a session identifier looks like and where
+// datasets land is the implementer's business; clients treat the identifier
+// as an opaque token, never a path.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "episode_recording",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // Finalize the open session into an immediately loadable dataset and
+        // open a fresh session in place.
+        name: "finish_session",
+        response_message_format: {
+          // Identifier of the finished session; empty when refused.
+          session: "string",
+          // Why the session could not finish; absent on success.
+          error: { $type: "string", $optional: true },
+        },
+      },
+      {
+        // Record into a past session again, appending to its dataset.
+        // Refused when the live sources no longer match what the session
+        // recorded.
+        name: "resume_session",
+        request_message_format: {
+          // Identifier of the session to resume, exactly as finish_session
+          // returned it.
+          session: "string",
+        },
+        response_message_format: {
+          // Identifier of the session now recording; empty when refused.
+          session: "string",
+          // Episodes already saved in the resumed dataset; 0 when refused.
+          episodes: "u64",
+          // Why the session could not resume; absent on success.
+          error: { $type: "string", $optional: true },
+        },
+      },
+    ],
+    actions: [
+      {
+        // One episode: recording runs from goal acceptance until the goal is
+        // cancelled (ending the episode with a save) or fails, and the frames
+        // land in the open session.
+        name: "record_episode",
+        goal_service: {
+          request_message_format: {
+            // Natural-language description of what the episode demonstrates,
+            // stored with the dataset.
+            task: "string",
+          },
+        },
+        feedback_topic: {
+          // One message per recorded frame.
+          qos_profile: "standard",
+          message_format: {
+            // Count of frames written so far, not image data.
+            frames_recorded: "u64",
+            // Remaining space where the dataset lands; the refresh cadence is
+            // the implementer's business.
+            disk_free_bytes: "u64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // Saved episode index; -1 when discarded.
+            episode_index: "i64",
+            // Count of frames captured during the goal.
+            frames_recorded: "u64",
+            // True when the frames were dropped instead of saved.
+            discarded: "bool",
+            // Why the episode ended; absent for a requested stop.
+            error: { $type: "string", $optional: true },
+          },
+        },
+      },
+    ],
+  },
+}

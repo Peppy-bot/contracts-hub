@@ -1,6 +1,11 @@
 {
   peppy_schema: "repository/v1",
   contracts: {
+    episode_recording: {
+      v1: {
+        path: "recording/episode_recording.json5"
+      }
+    },
     openarm_governor_control: {
       v1: {
         path: "openarm/governor_control.json5"
