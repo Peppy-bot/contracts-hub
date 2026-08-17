@@ -23,7 +23,7 @@
         message_format: {
           header: {
             $type: "object",
-            stamp: "time",
+            timestamp: "time",
             frame_id: "u32",
             align_mode: "string",   // e.g. "none" | "depth_to_color" | "color_to_depth"
           },
@@ -42,7 +42,7 @@
         message_format: {
           header: {
             $type: "object",
-            stamp: "time",
+            timestamp: "time",
             frame_id: "u32",
             align_mode: "string",   // e.g. "none" | "depth_to_color" | "color_to_depth"
           },

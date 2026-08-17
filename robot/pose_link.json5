@@ -26,7 +26,7 @@
       qos_profile: "sensor_data",
       message_format: {
         // Leader-side capture time of this setpoint.
-        stamp: "time",
+        timestamp: "time",
         // Desired end-effector position.
         position: { $type: "array", $items: "f64", $length: 3 },
         // Desired end-effector orientation.
@@ -41,7 +41,7 @@
       qos_profile: "sensor_data",
       message_format: {
         // Follower-side capture time of this measurement.
-        stamp: "time",
+        timestamp: "time",
         // Measured end-effector position.
         position: { $type: "array", $items: "f64", $length: 3 },
         // Measured end-effector orientation.

@@ -12,7 +12,7 @@
         message_format: {
           header: {
             $type: "object",
-            stamp: "time",
+            timestamp: "time",
             frame_id: "u32",   // capture counter, not a coordinate frame
           },
           encoding: "string",   // e.g. "rgb8" | "bgr8" | "yuyv" | "mjpeg"

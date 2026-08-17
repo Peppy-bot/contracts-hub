@@ -21,7 +21,7 @@
       // sample wants the next one, not a replay of the last.
       qos_profile: "sensor_data",
       message_format: {
-        stamp: "time",
+        timestamp: "time",
         joint_positions: {
           $type: "array",
           $items: "f64",
@@ -50,7 +50,7 @@
       // a whole planning cycle, so this direction is reliable.
       qos_profile: "reliable",
       message_format: {
-        stamp: "time",
+        timestamp: "time",
         subgoal_id: "u32",
         target_position: {
           $type: "array",
