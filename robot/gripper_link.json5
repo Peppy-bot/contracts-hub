@@ -22,7 +22,7 @@
       qos_profile: "sensor_data",
       message_format: {
         // Leader-side capture time of this setpoint.
-        stamp: "time",
+        timestamp: "time",
         // Desired opening fraction, 0 = closed, 1 = fully open.
         opening: "f64",
         // Maximum effort the follower may exert toward the commanded opening
@@ -40,7 +40,7 @@
       qos_profile: "sensor_data",
       message_format: {
         // Follower-side capture time of this measurement.
-        stamp: "time",
+        timestamp: "time",
         // Measured opening fraction, 0 = closed, 1 = fully open.
         opening: "f64",
         // Measured grip effort in this follower's effort unit (e.g. N*m at

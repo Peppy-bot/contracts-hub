@@ -22,8 +22,8 @@
 // not anything changed: the cadence is what lets a consumer tell a steady
 // robot from a dead producer. A consumer ages a report out a fixed multiple
 // of that mandated cadence after its arrival, on its own clock, and may
-// refuse a report whose `stamp` is already older than its window (every
-// stamp comes from the daemon-resolved clock, so a backlog is detectable);
+// refuse a report whose `timestamp` is already older than its window (every
+// timestamp comes from the daemon-resolved clock, so a backlog is detectable);
 // an aged-out report means the producer went quiet, not that the motors
 // are healthy.
 {
@@ -40,14 +40,14 @@
         qos_profile: "sensor_data",
         message_format: {
           // Producer-side capture time of this report.
-          stamp: "time",
+          timestamp: "time",
           // Evaluated severity per motor: 0 nominal, 1 warning, 2 critical,
           // 3 fault, 4 not reporting. A faulted motor is no longer acting on
           // commands; one that is not reporting has sent nothing recently,
           // so its readings are last-known rather than current.
           level: { $type: "array", $items: "u8" },
           // Instantaneous |effort| as a fraction of the motor's continuous
-          // rating: the sample measured at `stamp`, in the same effort sense
+          // rating: the sample measured at `timestamp`, in the same effort sense
           // joint_link carries (N*m revolute, N prismatic). 1.0 is the rated
           // limit, not the maximum.
           effort_fraction_rated: { $type: "array", $items: "f64" },

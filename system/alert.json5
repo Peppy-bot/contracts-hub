@@ -28,7 +28,7 @@
         qos_profile: "reliable",
         message_format: {
           // Producer-side time this alert was raised, re-emitted, or cleared.
-          stamp: "time",
+          timestamp: "time",
           // What the alert is about, in operator language: the component
           // and, for a per-motor alert, the motor ("left arm j2").
           source: "string",
