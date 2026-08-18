@@ -6,6 +6,11 @@
         path: "system/alert.json5"
       }
     },
+    component_ready: {
+      v1: {
+        path: "robot/component_ready.json5"
+      }
+    },
     episode_recording: {
       v1: {
         path: "recording/episode_recording.json5"
@@ -21,16 +26,6 @@
         path: "openarm/governor_control.json5"
       }
     },
-    openarm_hardware_ready: {
-      v1: {
-        path: "openarm/hardware_ready.json5"
-      }
-    },
-    openarm_robot_initializer: {
-      v1: {
-        path: "openarm/robot_initializer.json5"
-      }
-    },
     postures: {
       v1: {
         path: "robot/postures.json5"
@@ -44,6 +39,11 @@
     rgbd_camera: {
       v1: {
         path: "cameras/rgbd_camera.json5"
+      }
+    },
+    robot_ready: {
+      v1: {
+        path: "robot/robot_ready.json5"
       }
     }
   },
