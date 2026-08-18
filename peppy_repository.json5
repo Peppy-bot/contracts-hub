@@ -41,6 +41,11 @@
         path: "openarm/governor_control.json5"
       }
     },
+    openarm_obstacles: {
+      v1: {
+        path: "openarm/obstacles.json5"
+      }
+    },
     postures: {
       v1: {
         path: "robot/postures.json5"

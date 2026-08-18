@@ -1,0 +1,91 @@
+// Runtime workspace obstacles for one openarm robot: the world-frame convex
+// bodies the self-collision governor keeps both arms off, on top of the robot's
+// own geometry. A contract rather than an operator-node service so the backbone
+// names no operator node, which keeps the backbone <-> operator dependency
+// graph acyclic.
+//
+// The set is not persisted: it dies with the backbone, and a caller that needs
+// an obstacle to outlive a restart adds it again. `list_obstacles` is how a
+// caller sees what is actually in force.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "openarm_obstacles",
+    tag: "v1"
+  },
+  interfaces: {
+    services: [
+      {
+        // Add one convex obstacle, given as a point cloud in either form.
+        // Exactly one of `vertices` and `stl` must be non-empty; both fit the
+        // same convex hull. Refused, with the clearance in `message`, when the
+        // arms are already at or inside the governor's stop distance from it at
+        // either the commanded or the measured pose: an obstacle that starts in
+        // breach freezes the arms instead of governing them. Refused likewise
+        // while the arms are not reporting, when there is no pose to weigh it
+        // against.
+        name: "add_obstacle",
+        request_message_format: {
+          // Names the obstacle for remove_obstacle; must not be a name already
+          // in use, by another obstacle or by the robot's own geometry.
+          name: "string",
+          // World-frame vertices, flat triples [x0, y0, z0, x1, y1, z1, ...] in
+          // metres. Must bound a solid: at least four points, not all coplanar,
+          // and between a millimetre and a kilometre across.
+          vertices: { $type: "array", $items: "f64" },
+          // Binary STL of the obstacle, world-frame and in metres. Only the
+          // vertex cloud is read, so the mesh's own concavities are filled in
+          // by the convex fit.
+          stl: { $type: "array", $items: "u8" },
+          // How far the fitted hull may stand off the cloud (m). Required: it
+          // is a cost the robot pays on every control tick for as long as the
+          // obstacle is live, so the caller states it rather than inheriting a
+          // default. The fit adds supporting planes until the hull is within
+          // this, and every plane is work in the collision scan. A flat-faced
+          // body (a wall, a table, a crate) hulls to its corners and pays
+          // nothing for a tight fit; a curved one needs roughly a hundredth of
+          // its radius, so a 20 cm ball wants 0.002 and a 1 m ball 0.01. Too
+          // tight for the shape is refused by name, not silently charged to the
+          // control loop. Looser is the conservative direction: the hull
+          // contains the cloud either way and only grows.
+          tolerance_m: "f64"
+        },
+        response_message_format: {
+          success: "bool",
+          // Why the request was refused, or the resulting clearance when it
+          // was accepted.
+          message: "string"
+        }
+      },
+      {
+        // Remove one obstacle by name. Refused for a name that is not a live
+        // obstacle's, the robot's own geometry included.
+        name: "remove_obstacle",
+        request_message_format: {
+          name: "string"
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string"
+        }
+      },
+      {
+        // Remove every obstacle, leaving only the robot's own geometry.
+        name: "clear_obstacles",
+        response_message_format: {
+          success: "bool",
+          message: "string"
+        }
+      },
+      {
+        // The obstacles in force, in the order they were added.
+        name: "list_obstacles",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          names: { $type: "array", $items: "string" }
+        }
+      }
+    ]
+  }
+}
