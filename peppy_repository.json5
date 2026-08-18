@@ -26,6 +26,11 @@
         path: "openarm/hardware_ready.json5"
       }
     },
+    openarm_obstacles: {
+      v1: {
+        path: "openarm/obstacles.json5"
+      }
+    },
     openarm_robot_initializer: {
       v1: {
         path: "openarm/robot_initializer.json5"
