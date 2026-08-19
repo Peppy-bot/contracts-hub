@@ -48,8 +48,10 @@
         // drives toward open, regardless of the mechanism's direction.
         // 0.0 when the gripper does not sense effort.
         effort: "f64",
-        // Active effort ceiling (magnitude, same unit as effort): the
-        // largest effort this follower will exert. 0 = no effort control.
+        // The follower's configured effort ceiling (magnitude, same unit as
+        // effort): the largest effort it will exert for any setpoint, which a
+        // commanded max_effort lowers for a tick without restating. A leader
+        // bounds its own cap by this. 0 = no effort control.
         max_effort: "f64",
       },
     },
