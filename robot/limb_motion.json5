@@ -22,9 +22,9 @@
           request_message_format: {
             // Which arm, in the implementer's numbering.
             arm_id: "u8",
-            // Target joint positions (rad), one per joint of the arm in its
-            // fixed joint order.
-            joint_positions: { $type: "array", $items: "f64" },
+            // Target joint positions (rad), in the arm's fixed joint order.
+            // $length will be removed later once `refine` is implemented
+            joint_positions: { $type: "array", $items: "f64", $length: 7 },
             // Requested trajectory duration (s); floored at the implementer's
             // velocity-limit duration. 0 = fastest.
             duration_s: "f64",
@@ -36,9 +36,9 @@
             // message says which.
             success: "bool",
             message: "string",
-            // Measured joint positions (rad) when the action ended, one per
-            // joint of the arm in its fixed joint order.
-            final_joint_positions: { $type: "array", $items: "f64" },
+            // Measured joint positions (rad) when the action ended.
+            // $length will be removed later once `refine` is implemented
+            final_joint_positions: { $type: "array", $items: "f64", $length: 7 },
             // Wall-clock duration of the action (s).
             action_time: "f64",
           },
