@@ -1,7 +1,7 @@
-// Discrete, planned moves of one limb of a multi-arm manipulator, addressed
-// by side id (0 = left, 1 = right): a joint-space arm move, a Cartesian arm
-// move, and a gripper move. Each goal is planned and executed by the
-// implementer and returns a result; they are distinct from the streamed
+// Discrete, planned moves of one limb of a multi-arm manipulator: a
+// joint-space arm move, a Cartesian arm move, and a gripper move, each
+// addressed by a limb id whose numbering is the implementer's business.
+// Each goal is planned and executed by the implementer and returns a result; they are distinct from the streamed
 // setpoints on the joint_link / gripper_link / pose_link pairings.
 //
 // Every Cartesian pose, commanded or reported, is the gripper's grasp point
@@ -20,7 +20,7 @@
         name: "move_arm_joints",
         goal_service: {
           request_message_format: {
-            // Which arm (0 = left, 1 = right).
+            // Which arm, in the implementer's numbering.
             arm_id: "u8",
             // Target joint positions (rad), in the arm's fixed joint order.
             joint_positions: { $type: "array", $items: "f64", $length: 7 },
@@ -46,7 +46,7 @@
         name: "move_arm",
         goal_service: {
           request_message_format: {
-            // Which arm (0 = left, 1 = right).
+            // Which arm, in the implementer's numbering.
             arm_id: "u8",
             // Target grasp-point position, world frame: x, y, z (m).
             position: { $type: "array", $items: "f64", $length: 3 },
@@ -76,7 +76,7 @@
         name: "move_gripper",
         goal_service: {
           request_message_format: {
-            // Which gripper (0 = left, 1 = right).
+            // Which gripper, in the implementer's numbering.
             gripper_id: "u8",
             // Target opening as a fraction of full jaw travel: 0 = closed,
             // 1 = fully open.
