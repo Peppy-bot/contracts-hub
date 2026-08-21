@@ -1,0 +1,61 @@
+// The measured state of every limb of a multi-arm manipulator, as one
+// whole-robot snapshot per message: joint positions, the gripper grasp-point
+// pose of each arm, and each gripper's opening. Names match limb_motion
+// addressing: the same arm and gripper names select limbs there and label
+// them here. Distinct from the streamed per-pair states on the joint_link /
+// gripper_link / pose_link pairings: this is a robot-wide summary any
+// consumer can read without holding a pairing.
+//
+// Slicing rule for the per-arm arrays, all index-aligned with arm_names:
+// - joint_positions concatenates each arm's joints in arm_names order;
+//   arm i's vector starts at the sum of joints_per_arm[0..i] and runs
+//   joints_per_arm[i] entries.
+// - positions carries 3 entries per arm (x, y, z), orientations 4 per arm
+//   (quaternion x, y, z, w), at index i*3 and i*4 respectively.
+// Gripper arrays are index-aligned with gripper_names, independent of the
+// arm arrays.
+//
+// Every grasp-point pose is the gripper's grasp point (on the jaw closing
+// axis midway between the pads), in the implementer's world frame, position
+// in meters and orientation as a unit quaternion [x, y, z, w].
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "limb_state",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "limb_states",
+        // High-frequency stream where only the latest snapshot matters;
+        // occasional drops are acceptable.
+        qos_profile: "sensor_data",
+        message_format: {
+          // Implementer-side capture time of this snapshot.
+          timestamp: "time",
+          // The implementer's fixed set of arm names (e.g. "left_arm"), in
+          // its fixed order.
+          arm_names: { $type: "array", $items: "string" },
+          // Joint count of each arm, index-aligned with arm_names.
+          joints_per_arm: { $type: "array", $items: "u32" },
+          // Measured joint positions (rad), each arm's vector concatenated
+          // in arm_names order per the header's slicing rule.
+          joint_positions: { $type: "array", $items: "f64" },
+          // Measured grasp-point positions, 3 entries (x, y, z, m) per arm
+          // in arm_names order.
+          positions: { $type: "array", $items: "f64" },
+          // Measured grasp-point orientations, 4 entries (quaternion
+          // x, y, z, w) per arm in arm_names order.
+          orientations: { $type: "array", $items: "f64" },
+          // The implementer's fixed set of gripper names (e.g.
+          // "left_gripper"), in its fixed order.
+          gripper_names: { $type: "array", $items: "string" },
+          // Measured opening fraction of each gripper (0 = closed, 1 = fully
+          // open), index-aligned with gripper_names.
+          gripper_openings: { $type: "array", $items: "f64" },
+        },
+      },
+    ],
+  },
+}
