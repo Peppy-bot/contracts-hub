@@ -16,6 +16,11 @@
         path: "recording/episode_recording.json5"
       }
     },
+    limb_motion: {
+      v1: {
+        path: "robot/limb_motion.json5"
+      }
+    },
     motor_health: {
       v1: {
         path: "robot/motor_health.json5"
