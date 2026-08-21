@@ -6,6 +6,11 @@
         path: "system/alert.json5"
       }
     },
+    collision_status: {
+      v1: {
+        path: "robot/collision_status.json5"
+      }
+    },
     component_ready: {
       v1: {
         path: "robot/component_ready.json5"

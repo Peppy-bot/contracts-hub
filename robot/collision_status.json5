@@ -1,0 +1,38 @@
+// Live proximity readout of a robot whose motion authority runs a collision
+// governor: the nearest checked pair's signed surface distance and link
+// names, plus the governor's current disposition of the commanded motion.
+// Emitted continuously at the implementer's readout cadence, live regardless
+// of whether any motion is commanded.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "collision_status",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "collision_status",
+        // High-frequency stream where only the latest reading matters;
+        // occasional drops are acceptable.
+        qos_profile: "sensor_data",
+        message_format: {
+          // Implementer-side capture time of this reading.
+          timestamp: "time",
+          // Signed surface distance (m) of the nearest checked pair: positive
+          // is clearance, negative is penetration depth.
+          distance: "f64",
+          // The two links forming that nearest pair.
+          link_a: "string",
+          link_b: "string",
+          // Disposition of the commanded motion, mutually exclusive: throttled
+          // means it is being scaled down to hold the band, stopped means it
+          // is fully denied at the stop floor. Both false when motion is
+          // unrestricted.
+          throttled: "bool",
+          stopped: "bool",
+        },
+      },
+    ],
+  },
+}
