@@ -39,8 +39,9 @@
           arm_names: { $type: "array", $items: "string" },
           // Joint count of each arm, index-aligned with arm_names.
           joints_per_arm: { $type: "array", $items: "u32" },
-          // Measured joint positions (rad), each arm's vector concatenated
-          // in arm_names order per the header's slicing rule.
+          // Measured joint positions (rad for revolute joints, m for
+          // prismatic), each arm's vector concatenated in arm_names order
+          // per the header's slicing rule.
           joint_positions: { $type: "array", $items: "f64" },
           // Measured grasp-point positions, 3 entries (x, y, z, m) per arm
           // in arm_names order.
