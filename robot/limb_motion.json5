@@ -1,6 +1,6 @@
 // Discrete, planned moves of one limb of a multi-arm manipulator: a
 // joint-space arm move, a Cartesian arm move, and a gripper move, each
-// addressed by a limb id whose numbering is the implementer's business.
+// addressed by a limb name from the implementer's fixed set of names.
 // Each goal is planned and executed by the implementer and returns a result; they are distinct from the streamed
 // setpoints on the joint_link / gripper_link / pose_link pairings.
 //
@@ -20,8 +20,10 @@
         name: "move_arm_joints",
         goal_service: {
           request_message_format: {
-            // Which arm, in the implementer's numbering.
-            arm_id: "u8",
+            // Which arm, named from the implementer's fixed set of limb
+            // names (e.g. "left_arm"). An unknown name is refused in the
+            // result.
+            arm_name: "string",
             // Target joint positions (rad), one per joint of the arm in its
             // fixed joint order.
             joint_positions: { $type: "array", $items: "f64" },
@@ -48,8 +50,10 @@
         name: "move_arm",
         goal_service: {
           request_message_format: {
-            // Which arm, in the implementer's numbering.
-            arm_id: "u8",
+            // Which arm, named from the implementer's fixed set of limb
+            // names (e.g. "left_arm"). An unknown name is refused in the
+            // result.
+            arm_name: "string",
             // Target grasp-point position, world frame: x, y, z (m).
             position: { $type: "array", $items: "f64", $length: 3 },
             // Target grasp-point orientation, quaternion [x, y, z, w].
@@ -78,8 +82,10 @@
         name: "move_gripper",
         goal_service: {
           request_message_format: {
-            // Which gripper, in the implementer's numbering.
-            gripper_id: "u8",
+            // Which gripper, named from the implementer's fixed set of
+            // gripper names (e.g. "left_gripper"). An unknown name is
+            // refused in the result.
+            gripper_name: "string",
             // Target opening as a fraction of full jaw travel: 0 = closed,
             // 1 = fully open.
             opening: "f64",

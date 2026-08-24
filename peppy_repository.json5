@@ -6,6 +6,11 @@
         path: "system/alert.json5"
       }
     },
+    collision_status: {
+      v1: {
+        path: "robot/collision_status.json5"
+      }
+    },
     component_ready: {
       v1: {
         path: "robot/component_ready.json5"
@@ -19,6 +24,11 @@
     limb_motion: {
       v1: {
         path: "robot/limb_motion.json5"
+      }
+    },
+    limb_state: {
+      v1: {
+        path: "robot/limb_state.json5"
       }
     },
     motor_health: {
