@@ -73,9 +73,13 @@
             // nothing about where the arm finally stops. Read final_position and
             // final_orientation for that.
             //
-            // Position slack (m). 0 = the implementer's planner default.
+            // Position slack (m): the Euclidean distance between the
+            // commanded and planned grasp-point positions. 0 = the
+            // implementer's planner default.
             plan_position_tolerance_m: "f64",
-            // Orientation slack (rad). 0 = the implementer's planner default.
+            // Orientation slack (rad): the geodesic angle between the
+            // commanded and planned orientations, q and -q naming one
+            // rotation. 0 = the implementer's planner default.
             plan_orientation_tolerance_rad: "f64",
           },
         },
