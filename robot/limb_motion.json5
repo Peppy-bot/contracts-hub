@@ -61,6 +61,22 @@
             // Requested trajectory duration (s); floored at the implementer's
             // velocity-limit duration. 0 = fastest.
             duration_s: "f64",
+            // Not every arm can meet a position and an orientation at once. An
+            // arm with fewer than six actuated joints cannot generally do both,
+            // and even a redundant one runs out of postures near its limits. So
+            // rather than let the implementer decide how close is close enough,
+            // the caller names the slack it will accept and the goal is planned
+            // within it. A goal that no solution reaches inside both tolerances
+            // is rejected rather than quietly approximated.
+            //
+            // They bound the plan, not the path taken to it, and they promise
+            // nothing about where the arm finally stops. Read final_position and
+            // final_orientation for that.
+            //
+            // Position slack (m). 0 = the implementer's planner default.
+            plan_position_tolerance_m: "f64",
+            // Orientation slack (rad). 0 = the implementer's planner default.
+            plan_orientation_tolerance_rad: "f64",
           },
         },
         result_service: {
