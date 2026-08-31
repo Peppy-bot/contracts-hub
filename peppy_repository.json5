@@ -61,37 +61,5 @@
         path: "robot/robot_ready.json5"
       }
     }
-  },
-  pairings: {
-    deliberation: {
-      v1: {
-        path: "example_robot/deliberation.json5"
-      }
-    },
-    gripper_link: {
-      v1: {
-        path: "robot/gripper_link.json5"
-      }
-    },
-    joint_link: {
-      v1: {
-        path: "robot/joint_link.json5"
-      }
-    },
-    pose_link: {
-      v1: {
-        path: "robot/pose_link.json5"
-      }
-    },
-    sim_rgb_camera_link: {
-      v1: {
-        path: "cameras/sim_rgb_camera_link.json5"
-      }
-    },
-    sim_rgbd_camera_link: {
-      v1: {
-        path: "cameras/sim_rgbd_camera_link.json5"
-      }
-    }
   }
 }
