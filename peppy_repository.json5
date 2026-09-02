@@ -60,6 +60,11 @@
       v1: {
         path: "robot/robot_ready.json5"
       }
+    },
+    scene_control: {
+      v1: {
+        path: "simulation/scene_control.json5"
+      }
     }
   }
 }
