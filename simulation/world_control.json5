@@ -1,0 +1,59 @@
+// Choosing what a simulation engine simulates while it runs: the worlds
+// the engine can stand up (a robot, or several, with the pairing slots
+// mapped onto their limbs) and the switch from the running one to another.
+// The companion of scene_control, which edits the objects around whatever
+// robot is running: an engine that keeps one world for its life implements
+// scene_control alone, an engine that can restart on another world adds
+// this, and a commander binds this contract through an optional slot so
+// it drives either.
+//
+// A world switch is a restart of the simulation on the new world: the new
+// robot starts at its own initial pose in its world's own opening scene
+// with nothing spawned, the engine's limb and camera slots stay bound but
+// carry the new robot's joints (a slot the new world maps nothing onto
+// falls silent), and a viewer of the engine sees the new model.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "world_control",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // The worlds the engine can run, as a JSON array in worlds_json.
+        // Every entry carries at least world_id, display_name, robot (the
+        // id of the robot the world stands) and current (true for exactly
+        // the world running now); implementers may add engine-specific
+        // fields.
+        name: "get_worlds_list",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          worlds_json: "string",
+        },
+      },
+    ],
+    actions: [
+      {
+        // Restart the simulation on the world named by world_id. Naming
+        // the running world restarts it. The goal completes once the new
+        // world is simulating and serving its slots, or with the reason the
+        // switch was refused or failed, in which case the previous world
+        // keeps running untouched.
+        name: "load_world",
+        goal_service: {
+          request_message_format: {
+            world_id: "string",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            success: "bool",
+            message: "string",
+          },
+        },
+      },
+    ],
+  },
+}

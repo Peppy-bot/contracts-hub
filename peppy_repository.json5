@@ -65,6 +65,11 @@
       v1: {
         path: "simulation/scene_control.json5"
       }
+    },
+    world_control: {
+      v1: {
+        path: "simulation/world_control.json5"
+      }
     }
   }
 }
