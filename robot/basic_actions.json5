@@ -1,0 +1,288 @@
+// Environment-aware manipulation on a multi-limb robot: find an item, pick it
+// up, and put it down again. Each action is a whole sequence, planned and
+// carried out by the implementer, and returns a result when the sequence
+// ends. They sit above limb_motion, whose moves command one limb at a time
+// and carry no knowledge of what the limb is reaching for.
+//
+// Every pose, commanded or reported, is in the implementer's world frame,
+// position in meters and orientation as a unit quaternion [x, y, z, w]. An
+// item's pose is the pose the implementer would drive a gripper's grasp point
+// to in order to take it. Grippers are named from the implementer's fixed set
+// of gripper names.
+//
+// A position says where and is always required. An orientation says how and
+// is optional wherever it appears: absent on a goal leaves the choice to the
+// implementer, and absent on a result means the implementer never resolved
+// it. Neither side has to invent a quaternion it does not mean, so a caller
+// can tell a chosen orientation from one that was merely filled in.
+//
+// One sequence at a time. A goal that arrives while another sequence is
+// running is refused and the running sequence continues untouched; the
+// refusal names the running action. A caller that wants the robot regardless
+// aborts first. This is what keeps two callers, an operator and an autonomous
+// planner among them, from interleaving sequences on one robot.
+//
+// abort stops whichever sequence is running and leaves the robot standing
+// where the stop left it, still holding whatever it held. It is distinct from
+// cancelling a goal: a cancel travels over the goal's own handle and so is
+// available only to the caller that issued it, while abort is a goal in its
+// own right that any caller can issue. abort against an idle robot succeeds
+// and reports that no sequence was running.
+//
+// An item identifier is minted by identify_item and names that one item for
+// as long as the implementer can still account for it. An identifier the
+// implementer no longer recognises is refused in the result. Identifiers are
+// opaque: callers compare them and pass them back, and read nothing into
+// their text.
+//
+// A gripper's held flag is set when grab_item succeeds on it and cleared when
+// drop_item or place_item succeeds on it. A refused, failed, or aborted
+// sequence leaves the flag as it was, so a grab that fails partway does not
+// report an item the gripper never closed on.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "basic_actions",
+    tag: "v1",
+  },
+  interfaces: {
+    actions: [
+      {
+        name: "identify_item",
+        goal_service: {
+          request_message_format: {
+            // What to look for, in the caller's own words. Empty asks the
+            // implementer for the item it judges most prominent among those
+            // it can act on. A description matching nothing is reported as a
+            // failure in the result, not as a refusal. When several items
+            // match, the implementer reports the one it judges best; one
+            // item per result.
+            description: "string",
+            // Upper bound on the search (s); the implementer returns as soon
+            // as it has an answer. 0 = the implementer's default.
+            timeout_s: "f64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the search was refused, found nothing, failed, was
+            // cancelled, or was aborted; message says which. Refused before
+            // searching when another sequence is running or no perception
+            // source is available. All other fields are zero or empty when
+            // success is false.
+            success: "bool",
+            message: "string",
+            // Identifier minted for the item that was found, to be passed to
+            // grab_item.
+            item_id: "string",
+            // What the implementer recognised the item as, in whatever
+            // vocabulary it uses. Empty when it has no name for the item.
+            label: "string",
+            // Item position, world frame: x, y, z (m).
+            position: { $type: "array", $items: "f64", $length: 3 },
+            // Item orientation, quaternion [x, y, z, w]. Absent when the
+            // implementer located the item without resolving how it is
+            // turned, which is the honest answer for a symmetric item and
+            // for a detector that reports position alone. A caller that
+            // passes item_id to grab_item leaves the approach to the
+            // implementer; one that grasps by pose supplies its own.
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
+            // How sure the implementer is of this identification, 0 to 1.
+            // 0 when the implementer reports no confidence of its own.
+            confidence: "f64",
+            // Wall-clock duration of the action (s).
+            action_time: "f64",
+          },
+        },
+      },
+      {
+        name: "grab_item",
+        goal_service: {
+          request_message_format: {
+            // Which gripper closes on the item, named from the implementer's
+            // fixed set of gripper names (e.g. "left_gripper"). An unknown
+            // name is refused in the result, as is a gripper that already
+            // holds an item. Empty leaves the choice to the implementer,
+            // which picks a free gripper suited to the item's position and
+            // is refused in the result when none is free. The result names
+            // the gripper that took the item either way.
+            gripper_name: "string",
+            // Identifier of an item a previous identify_item found. Empty
+            // hands the grasp pose below to the implementer instead, so a
+            // caller that already knows where to reach needs no identify_item
+            // first. An identifier the implementer no longer recognises is
+            // refused in the result.
+            item_id: "string",
+            // Grasp-point position, world frame: x, y, z (m). Read only when
+            // item_id is empty.
+            position: { $type: "array", $items: "f64", $length: 3 },
+            // Grasp-point orientation, quaternion [x, y, z, w]. Read only
+            // when item_id is empty. Absent asks the implementer to approach
+            // the position however it judges best, the same freedom it has
+            // when the goal names an item_id instead.
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
+            // Maximum effort the gripper may exert closing on the item
+            // (magnitude, in the gripper's effort unit). 0 = no preference;
+            // the implementer's configured ceiling applies.
+            max_effort: "f64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the grasp was refused, failed, cancelled, or
+            // aborted; message says which. Refused before reaching when
+            // another sequence is running, the named gripper is unknown or
+            // already holds an item, no gripper is free for a goal that
+            // named none, or the item_id is one the implementer no longer
+            // recognises. All other fields are zero or empty when success is
+            // false.
+            success: "bool",
+            message: "string",
+            // Gripper that now holds the item, from the implementer's fixed
+            // set of gripper names. It repeats the goal's name, or names the
+            // one the implementer chose when the goal left it empty, so the
+            // caller knows which gripper to address with drop_item or
+            // place_item.
+            gripper_name: "string",
+            // Identifier of the item the gripper now holds. It repeats the
+            // goal's identifier, or names one the implementer minted for an
+            // item the goal addressed by pose, so the held item is always
+            // addressable afterwards.
+            item_id: "string",
+            // Wall-clock duration of the action (s).
+            action_time: "f64",
+          },
+        },
+      },
+      {
+        name: "drop_item",
+        goal_service: {
+          request_message_format: {
+            // Which gripper releases, named from the implementer's fixed set
+            // of gripper names. Empty means the gripper currently holding an
+            // item; refused in the result when none or more than one holds.
+            // An unknown name is refused in the result, as is a gripper
+            // holding nothing. The item is released where the gripper
+            // already is; place_item carries it somewhere first.
+            gripper_name: "string",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the release was refused, failed, cancelled, or
+            // aborted; message says which. Refused before releasing when
+            // another sequence is running, the named gripper is unknown or
+            // holds nothing, or the name is empty while no gripper or more
+            // than one holds. All other fields are zero or empty when
+            // success is false.
+            success: "bool",
+            message: "string",
+            // Gripper that released the item, from the implementer's fixed
+            // set of gripper names.
+            gripper_name: "string",
+            // Identifier of the item that was released, as grab_item
+            // reported it.
+            item_id: "string",
+            // Wall-clock duration of the action (s).
+            action_time: "f64",
+          },
+        },
+      },
+      {
+        name: "place_item",
+        goal_service: {
+          request_message_format: {
+            // Which gripper carries and releases the item, named from the
+            // implementer's fixed set of gripper names. Empty means the
+            // gripper currently holding an item; refused in the result when
+            // none or more than one holds. An unknown name is refused in the
+            // result, as is a gripper holding nothing.
+            gripper_name: "string",
+            // Grasp-point position when the jaws open, world frame:
+            // x, y, z (m). It is where the gripper lets go, not a waypoint
+            // on the way there.
+            position: { $type: "array", $items: "f64", $length: 3 },
+            // Grasp-point orientation when the jaws open, quaternion
+            // [x, y, z, w]. Absent leaves it to the implementer, which is
+            // what a caller means when it cares where the item ends up and
+            // not which way it faces.
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the placement was refused, failed, cancelled, or
+            // aborted; message says which. Refused before carrying when
+            // another sequence is running, the named gripper is unknown or
+            // holds nothing, the name is empty while no gripper or more than
+            // one holds, or the target is one the implementer cannot reach,
+            // which it refuses rather than approximates. All other fields
+            // are zero or empty when success is false.
+            success: "bool",
+            message: "string",
+            // Gripper that placed the item, from the implementer's fixed set
+            // of gripper names.
+            gripper_name: "string",
+            // Identifier of the item that was placed, as grab_item reported
+            // it.
+            item_id: "string",
+            // Measured grasp-point position when the jaws opened, world
+            // frame: x, y, z (m).
+            final_position: { $type: "array", $items: "f64", $length: 3 },
+            // Wall-clock duration of the action (s).
+            action_time: "f64",
+          },
+        },
+      },
+      {
+        name: "abort",
+        goal_service: {
+          request_message_format: {
+            // Why the sequence is being stopped, recorded by the implementer
+            // alongside the abort. Empty is accepted.
+            reason: "string",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False only when the abort itself could not be carried out;
+            // message says why. An abort with no sequence running succeeds.
+            success: "bool",
+            message: "string",
+            // Name of the action that was stopped, as it appears in this
+            // contract. Empty when no sequence was running.
+            aborted_action: "string",
+            // Wall-clock duration of the action (s).
+            action_time: "f64",
+          },
+        },
+      },
+    ],
+    services: [
+      {
+        // What the implementer is doing and what it is holding, as of this
+        // call. It answers "is action X being performed?" by comparing X
+        // against current_action, and "is the robot holding an item?" from
+        // the per-gripper arrays.
+        name: "get_state",
+        response_message_format: {
+          // Name of the sequence running now, as it appears in this contract
+          // (e.g. "grab_item"). Empty when no sequence is running, which is
+          // also when a new goal is accepted.
+          current_action: "string",
+          // How long the running sequence has been going (s). 0 when none is
+          // running.
+          current_action_elapsed_s: "f64",
+          // The implementer's fixed set of gripper names, in a stable order.
+          // The two arrays below carry one entry per gripper in this order.
+          gripper_names: { $type: "array", $items: "string" },
+          // True where that gripper holds an item.
+          holding: { $type: "array", $items: "bool" },
+          // Identifier of the item that gripper holds, addressable by
+          // drop_item and place_item. Empty where holding is false.
+          held_item_ids: { $type: "array", $items: "string" },
+        },
+      },
+    ],
+  },
+}
