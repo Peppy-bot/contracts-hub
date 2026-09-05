@@ -22,12 +22,14 @@
 // aborts first. This is what keeps two callers, an operator and an autonomous
 // planner among them, from interleaving sequences on one robot.
 //
-// abort stops whichever sequence is running and leaves the robot standing
-// where the stop left it, still holding whatever it held. It is distinct from
-// cancelling a goal: a cancel travels over the goal's own handle and so is
-// available only to the caller that issued it, while abort is a goal in its
-// own right that any caller can issue. abort against an idle robot succeeds
-// and reports that no sequence was running.
+// abort is the one goal admitted while a sequence is running: it stops that
+// sequence and returns once the robot has come to rest, standing where the
+// stop left it. A cancel on a running goal's own handle stops the robot the
+// same way; the two differ only in who may issue them, since a cancel is
+// available only to the caller holding the handle while abort is a goal in
+// its own right that any caller can issue. abort never appears as
+// current_action in get_state, and abort against an idle robot succeeds and
+// reports that no sequence was running.
 //
 // An item identifier is minted by identify_item and names that one item for
 // as long as the implementer can still account for it. An identifier the
@@ -36,9 +38,12 @@
 // their text.
 //
 // A gripper's held flag is set when grab_item succeeds on it and cleared when
-// drop_item or place_item succeeds on it. A refused, failed, or aborted
-// sequence leaves the flag as it was, so a grab that fails partway does not
-// report an item the gripper never closed on.
+// drop_item or place_item succeeds on it. A refused, failed, cancelled, or
+// aborted sequence leaves the flag as it was. The flag follows results, not
+// the jaws: a sequence stopped partway can leave the gripper holding what the
+// flag does not report, or the reverse, and the flag stays as it was until a
+// later grab_item, drop_item, or place_item succeeds. get_state reports the
+// flag.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -114,7 +119,7 @@
             // refused in the result.
             item_id: "string",
             // Grasp-point position, world frame: x, y, z (m). Read only when
-            // item_id is empty.
+            // item_id is empty; a goal that names an item_id sends zeros here.
             position: { $type: "array", $items: "f64", $length: 3 },
             // Grasp-point orientation, quaternion [x, y, z, w]. Read only
             // when item_id is empty. Absent asks the implementer to approach
