@@ -6,11 +6,6 @@
         path: "system/alert.json5"
       }
     },
-    basic_actions: {
-      v1: {
-        path: "robot/basic_actions.json5"
-      }
-    },
     collision_status: {
       v1: {
         path: "robot/collision_status.json5"
@@ -24,6 +19,16 @@
     episode_recording: {
       v1: {
         path: "recording/episode_recording.json5"
+      }
+    },
+    item_manipulation: {
+      v1: {
+        path: "robot/item_manipulation.json5"
+      }
+    },
+    item_perception: {
+      v1: {
+        path: "robot/item_perception.json5"
       }
     },
     limb_motion: {
