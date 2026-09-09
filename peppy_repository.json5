@@ -26,6 +26,16 @@
         path: "recording/episode_recording.json5"
       }
     },
+    item_manipulation: {
+      v1: {
+        path: "robot/item_manipulation.json5"
+      }
+    },
+    item_perception: {
+      v1: {
+        path: "robot/item_perception.json5"
+      }
+    },
     limb_motion: {
       v1: {
         path: "robot/limb_motion.json5"

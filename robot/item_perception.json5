@@ -1,0 +1,83 @@
+// Finding an item for a multi-limb robot to act on: one search, one item,
+// one identifier. The implementer looks with whatever perception it has and
+// reports the item it judges best, minting an item identifier that
+// item_manipulation's grab_item accepts, so a caller can hand what was found
+// straight to a grasp without restating where it is. The search is a whole
+// sequence the implementer carries out and returns a result for when it ends.
+//
+// The pose reported is in the implementer's world frame, position in meters
+// and orientation as a unit quaternion [x, y, z, w]. An item's pose is the
+// pose the implementer would drive a gripper's grasp point to in order to
+// take it, the same convention item_manipulation commands by.
+//
+// A position says where and is always required. An orientation says how and
+// is optional: absent means the implementer never resolved it, which is the
+// honest answer for a symmetric item and for a detector that reports position
+// alone, so a caller can tell a resolved orientation from one that was merely
+// filled in.
+//
+// An item identifier names that one item for as long as the implementer can
+// still account for it; item_manipulation refuses one the implementer no
+// longer recognises. Identifiers are opaque: callers compare them and pass
+// them back, and read nothing into their text.
+//
+// One search at a time. A goal that arrives while a search is running is
+// refused and the running search continues untouched.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "item_perception",
+    tag: "v1",
+  },
+  interfaces: {
+    actions: [
+      {
+        name: "identify_item",
+        goal_service: {
+          request_message_format: {
+            // What to look for, in the caller's own words. Empty asks the
+            // implementer for the item it judges most prominent among those
+            // it can act on. A description matching nothing is reported as a
+            // failure in the result, not as a refusal. When several items
+            // match, the implementer reports the one it judges best; one
+            // item per result.
+            description: "string",
+            // Upper bound on the search (s); the implementer returns as soon
+            // as it has an answer. 0 = the implementer's default.
+            timeout_s: "f64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the search was refused, found nothing, failed, or
+            // was cancelled; message says which. Refused before searching
+            // when another search is running or no perception source is
+            // available. All other fields are zero or empty when success is
+            // false.
+            success: "bool",
+            message: "string",
+            // Identifier minted for the item that was found, to be passed to
+            // item_manipulation's grab_item.
+            item_id: "string",
+            // What the implementer recognised the item as, in whatever
+            // vocabulary it uses. Empty when it has no name for the item.
+            label: "string",
+            // Item position, world frame: x, y, z (m).
+            position: { $type: "array", $items: "f64", $length: 3 },
+            // Item orientation, quaternion [x, y, z, w]. Absent when the
+            // implementer located the item without resolving how it is
+            // turned. A caller that passes item_id to grab_item leaves the
+            // approach to the implementer; one that grasps by pose supplies
+            // its own.
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
+            // How sure the implementer is of this identification, 0 to 1.
+            // 0 when the implementer reports no confidence of its own.
+            confidence: "f64",
+            // Wall-clock duration of the action (s).
+            action_time: "f64",
+          },
+        },
+      },
+    ],
+  },
+}
