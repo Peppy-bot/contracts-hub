@@ -86,6 +86,11 @@
         path: "simulation/scene_control.json5"
       }
     },
+    simulation_robot: {
+      v1: {
+        path: "simulation/simulation_robot.json5"
+      }
+    },
     sensor_readout: {
       v1: {
         path: "simulation/sensor_readout.json5"
