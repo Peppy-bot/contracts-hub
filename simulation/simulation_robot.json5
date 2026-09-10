@@ -5,11 +5,14 @@
 // attachments apart by the caller's core node and instance id, so no message
 // carries a robot id, and one attachment instance is one robot.
 //
-// Limb order: the attach response lists the model's arm and gripper names,
-// and every `arms` / `grippers` array in this contract follows that order.
-// Units are those of joint_link and gripper_link: joint positions in radians
-// (metres for prismatic joints), gripper openings as a fraction of full
-// travel (0 closed, 1 open), efforts in newtons.
+// Limb order: the attach response lists the model's arm and gripper names
+// and the joints of each arm, and every `arms` / `grippers` array in this
+// contract follows that order. Units are those of joint_link and
+// gripper_link: joint positions in radians (metres for prismatic joints),
+// gripper openings as a fraction of full travel (0 closed, 1 open), and
+// gripper efforts in the engine's own effort unit for that gripper (N*m at
+// a revolute finger's joint, N at a prismatic one), as gripper_link
+// defines them.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -44,15 +47,17 @@
               $type: "object",
               commanded: "bool",
               opening: "f64",
-              // The force the gripper may apply; 0 leaves the model's own
-              // limit as the only one.
+              // The force the gripper may apply, in this gripper's effort
+              // unit; 0 leaves the model's own limit as the only one.
               max_effort: "f64",
             },
           },
         },
         response_message_format: {
-          // False when the caller is not attached or the arrays do not
-          // match its model; message says why.
+          // False when the caller is not attached, or a limb of the command
+          // does not match its model (a wrong joint count, a value that is
+          // not a number); message says which. A command the engine refuses
+          // changes no limb, and the robot holds what it had.
           success: "bool",
           message: "string",
         },
@@ -62,11 +67,13 @@
       {
         // Joins the scene. The goal is accepted when the model is in the
         // engine's catalogue and the placement is free, and it runs for as
-        // long as the robot is in the scene: feedback is the robot's
-        // measured state on the engine's state grid, cancelling the goal
-        // removes the robot, and the engine completes the goal itself when
-        // it removes the robot (a lapsed lease, its own shutdown). A second
-        // attach from the same caller replaces its earlier one.
+        // long as the robot is in the scene: feedback carries the robot's
+        // measured state on the engine's own grid, published without
+        // waiting for anyone, so subscribe to it as sensor data and drain
+        // it as it arrives. Cancelling the goal removes the robot, and the engine
+        // completes the goal itself when it removes the robot (a lapsed
+        // lease, its own shutdown), saying why. A caller holds one seat: a
+        // second attach while the first stands is refused.
         name: "attach",
         goal_service: {
           request_message_format: {
@@ -87,12 +94,16 @@
             // The model's limbs, in the order every arms / grippers array
             // of this contract uses.
             arm_names: { $type: "array", $items: "string" },
+            // Joints of each arm, index-aligned with arm_names: how many
+            // values that arm's positions and velocities carry.
+            arm_joints: { $type: "array", $items: "u32" },
             gripper_names: { $type: "array", $items: "string" },
           },
         },
         feedback_topic: {
           message_format: {
-            // The engine's capture time of this state.
+            // The engine's capture time of this state, so a caller reading
+            // behind the engine can tell how far behind it is.
             timestamp: "time",
             arms: {
               $type: "array",
