@@ -1,28 +1,37 @@
-// Finding an item for a multi-limb robot to act on: one search, one item,
-// one identifier. The implementer looks with whatever perception it has and
-// reports the item it judges best, minting an item identifier that
-// item_manipulation's grab_item accepts, so a caller can hand what was found
-// straight to a grasp without restating where it is. The search is a whole
-// sequence the implementer carries out and returns a result for when it ends.
+// Finding items for a multi-limb robot to act on: a scan that reports every
+// item the implementer can see and act on, and a search that reports the one
+// item best matching a description. The implementer looks with whatever
+// perception it has and mints an item identifier for each item it reports,
+// the identifier item_manipulation's grab_item accepts, so a caller can hand
+// what was found straight to a grasp without restating where it is. Each
+// action is a whole sequence the implementer carries out and returns a result
+// for when it ends.
 //
-// The pose reported is in the implementer's world frame, position in meters
-// and orientation as a unit quaternion [x, y, z, w]. An item's pose is the
-// pose the implementer would drive a gripper's grasp point to in order to
-// take it, the same convention item_manipulation commands by.
+// Every position reported is in the implementer's world frame, in meters,
+// and an orientation, where an action reports one, is a unit quaternion
+// [x, y, z, w]. An item's pose is the pose the implementer would drive a
+// gripper's grasp point to in order to take it, the same convention
+// item_manipulation commands by.
 //
-// A position says where and is always required. An orientation says how and
-// is optional: absent means the implementer never resolved it, which is the
-// honest answer for a symmetric item and for a detector that reports position
-// alone, so a caller can tell a resolved orientation from one that was merely
-// filled in.
+// A position says where and is always reported. An orientation says how and
+// is optional where it appears: absent means the implementer never resolved
+// it, which is the honest answer for a symmetric item and for a detector that
+// reports position alone, so a caller can tell a resolved orientation from
+// one that was merely filled in. A scan reports positions alone; a caller
+// that needs how an item is turned asks identify_item for it, or hands the
+// item to grab_item and leaves the approach to the implementer.
 //
 // An item identifier names that one item for as long as the implementer can
 // still account for it; item_manipulation refuses one the implementer no
 // longer recognises. Identifiers are opaque: callers compare them and pass
-// them back, and read nothing into their text.
+// them back, and read nothing into their text. Both actions mint from one
+// set: an identifier from either is valid wherever an item_id is taken, and
+// a later scan or search that recognises an item it already reported keeps
+// that item's identifier rather than minting another, so the handles a
+// caller holds survive looking again.
 //
-// One search at a time. A goal that arrives while a search is running is
-// refused and the running search continues untouched.
+// One search at a time, scan and identify alike. A goal that arrives while a
+// search is running is refused and the running search continues untouched.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -31,6 +40,45 @@
   },
   interfaces: {
     actions: [
+      {
+        name: "scan_items",
+        goal_service: {
+          request_message_format: {
+            // Upper bound on the scan (s); the implementer returns as soon
+            // as it has looked. 0 = the implementer's default.
+            timeout_s: "f64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the scan was refused, failed, or was cancelled;
+            // message says which. Refused before scanning when another
+            // search is running or no perception source is available. A
+            // scene with no items is a success with empty arrays. All
+            // arrays are empty when success is false.
+            success: "bool",
+            message: "string",
+            // One entry per item found, in the implementer's order; the
+            // arrays below are index aligned with this one. Identifiers are
+            // the ones identify_item and item_manipulation address.
+            item_ids: { $type: "array", $items: "string" },
+            // What the implementer recognised each item as, in whatever
+            // vocabulary it uses; empty where it has no name for the item.
+            // Labels may repeat: two items of one kind get one label each
+            // and distinct identifiers, and callers tell them apart by
+            // position.
+            labels: { $type: "array", $items: "string" },
+            // Item positions, world frame: 3 entries (x, y, z, m) per item,
+            // in item_ids order.
+            positions: { $type: "array", $items: "f64" },
+            // How sure the implementer is of each identification, 0 to 1.
+            // 0 where the implementer reports no confidence of its own.
+            confidences: { $type: "array", $items: "f64" },
+            // Wall-clock duration of the action (s).
+            action_time: "f64",
+          },
+        },
+      },
       {
         name: "identify_item",
         goal_service: {
