@@ -1,14 +1,23 @@
 // The ground truth of the objects a simulation engine spawned through
-// scene_control: where each one is right now and how fast it moves,
-// streamed on the engine's own state cadence. A consumer can judge a
-// task from this (the cube came to rest in the tray) without holding a
-// pairing or polling get_objects_list. Object ids are the ones
-// scene_control minted; a message carries one record per spawned object,
-// whatever its physics, and an empty list when nothing is spawned.
+// scene_control: what each one is, where it is right now and how fast it
+// moves. One snapshot, read two ways from the same state: streamed on the
+// engine's own state cadence (object_states), and answered on demand
+// (get_object_states), for example by a scene commander that refreshes its
+// list after an edit. A consumer can judge a task from this (the cube came
+// to rest in the tray) without holding a pairing. Object ids are the ones
+// scene_control minted; a snapshot carries one record per spawned object,
+// whatever its physics, and an empty list when nothing is spawned. Only
+// spawned objects are listed, never the robot's links or the scene's
+// backdrop.
+//
+// Every snapshot is complete: a dropped message needs no replay, the next
+// one replaces it. A snapshot's timestamp is when the implementer captured
+// it, never when it was requested or sent, on the same clock for both
+// reads.
 //
 // Ground truth is a debugging surface and stays inside the peppy
-// framework: harness tests, recorders and the evaluation of a trained
-// behaviour (did the cube end up in the tray) read it. No
+// framework: harness tests, recorders, scene commanders and the evaluation
+// of a trained behaviour (did the cube end up in the tray) read it. No
 // mcp_exposure/v1 document ever selects a member of this contract. An
 // MCP endpoint is the one surface a model drives on the real robot and
 // in simulation alike, and the real world has no ground truth to
@@ -19,7 +28,9 @@
 // Poses are world frame: position in metres, orientation a unit
 // quaternion [x, y, z, w]. Velocities are world axes, taken at the
 // object's origin: linear in m/s, angular in rad/s. Static and
-// visual-only objects report a fixed pose and zero velocities.
+// visual-only objects report a fixed pose and zero velocities. Mass (kg)
+// and scale are the ones the object was spawned with; only a dynamic
+// object simulates its mass.
 //
 // What an object touches is not here: contact_state lists every contact
 // the engine resolves, from both sides, naming a spawned object by the
@@ -50,6 +61,45 @@
               asset_id: "string",
               // "dynamic", "static" or "none", as spawned.
               physics: "string",
+              mass: "f64",
+              scale: "f64",
+              position: { $type: "array", $items: "f64", $length: 3 },
+              orientation: { $type: "array", $items: "f64", $length: 4 },
+              linear_velocity: { $type: "array", $items: "f64", $length: 3 },
+              angular_velocity: { $type: "array", $items: "f64", $length: 3 },
+            },
+          },
+        },
+      },
+    ],
+    services: [
+      {
+        // The latest snapshot, on demand: the same records the stream
+        // carries, from the same state. Answered before the first streamed
+        // snapshot, and once a scene_control goal has completed, the
+        // snapshot includes its edit.
+        name: "get_object_states",
+        response_message_format: {
+          // False when the implementer has no object state to report (it
+          // does not inspect its scene, or is not ready yet; message says
+          // why). Never an empty scene, which is success with no objects.
+          // timestamp and objects carry nothing then.
+          success: "bool",
+          message: "string",
+          // Implementer-side capture time of this snapshot.
+          timestamp: "time",
+          // One record per spawned object, in the implementer's order.
+          objects: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              object_id: "string",
+              // The asset it was spawned from.
+              asset_id: "string",
+              // "dynamic", "static" or "none", as spawned.
+              physics: "string",
+              mass: "f64",
+              scale: "f64",
               position: { $type: "array", $items: "f64", $length: 3 },
               orientation: { $type: "array", $items: "f64", $length: 4 },
               linear_velocity: { $type: "array", $items: "f64", $length: 3 },
