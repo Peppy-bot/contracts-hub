@@ -59,6 +59,11 @@
           // not a number); message says which. A command the engine refuses
           // changes no limb, and the robot holds what it had.
           success: "bool",
+          // True while the engine is still standing this robot: it has no
+          // limbs yet, so the command wrote none, and the next one lands
+          // once it is seated. A robot that keeps commanding through its
+          // own join reads this rather than the message text.
+          joining: "bool",
           message: "string",
         },
       },
