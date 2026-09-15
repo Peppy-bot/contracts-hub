@@ -1,19 +1,22 @@
 // The ground truth of the objects a simulation engine spawned through
 // scene_manipulation: what each one is, where it is right now and how fast it
-// moves. One snapshot, read two ways from the same state: streamed on the
-// engine's own state cadence (object_states), and answered on demand
-// (get_object_states), for example by a scene commander that refreshes its
-// list after an edit. A consumer can judge a task from this (the cube came
-// to rest in the tray) without holding a pairing. Object ids are the ones
-// scene_manipulation minted; a snapshot carries one record per spawned object,
-// whatever its physics, and an empty list when nothing is spawned. Only
-// spawned objects are listed, never the robot's links or the scene's
-// backdrop.
+// moves. One record, read two ways from the same state: the stream
+// (object_states) publishes the implementer's captures on its own state
+// cadence, and get_object_states answers its latest capture on demand, for
+// example to a scene commander that refreshes its list after an edit. That
+// capture can be one the stream never carried: an implementer captures again
+// when a scene edit completes. A consumer can judge a task from this (the
+// cube came to rest in the tray) without holding a pairing. Object ids are
+// the ones scene_manipulation minted; a snapshot carries one record per
+// spawned object, whatever its physics, and an empty list when nothing is
+// spawned. Only spawned objects are listed, never the robot's links or the
+// scene's backdrop.
 //
 // Every snapshot is complete: a dropped message needs no replay, the next
 // one replaces it. A snapshot's timestamp is when the implementer captured
 // it, never when it was requested or sent, on the same clock for both
-// reads.
+// reads. An edit made while that clock stands still (simulated time between
+// steps) is captured at the same instant as the snapshot before it.
 //
 // Ground truth is a debugging surface and stays inside the peppy
 // framework: harness tests, recorders, scene commanders and the evaluation
@@ -74,10 +77,10 @@
     ],
     services: [
       {
-        // The latest snapshot, on demand: the same records the stream
-        // carries, from the same state. Answered before the first streamed
-        // snapshot, and once a scene_manipulation goal has completed, the
-        // snapshot includes its edit.
+        // The latest capture, on demand, in the stream's records and from the
+        // same state. Answered before the first streamed snapshot, and once a
+        // scene_manipulation goal has completed, the snapshot includes its
+        // edit.
         name: "get_object_states",
         response_message_format: {
           // False when the implementer has no object state to report (it
