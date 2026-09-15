@@ -1,0 +1,90 @@
+name: Contract similarity
+
+# A privileged PR event permits comments on forks. Only base-branch code runs;
+# proposed contracts are read as Git blobs, never checked out or executed.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: contract-similarity-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  advise:
+    if: github.event.pull_request.state == 'open'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+    env:
+      HAS_CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+    steps:
+      - name: Check out trusted review code
+        id: checkout
+        continue-on-error: true
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        id: python
+        continue-on-error: true
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install review dependencies
+        id: dependencies
+        if: steps.checkout.outcome == 'success' && steps.python.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python3 -m venv "$RUNNER_TEMP/contract-similarity-venv"
+          "$RUNNER_TEMP/contract-similarity-venv/bin/python" -m pip install \
+            --disable-pip-version-check -r .github/scripts/requirements.txt
+
+      - name: Prepare contract snapshots
+        id: prepare
+        if: steps.dependencies.outcome == 'success'
+        continue-on-error: true
+        run: |
+          "$RUNNER_TEMP/contract-similarity-venv/bin/python" \
+            .github/scripts/contract_similarity.py prepare \
+            --state-dir "$RUNNER_TEMP/contract-similarity"
+
+      - name: Install Claude Code
+        if: steps.prepare.outputs.ready == 'true' && env.HAS_CLAUDE_TOKEN == 'true'
+        continue-on-error: true
+        run: |
+          export HOME="$RUNNER_TEMP/contract-similarity-cli-home"
+          mkdir -p "$HOME"
+          curl -fsSL --connect-timeout 10 --max-time 120 \
+            https://claude.ai/install.sh -o "$HOME/install.sh"
+          bash "$HOME/install.sh" 2.1.269
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Analyze goals with Claude
+        if: steps.dependencies.outcome == 'success' && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          "$RUNNER_TEMP/contract-similarity-venv/bin/python" \
+            .github/scripts/contract_similarity.py analyze \
+            --state-dir "$RUNNER_TEMP/contract-similarity"
+
+      # This publisher needs only the standard library and the GitHub token.
+      # It can report an unavailable review even when setup or analysis fails.
+      - name: Update advisory PR comment
+        if: always() && !cancelled() && steps.checkout.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 .github/scripts/contract_similarity.py comment \
+            --state-dir "$RUNNER_TEMP/contract-similarity"
