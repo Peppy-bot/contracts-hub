@@ -6,8 +6,10 @@
 //
 // Asset ids come from get_assets_list and carry their kind as a prefix
 // ("scene/<id>" or "object/<id>"). Object ids are minted by the implementer
-// on spawn and reported by get_objects_list. Positions are world-frame x, y,
-// z in meters, forces are world-frame newtons, masses are kilograms.
+// on spawn. What is spawned, and where it stands, is not read here: the
+// engine's object_state contract reports it, so a commander that lists
+// objects binds both contracts to the same engine. Positions are world-frame
+// x, y, z in meters, forces are world-frame newtons, masses are kilograms.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -26,17 +28,6 @@
           success: "bool",
           message: "string",
           assets_json: "string",
-        },
-      },
-      {
-        // The objects currently spawned, as a JSON array in objects_json.
-        // Every entry carries at least object_id, asset_id, position and
-        // physics.
-        name: "get_objects_list",
-        response_message_format: {
-          success: "bool",
-          message: "string",
-          objects_json: "string",
         },
       },
     ],
