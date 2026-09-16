@@ -6,6 +6,11 @@
         path: "system/alert.json5"
       }
     },
+    camera_profile: {
+      v1: {
+        path: "cameras/camera_profile.json5"
+      }
+    },
     collision_status: {
       v1: {
         path: "robot/collision_status.json5"
@@ -81,14 +86,29 @@
         path: "robot/robot_ready.json5"
       }
     },
-    scene_control: {
+    scene_lighting: {
       v1: {
-        path: "simulation/scene_control.json5"
+        path: "simulation/scene_lighting.json5"
+      }
+    },
+    scene_manipulation: {
+      v1: {
+        path: "simulation/scene_manipulation.json5"
+      }
+    },
+    scene_materials: {
+      v1: {
+        path: "simulation/scene_materials.json5"
       }
     },
     sensor_readout: {
       v1: {
         path: "simulation/sensor_readout.json5"
+      }
+    },
+    sim_camera_control: {
+      v1: {
+        path: "simulation/sim_camera_control.json5"
       }
     }
   }
