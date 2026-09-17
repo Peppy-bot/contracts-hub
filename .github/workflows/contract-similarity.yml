@@ -17,7 +17,7 @@ concurrency:
 jobs:
   advise:
     if: github.event.pull_request.state == 'open'
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     timeout-minutes: 15
     continue-on-error: true
     env:
