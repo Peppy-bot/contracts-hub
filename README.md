@@ -50,9 +50,10 @@ contracts are included even before they appear in `peppy_repository.json5`.
 
 One bot comment mentions the PR author and is updated on subsequent runs. It reports possible
 matches with source links, no substantial matches, no changed contracts, or an unavailable
-review. Contracts do not match themselves, and contracts removed by the PR are excluded.
-Documentation-only and deletion-only PRs do not call Claude. Results identify the reviewed
-revisions; an outdated run does not replace the comment for a newer PR revision.
+review. A contract never matches itself or its own earlier revision, and contracts removed by
+the PR are excluded. Documentation-only and deletion-only PRs do not call Claude. Results
+identify the reviewed revisions; an outdated run does not replace the comment for a newer PR
+revision.
 
 Each changed contract receives up to three matches. The complete input is limited to 1 MiB,
 with at most 20 changed contracts, 250 existing contracts, 500 JSON5 files per snapshot, and
