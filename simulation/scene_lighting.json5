@@ -1,0 +1,161 @@
+// The physical light sources of a simulated scene, edited while the
+// simulation runs: discover what lights the scene has, read their effective
+// values, set one property of one light, and restore the scene's authored
+// lighting. Every value has a physical meaning and a unit, the same on every
+// implementer, so a caller reasons about lux and lumens, never about a
+// renderer's knobs. A change shows up in every view the engine renders,
+// the robot's cameras included; it never recompiles the scene and never
+// touches physics.
+//
+// Light ids are stable for the life of a loaded scene and come from
+// get_lighting, which reports every light with its kind, the properties it
+// supports (a directional light has no position, a point light no cone),
+// each property's unit, bounds, authored default and current value. Kinds:
+// "directional" (a sun-like key light: illuminance in lux, colour,
+// direction), "point" (a lamp: luminous flux in lumens, colour, position),
+// "spot" (a lamp with a cone: flux, colour, position, direction, cone
+// angles) and "environment" (a photographed environment map: a radiance
+// scale and an orientation). Ambient and fill levels are the renderers'
+// approximation of indirect light and are reported, never set.
+//
+// Positions are world-frame metres, Z up; directions are unit vectors in
+// the world frame, pointing the way the light travels; colours are linear
+// RGB in the unit interval; cone angles are half angles in radians; the
+// environment orientation is a unit quaternion [x, y, z, w] rotating the
+// map into the world. A setter validates its whole request before it
+// changes anything: a refused request (unknown light, unsupported
+// property, a value out of bounds or not finite) leaves the light as it was
+// and says why in message. Every setter answers with the effective value
+// after the call, whether it succeeded or not.
+//
+// Loading or clearing a scene through scene_manipulation restores that
+// scene's authored lighting; reset_lighting does the same for the scene
+// that is loaded.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "scene_lighting",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // Every light of the loaded scene, as a JSON object in
+        // lighting_json: {"scene": "<scene asset id>", "ambient_lux": <n>,
+        // "fill_lux": <n>, "lights": [...]}. Each light carries "id",
+        // "kind", "label" and "properties", an object keyed by property
+        // name ("illuminance_lux", "luminous_flux_lm", "radiance_scale",
+        // "color_rgb", "position_m", "direction", "inner_angle_rad",
+        // "outer_angle_rad", "orientation_xyzw"), each with "unit",
+        // "default", "value" and, for scalars, "min" and "max". A light
+        // lists only the properties it supports.
+        name: "get_lighting",
+        response_message_format: {
+          // False when the engine has no lighting to report (no scene is
+          // loaded yet; message says why).
+          success: "bool",
+          message: "string",
+          lighting_json: "string",
+        },
+      },
+      {
+        // The light's strength: illuminance in lux for a directional light,
+        // luminous flux in lumens for a point or spot lamp, the radiance
+        // scale of an environment map (the map's stored radiance times this
+        // scale is cd/m2). Finite, nonnegative, at most the light's reported
+        // max.
+        name: "set_light_intensity",
+        request_message_format: {
+          light_id: "string",
+          value: "f64",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "f64",
+        },
+      },
+      {
+        // The light's colour, linear RGB in the unit interval. Not
+        // supported by an environment light, whose colour is its map.
+        name: "set_light_color",
+        request_message_format: {
+          light_id: "string",
+          color: { $type: "array", $items: "f64", $length: 3 },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_color: { $type: "array", $items: "f64", $length: 3 },
+        },
+      },
+      {
+        // Where a point or spot lamp sits, world-frame metres.
+        name: "set_light_position",
+        request_message_format: {
+          light_id: "string",
+          position: { $type: "array", $items: "f64", $length: 3 },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_position: { $type: "array", $items: "f64", $length: 3 },
+        },
+      },
+      {
+        // Which way a directional light or a spot lamp shines: a world-frame
+        // vector, normalised by the implementer, refused when it has no
+        // length.
+        name: "set_light_direction",
+        request_message_format: {
+          light_id: "string",
+          direction: { $type: "array", $items: "f64", $length: 3 },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_direction: { $type: "array", $items: "f64", $length: 3 },
+        },
+      },
+      {
+        // A spot lamp's cone, half angles in radians: full intensity inside
+        // inner_angle, none beyond outer_angle, with
+        // 0 <= inner_angle < outer_angle < pi/2.
+        name: "set_light_cone",
+        request_message_format: {
+          light_id: "string",
+          inner_angle: "f64",
+          outer_angle: "f64",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_inner_angle: "f64",
+          current_outer_angle: "f64",
+        },
+      },
+      {
+        // The environment map's orientation, a unit quaternion [x, y, z, w]
+        // rotating the map into the world frame.
+        name: "set_light_orientation",
+        request_message_format: {
+          light_id: "string",
+          orientation: { $type: "array", $items: "f64", $length: 4 },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_orientation: { $type: "array", $items: "f64", $length: 4 },
+        },
+      },
+      {
+        // Every light back to the loaded scene's authored values.
+        name: "reset_lighting",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+        },
+      },
+    ],
+  },
+}

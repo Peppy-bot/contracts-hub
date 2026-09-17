@@ -1,0 +1,49 @@
+// What a camera is and what it can do: the device it stands for, the
+// encoding it publishes, and every control of the rgb_camera or
+// rgbd_camera contract it implements beside this one, with the control's
+// modes, unit, bounds, device default and current value; plus a reset to
+// those device defaults. A camera node implements this beside its camera
+// contract so a caller can discover which controls to offer before
+// calling one, and can put the camera back in a known state. The camera
+// contracts themselves carry the controls; this one only describes them,
+// so a camera node that implements a camera contract alone is complete
+// without it.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "camera_profile",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // The profile as a JSON object in profile_json: {"device": "<device
+        // id>", "label": "<device name>", "encoding": "<wire encoding>",
+        // "reference": {"source": "<where the ranges come from>",
+        // "captured_on": "<YYYY-MM-DD>"}, "controls": {...}}. controls is
+        // keyed by control name ("exposure", "gain", "white_balance",
+        // "brightness", "contrast"), each {"supported": <bool>} and, when
+        // supported, "modes" (["auto", "manual"] or ["manual"]), "unit",
+        // "min", "max", "default_mode", "default_value", "mode" and
+        // "value" (the current ones; value is the effective reading in
+        // auto mode).
+        name: "get_camera_profile",
+        response_message_format: {
+          // False when the camera cannot describe itself (it is not attached
+          // to its device or simulation yet; message says why).
+          success: "bool",
+          message: "string",
+          profile_json: "string",
+        },
+      },
+      {
+        // Every control back to the device's defaults.
+        name: "reset_camera",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+        },
+      },
+    ],
+  },
+}

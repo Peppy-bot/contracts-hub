@@ -13,7 +13,7 @@
 {
   peppy_schema: "contract/v1",
   manifest: {
-    name: "scene_control",
+    name: "scene_manipulation",
     tag: "v1",
   },
   interfaces: {

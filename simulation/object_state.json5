@@ -1,11 +1,11 @@
 // The ground truth of the objects a simulation engine spawned through
-// scene_control: what each one is, where it is right now and how fast it
+// scene_manipulation: what each one is, where it is right now and how fast it
 // moves. One snapshot, read two ways from the same state: streamed on the
 // engine's own state cadence (object_states), and answered on demand
 // (get_object_states), for example by a scene commander that refreshes its
 // list after an edit. A consumer can judge a task from this (the cube came
 // to rest in the tray) without holding a pairing. Object ids are the ones
-// scene_control minted; a snapshot carries one record per spawned object,
+// scene_manipulation minted; a snapshot carries one record per spawned object,
 // whatever its physics, and an empty list when nothing is spawned. Only
 // spawned objects are listed, never the robot's links or the scene's
 // backdrop.
@@ -76,7 +76,7 @@
       {
         // The latest snapshot, on demand: the same records the stream
         // carries, from the same state. Answered before the first streamed
-        // snapshot, and once a scene_control goal has completed, the
+        // snapshot, and once a scene_manipulation goal has completed, the
         // snapshot includes its edit.
         name: "get_object_states",
         response_message_format: {

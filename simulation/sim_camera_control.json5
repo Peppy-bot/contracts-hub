@@ -1,0 +1,118 @@
+// The channel through which a rendered-camera relay forwards the camera
+// controls it receives to the simulation engine that renders the camera.
+// The engine models each rendered camera's response after the real device
+// the camera stands for (exposure, gain, white balance, brightness,
+// contrast, in that device's units and bounds) and applies a control to
+// that camera's colour stream alone; the relay presents the result as the
+// rgb_camera or rgbd_camera contract and describes it through
+// camera_profile. Every request names the camera by its slot, the link id
+// the engine renders it on, which is also the relay's own pairing peer.
+//
+// Response fields mirror the camera contracts' control responses so the
+// relay answers what the engine answers. An engine that does not model a
+// control for a camera refuses it with success false and says so.
+//
+// This contract is internal to the simulation stack: no MCP exposure
+// publishes it, no web page binds it, and it has no counterpart on a
+// physical robot, where the camera node drives the device itself.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "sim_camera_control",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // The camera's device profile, in the JSON shape camera_profile's
+        // get_camera_profile publishes.
+        name: "describe_camera",
+        request_message_format: {
+          camera: "string",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          profile_json: "string",
+        },
+      },
+      {
+        // mode is "auto" or "manual"; value is the manual exposure in the
+        // device's units and is ignored in auto mode.
+        name: "set_camera_exposure",
+        request_message_format: {
+          camera: "string",
+          mode: "string",
+          value: "i32",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        // mode is "auto" or "manual"; temperature is Kelvin and is ignored
+        // in auto mode.
+        name: "set_camera_white_balance",
+        request_message_format: {
+          camera: "string",
+          mode: "string",
+          temperature: "i32",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_temperature: "i32",
+        },
+      },
+      {
+        name: "set_camera_gain",
+        request_message_format: {
+          camera: "string",
+          value: "i32",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        name: "set_camera_brightness",
+        request_message_format: {
+          camera: "string",
+          value: "i32",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        name: "set_camera_contrast",
+        request_message_format: {
+          camera: "string",
+          value: "i32",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_value: "i32",
+        },
+      },
+      {
+        // Every control of the camera back to its device defaults.
+        name: "reset_camera",
+        request_message_format: {
+          camera: "string",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+        },
+      },
+    ],
+  },
+}

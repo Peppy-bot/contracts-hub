@@ -1,0 +1,87 @@
+// The optical properties of the materials in a simulated scene, edited
+// while the simulation runs: discover the materials, read their effective
+// values, set the colour or the finish of one, and restore the authored
+// values. A material is shared: every surface that references it changes
+// together, and get_materials states that scope for each one, so a caller
+// knows what an edit reaches before making it. A change shows up in every
+// view the engine renders, the robot's cameras included; it never
+// recompiles the scene and never touches mass, friction or collision.
+//
+// Material ids are stable for the life of a loaded scene and come from
+// get_materials. Colour is the base reflectance, linear RGB in the unit
+// interval; metallic and roughness are the unit-interval parameters of the
+// metallic-roughness model (0 metallic is a dielectric, 1 a conductor; 0
+// roughness a mirror finish, 1 fully diffuse). A setter validates its
+// whole request before it changes anything: a refused request (unknown
+// material, a value out of the unit interval or not finite) leaves the
+// material as it was and says why in message. Every setter answers with
+// the effective values after the call.
+//
+// Loading or clearing a scene through scene_manipulation restores the
+// authored materials; reset_materials does the same for what is loaded.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "scene_materials",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // Every editable material, as a JSON object in materials_json:
+        // {"materials": [...]}. Each material carries "id", "label",
+        // "scope" ({"owner": "<robot instance or scene>", "surfaces": <count
+        // of surfaces sharing it>, "bodies": [<body names>]}) and
+        // "properties", an object with "color_rgb", "metallic" and
+        // "roughness", each with "unit", "default" and "value" (and "min",
+        // "max" for the scalars).
+        name: "get_materials",
+        response_message_format: {
+          // False when the engine has no materials to report (no scene is
+          // loaded yet; message says why).
+          success: "bool",
+          message: "string",
+          materials_json: "string",
+        },
+      },
+      {
+        // The material's base colour, linear RGB reflectance in the unit
+        // interval.
+        name: "set_material_color",
+        request_message_format: {
+          material_id: "string",
+          color: { $type: "array", $items: "f64", $length: 3 },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_color: { $type: "array", $items: "f64", $length: 3 },
+        },
+      },
+      {
+        // The material's finish: metallic and roughness, both in the unit
+        // interval, checked together and applied together.
+        name: "set_material_finish",
+        request_message_format: {
+          material_id: "string",
+          metallic: "f64",
+          roughness: "f64",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          current_metallic: "f64",
+          current_roughness: "f64",
+        },
+      },
+      {
+        // Every material back to its authored values.
+        name: "reset_materials",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+        },
+      },
+    ],
+  },
+}
