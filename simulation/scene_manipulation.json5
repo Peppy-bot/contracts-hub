@@ -1,6 +1,6 @@
 // Editing the world of a simulation engine while it runs: listing the assets
 // the engine can place, loading a scene, spawning, moving, pushing and
-// removing objects, and relocating the robot. Any engine that keeps a scene
+// removing objects, and relocating a robot. Any engine that keeps a scene
 // graph can implement it; a commander only needs the contract, not the
 // engine.
 //
@@ -8,8 +8,9 @@
 // ("scene/<id>" or "object/<id>"). Object ids are minted by the implementer
 // on spawn. What is spawned, and where it stands, is not read here: the
 // engine's object_state contract reports it, so a commander that lists
-// objects binds both contracts to the same engine. Positions are world-frame
-// x, y, z in meters, forces are world-frame newtons, masses are kilograms.
+// objects binds both contracts to the same engine. Robot names come from
+// get_robots_list. Positions are world-frame x, y, z in meters, forces are
+// world-frame newtons, masses are kilograms.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -28,6 +29,34 @@
           success: "bool",
           message: "string",
           assets_json: "string",
+        },
+      },
+      {
+        // The robots standing in the world, one entry per robot: the name a
+        // scene command addresses it by, the id of the engine's robot
+        // catalogue it stands as, where its base stands, and whether it
+        // holds a seat through simulation_robot or the engine stands it on
+        // its own. A commander lists what it may address and a test counts
+        // what the world holds.
+        name: "get_robots_list",
+        response_message_format: {
+          // False when the engine cannot list its robots yet; message says
+          // why. Never an empty world, which is success with no robots.
+          success: "bool",
+          message: "string",
+          robots: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              robot: "string",
+              model: "string",
+              // World-frame x, y, z of the robot's base, in meters.
+              position: { $type: "array", $items: "f64", $length: 3 },
+              // True for a robot seated through simulation_robot, false for
+              // one the engine stands on its own.
+              attached: "bool",
+            },
+          },
         },
       },
     ],
@@ -142,11 +171,14 @@
         },
       },
       {
-        // Relocate the robot's base to a new world-frame position, keeping
-        // its joint configuration.
+        // Relocate one robot's base to a new world-frame position, keeping
+        // its joint configuration. `robot` is the name the engine reports
+        // in get_robots_list; an engine hosting several moves that one and
+        // leaves the rest standing.
         name: "move_robot",
         goal_service: {
           request_message_format: {
+            robot: "string",
             position: { $type: "array", $items: "f64", $length: 3 },
           },
         },

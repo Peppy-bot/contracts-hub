@@ -1,0 +1,151 @@
+// One robot's seat in a shared simulation. A robot's attachment consumes
+// this contract on the engine: it attaches once, naming its model and where
+// the robot stands, hands the engine the setpoints of its limbs, and receives
+// the engine's measured state of those limbs on its own goal. The engine tells
+// attachments apart by the caller's core node and instance id, so no message
+// carries a robot id, and one attachment instance is one robot.
+//
+// Every member is called by the robot's side: attach stands the robot,
+// set_limb_setpoints writes what its limbs are commanded to, and the measured
+// state comes back to it as attach's feedback. The setpoints are the ones the
+// joint_link and gripper_link pairings carry, in their units, but they do not
+// ride those pairings: a pairing binds one leader to one follower, and an
+// engine hosting several robots needs to know which robot each setpoint
+// belongs to, which the caller of a service tells it.
+//
+// Limb order: the attach response lists the model's arm and gripper names
+// and the joints of each arm, and every `arms` / `grippers` array in this
+// contract follows that order. Units are those of joint_link and
+// gripper_link: joint positions in radians (metres for prismatic joints),
+// gripper openings as a fraction of full travel (0 closed, 1 open), and
+// gripper efforts in the engine's own effort unit for that gripper (N*m at
+// a revolute finger's joint, N at a prismatic one), as gripper_link
+// defines them.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "simulation_robot",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // The latest setpoints of the calling robot's limbs, held by the
+        // engine until the next call. An arm with empty positions and a
+        // gripper with commanded false keep their previous setpoint, so a
+        // robot holds its start pose until its first setpoints. Sent at the
+        // attachment's own rate whether or not anything changed: the call is
+        // also the attachment's heartbeat, and a robot silent past the
+        // engine's lease leaves the scene.
+        name: "set_limb_setpoints",
+        request_message_format: {
+          arms: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              // One value per joint, or empty for no setpoint.
+              positions: { $type: "array", $items: "f64" },
+              // One value per joint, or empty for position-only control.
+              velocities: { $type: "array", $items: "f64" },
+            },
+          },
+          grippers: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              commanded: "bool",
+              opening: "f64",
+              // The force the gripper may apply, in this gripper's effort
+              // unit; 0 leaves the model's own limit as the only one.
+              max_effort: "f64",
+            },
+          },
+        },
+        response_message_format: {
+          // False when the caller is not attached, or a limb of the request
+          // does not match its model (a wrong joint count, a value that is
+          // not a number); message says which. Setpoints the engine refuses
+          // change no limb, and the robot holds what it had.
+          success: "bool",
+          // True while the engine is still standing this robot: it has no
+          // limbs yet, so nothing was written, and the next call lands once
+          // it is seated. A robot that keeps sending through its own join
+          // reads this rather than the message text.
+          joining: "bool",
+          message: "string",
+        },
+      },
+    ],
+    actions: [
+      {
+        // Joins the scene. The goal is accepted when the model is in the
+        // engine's catalogue and the placement is free, and it runs for as
+        // long as the robot is in the scene: feedback carries the robot's
+        // measured state on the engine's own grid, published without
+        // waiting for anyone, so subscribe to it as sensor data and drain
+        // it as it arrives. Cancelling the goal removes the robot, and the
+        // engine completes the goal itself when it removes the robot (a
+        // lapsed lease, its own shutdown), saying why. A caller holds one
+        // seat: a second attach while the first stands is refused.
+        name: "attach",
+        goal_service: {
+          request_message_format: {
+            // An id of the engine's robot catalogue, for example openarm_v2.
+            model: "string",
+            // Where the robot's base stands on the floor. Absent, the
+            // engine places the robot on a free spot of its own choosing.
+            placement: {
+              $type: "object",
+              $optional: true,
+              // World-frame x, y, z in metres.
+              position: { $type: "array", $items: "f64", $length: 3 },
+              // Rotation about the world's +z in radians.
+              yaw: "f64",
+            },
+          },
+          response_message_format: {
+            // The model's limbs, in the order every arms / grippers array
+            // of this contract uses.
+            arm_names: { $type: "array", $items: "string" },
+            // Joints of each arm, index-aligned with arm_names: how many
+            // values that arm's positions and velocities carry.
+            arm_joints: { $type: "array", $items: "u32" },
+            gripper_names: { $type: "array", $items: "string" },
+          },
+        },
+        feedback_topic: {
+          message_format: {
+            // The engine's capture time of this state, so a caller reading
+            // behind the engine can tell how far behind it is.
+            timestamp: "time",
+            arms: {
+              $type: "array",
+              $items: {
+                $type: "object",
+                positions: { $type: "array", $items: "f64" },
+                velocities: { $type: "array", $items: "f64" },
+              },
+            },
+            grippers: {
+              $type: "array",
+              $items: {
+                $type: "object",
+                opening: "f64",
+                // Measured force in the opening frame, positive toward open.
+                effort: "f64",
+              },
+            },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the engine removed the robot for a reason other
+            // than the caller's cancel; message says why.
+            success: "bool",
+            message: "string",
+          },
+        },
+      },
+    ],
+  },
+}

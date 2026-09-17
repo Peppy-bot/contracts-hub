@@ -110,6 +110,11 @@
       v1: {
         path: "simulation/sim_camera_control.json5"
       }
+    },
+    simulation_robot: {
+      v1: {
+        path: "simulation/simulation_robot.json5"
+      }
     }
   }
 }
