@@ -566,7 +566,7 @@ class StatePhaseTests(OfflineTestCase):
         self.assertIn("::warning::", self.warnings.getvalue())
 
 
-class ValidateAnalysisTests(OfflineTestCase):
+class ParseAnalysisTests(OfflineTestCase):
     def setUp(self):
         super().setUp()
         self.prepared = prepared_state()
@@ -575,7 +575,7 @@ class ValidateAnalysisTests(OfflineTestCase):
         for result in (finding(), {"candidate_id": NEW, "matches": []}):
             with self.subTest(result=result):
                 self.assertEqual(
-                    similarity.validate_analysis({"results": [result]}, self.prepared),
+                    similarity.parse_analysis({"results": [result]}, self.prepared),
                     [result],
                 )
 
@@ -584,7 +584,7 @@ class ValidateAnalysisTests(OfflineTestCase):
         for results in ([], [finding()], [finding(), finding()]):
             with self.subTest(results=results):
                 with self.assertRaises(similarity.Unavailable):
-                    similarity.validate_analysis({"results": results}, self.prepared)
+                    similarity.parse_analysis({"results": results}, self.prepared)
 
     def test_unknown_candidate_match_and_duplicate_match_are_rejected(self):
         duplicate = finding()
@@ -596,25 +596,58 @@ class ValidateAnalysisTests(OfflineTestCase):
         ):
             with self.subTest(result=result):
                 with self.assertRaises(similarity.Unavailable):
-                    similarity.validate_analysis({"results": [result]}, self.prepared)
+                    similarity.parse_analysis({"results": [result]}, self.prepared)
 
-    def test_same_path_and_same_name_tag_are_not_eligible_matches(self):
+    def test_own_earlier_revision_and_alias_matches_are_dropped_not_fatal(self):
         self.prepared["corpus"].extend(
             [contract(NEW, "position"), contract("alias.json5", "position")]
         )
         for path in (NEW, "alias.json5"):
             with self.subTest(path=path):
-                with self.assertRaises(similarity.Unavailable):
-                    similarity.validate_analysis(
+                result = finding(contract_id=path)
+                result["matches"].append(finding()["matches"][0])
+                self.assertEqual(
+                    similarity.parse_analysis({"results": [result]}, self.prepared),
+                    [finding()],
+                )
+                self.assertEqual(
+                    similarity.parse_analysis(
                         {"results": [finding(contract_id=path)]}, self.prepared
-                    )
+                    ),
+                    [{"candidate_id": NEW, "matches": []}],
+                )
+
+    def test_dropped_revision_match_is_not_checked_for_explanations(self):
+        self.prepared["corpus"].append(contract(NEW, "position"))
+        revision = {"contract_id": NEW, "similarities": ["Same."], "differences": []}
+        self.assertEqual(
+            similarity.parse_analysis(
+                {"results": [{"candidate_id": NEW, "matches": [revision]}]},
+                self.prepared,
+            ),
+            [{"candidate_id": NEW, "matches": []}],
+        )
+
+    def test_parsing_reports_the_failed_check_without_response_text(self):
+        for results, detail in (
+            ([], "candidate_coverage"),
+            ([finding(candidate_id="invented.json5")], "unknown_candidate"),
+            ([finding(contract_id="invented.json5")], "unknown_contract"),
+            ([{"candidate_id": NEW, "matches": [{"contract_id": ARM}]}], "match_shape"),
+        ):
+            with self.subTest(detail=detail):
+                with self.assertRaises(similarity.Unavailable) as raised:
+                    similarity.parse_analysis({"results": results}, self.prepared)
+                self.assertEqual(raised.exception.reason, "invalid_analysis")
+                self.assertEqual(raised.exception.detail, detail)
+                self.assertNotIn("invented", str(raised.exception))
 
     def test_another_tag_of_the_same_name_is_eligible(self):
         older = "robot/position_v0.json5"
         self.prepared["corpus"].append(contract(older, "position", "v0"))
         results = [finding(contract_id=older)]
         self.assertEqual(
-            similarity.validate_analysis({"results": results}, self.prepared), results
+            similarity.parse_analysis({"results": results}, self.prepared), results
         )
 
     def test_malformed_structured_response_is_rejected(self):
@@ -638,7 +671,7 @@ class ValidateAnalysisTests(OfflineTestCase):
         for payload in invalid:
             with self.subTest(payload=payload):
                 with self.assertRaises(similarity.Unavailable):
-                    similarity.validate_analysis(payload, self.prepared)
+                    similarity.parse_analysis(payload, self.prepared)
 
 
 class AnalyzeTests(OfflineTestCase):
@@ -650,9 +683,34 @@ class AnalyzeTests(OfflineTestCase):
         self.assertEqual(result["status"], "complete")
         self.assertEqual(result["results"], [finding()])
         self.model.assert_called_once()
-        prompt = self.model.call_args.args[0]
+        prompt, schema = self.model.call_args.args
         self.assertIn("Target in the world frame.", prompt)
         self.assertIn("request_message_format", prompt)
+        self.assertEqual(schema, similarity.analysis_schema(prepared))
+
+    def test_schema_restricts_identifiers_to_the_inventory(self):
+        prepared = prepared_state()
+        result = similarity.analysis_schema(prepared)["properties"]["results"]["items"]
+        self.assertEqual(result["properties"]["candidate_id"]["enum"], [NEW])
+        match = result["properties"]["matches"]["items"]
+        self.assertEqual(match["properties"]["contract_id"]["enum"], [ARM, GRIPPER])
+
+    def test_modified_contract_matched_with_its_earlier_revision_is_still_reviewed(self):
+        prepared = {**prepared_state(), "candidates": [contract(ARM)]}
+        revision = finding(candidate_id=ARM, contract_id=ARM)["matches"][0]
+        overlap = finding(candidate_id=ARM, contract_id=GRIPPER)["matches"][0]
+        self.model.side_effect = None
+        self.model.return_value = {
+            "results": [{"candidate_id": ARM, "matches": [revision, overlap]}]
+        }
+        self.assertEqual(
+            similarity.analyze(prepared),
+            {
+                "status": "complete",
+                "results": [{"candidate_id": ARM, "matches": [overlap]}],
+            },
+        )
+        self.assertEqual(self.warnings.getvalue(), "")
 
     def test_prompt_contains_per_candidate_eligible_ids_and_full_corpus(self):
         prepared = prepared_state()
@@ -686,15 +744,18 @@ class AnalyzeTests(OfflineTestCase):
 
     def test_missing_or_invalid_model_results_cannot_become_clean(self):
         self.model.side_effect = None
-        for response in (
-            {"results": []},
-            {"results": [finding(contract_id="invented.json5")]},
+        for response, detail in (
+            ({"results": []}, "candidate_coverage"),
+            ({"results": [finding(contract_id="invented.json5")]}, "unknown_contract"),
         ):
             with self.subTest(response=response):
                 self.model.return_value = response
                 result = similarity.analyze(prepared_state())
-                self.assertEqual(result["status"], "unavailable")
-                self.assertTrue(result["reason"])
+                self.assertEqual(
+                    result, {"status": "unavailable", "reason": "invalid_analysis"}
+                )
+                self.assertIn(f"({detail})", self.warnings.getvalue())
+                self.assertNotIn("invented", self.warnings.getvalue())
 
     def test_model_failure_is_unavailable_not_a_clean_review(self):
         self.model.side_effect = similarity.Unavailable("claude")
@@ -1030,34 +1091,55 @@ class ClaudeInvocationTests(unittest.TestCase):
 
     def test_process_failure_and_failed_or_malformed_envelopes_are_unavailable(self):
         envelopes = [
-            (1, "failure"),
-            (0, "not JSON"),
+            (1, "failure", "claude", "exit_status"),
+            (0, "not JSON", "invalid_analysis", "json"),
             (
                 0,
                 json.dumps(
-                    {"type": "result", "subtype": "error_max_turns", "is_error": True}
+                    {
+                        "type": "result",
+                        "subtype": "error_max_structured_output_retries",
+                        "is_error": True,
+                        "errors": ["Failed after 5 attempts: <untrusted text>"],
+                    }
                 ),
+                "claude",
+                "error_max_structured_output_retries",
+            ),
+            (
+                0,
+                json.dumps(
+                    {"type": "result", "subtype": "<untrusted>", "is_error": True}
+                ),
+                "claude",
+                "unknown_subtype",
             ),
             (
                 0,
                 json.dumps(
                     {"type": "result", "subtype": "success", "result": "No overlaps"}
                 ),
+                "invalid_analysis",
+                "structured_output",
             ),
             (
                 0,
                 json.dumps(
                     {"type": "result", "subtype": "success", "structured_output": []}
                 ),
+                "invalid_analysis",
+                "structured_output",
             ),
         ]
-        for code, stdout in envelopes:
+        for code, stdout, reason, detail in envelopes:
             with self.subTest(code=code, stdout=stdout):
                 self.process.return_value = subprocess.CompletedProcess(
                     ["claude"], code, stdout, ""
                 )
-                with self.assertRaises(similarity.Unavailable):
+                with self.assertRaises(similarity.Unavailable) as raised:
                     similarity.run_claude("prompt", self.schema)
+                self.assertEqual(raised.exception.reason, reason)
+                self.assertEqual(raised.exception.detail, detail)
 
 
 if __name__ == "__main__":
