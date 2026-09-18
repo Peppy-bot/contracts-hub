@@ -1,19 +1,24 @@
-// The channel through which a rendered-camera relay forwards the camera
-// controls it receives to the simulation engine that renders the camera.
+// The rendered cameras of a simulation engine and their controls: the
+// channel through which a rendered-camera relay forwards the camera
+// controls it receives to the engine that renders the camera, and through
+// which the scene commander's camera panel lists and edits every camera.
 // The engine models each rendered camera's response after the real device
 // the camera stands for (exposure, gain, white balance, brightness,
 // contrast, in that device's units and bounds) and applies a control to
 // that camera's colour stream alone; the relay presents the result as the
 // rgb_camera or rgbd_camera contract and describes it through
 // camera_profile. Every request names the camera by its slot, the link id
-// the engine renders it on, which is also the relay's own pairing peer.
+// the engine renders it on, which is also the relay's own pairing peer,
+// and by its robot, the copy the robot runs as. A relay leaves robot
+// empty: the engine tells the relay's robot by the camera pair the relay
+// holds, as it tells a limb's by its pair. A robot renders the cameras of
+// its rig while it holds their pairs, so a robot without a rig has none.
 //
 // Response fields mirror the camera contracts' control responses so the
 // relay answers what the engine answers. An engine that does not model a
 // control for a camera refuses it with success false and says so.
 //
-// This contract is internal to the simulation stack: no MCP exposure
-// publishes it, no web page binds it, and it has no counterpart on a
+// No MCP exposure publishes this contract, and it has no counterpart on a
 // physical robot, where the camera node drives the device itself.
 {
   peppy_schema: "contract/v1",
@@ -24,10 +29,34 @@
   interfaces: {
     services: [
       {
+        // Every camera the engine renders, in the order its robots stand:
+        // its robot and slot, its kind ("rgb" or "rgbd") and its colour
+        // stream, in the fields of the camera contracts' video_stream_info.
+        name: "get_cameras",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          cameras: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              robot: "string",
+              camera: "string",
+              kind: "string",
+              width: "u32",
+              height: "u32",
+              frames_per_second: "u8",
+              encoding: "string",
+            },
+          },
+        },
+      },
+      {
         // The camera's device profile, in the JSON shape camera_profile's
         // get_camera_profile publishes.
         name: "describe_camera",
         request_message_format: {
+          robot: "string",
           camera: "string",
         },
         response_message_format: {
@@ -41,6 +70,7 @@
         // device's units and is ignored in auto mode.
         name: "set_camera_exposure",
         request_message_format: {
+          robot: "string",
           camera: "string",
           mode: "string",
           value: "i32",
@@ -56,6 +86,7 @@
         // in auto mode.
         name: "set_camera_white_balance",
         request_message_format: {
+          robot: "string",
           camera: "string",
           mode: "string",
           temperature: "i32",
@@ -69,6 +100,7 @@
       {
         name: "set_camera_gain",
         request_message_format: {
+          robot: "string",
           camera: "string",
           value: "i32",
         },
@@ -81,6 +113,7 @@
       {
         name: "set_camera_brightness",
         request_message_format: {
+          robot: "string",
           camera: "string",
           value: "i32",
         },
@@ -93,6 +126,7 @@
       {
         name: "set_camera_contrast",
         request_message_format: {
+          robot: "string",
           camera: "string",
           value: "i32",
         },
@@ -106,6 +140,7 @@
         // Every control of the camera back to its device defaults.
         name: "reset_camera",
         request_message_format: {
+          robot: "string",
           camera: "string",
         },
         response_message_format: {
