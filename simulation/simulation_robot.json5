@@ -1,0 +1,100 @@
+// One robot in a shared simulation. A robot joins the scene by attaching,
+// naming the copy it runs as, the model it is, and where it stands, and it
+// stays for as long as its attach goal runs: cancelling the goal takes the
+// robot out, and the engine completes the goal itself when it removes the
+// robot, saying why.
+//
+// Nothing here carries motion. A robot's limbs are paired to the engine
+// directly, one pair per limb over joint_link or gripper_link, and the copy
+// the engine reads on each pair is the one this goal named: that is how a
+// setpoint reaches the robot it was meant for and how its measured state
+// comes back on the same pair. Whether the engine is standing a robot and
+// holding every limb's pair is that robot's readiness, which the engine
+// answers on is_ready to the instance that attached it.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "simulation_robot",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // Whether the asking instance's robot is ready to be driven: it
+        // stands in the scene and the engine holds every one of its limb
+        // pairs, so a setpoint reaches it and its measured state comes back.
+        // False for an instance that stands no robot here.
+        name: "is_ready",
+        response_message_format: {
+          ready: "bool",
+        },
+      },
+    ],
+    actions: [
+      {
+        // Joins the scene. The goal is accepted when the model is in the
+        // engine's catalogue and the placement is free, and it runs for as
+        // long as the robot is in the scene. A caller holds one robot: a
+        // second attach naming another robot while its first stands is
+        // refused, and so is one naming another model for the robot it
+        // stands.
+        //
+        // A caller attaching the robot it already stands is registering
+        // that robot again, which is what an instance that died and came
+        // back does. The engine admits it and hands the robot's stay to the
+        // new goal: the robot is never stood twice and never leaves, and
+        // the goal that held it completes saying another goal of the same
+        // caller holds it now.
+        name: "attach",
+        goal_service: {
+          request_message_format: {
+            // The copy this robot runs as, which is the name it stands
+            // under and the name the engine reads on every one of its
+            // limb pairs. A robot launched outside a copy names itself.
+            robot: "string",
+            // An id of the engine's robot catalogue, for example openarm_v2.
+            model: "string",
+            // Where the robot's base stands on the floor. Absent, the
+            // engine places the robot on a free spot of its own choosing.
+            placement: {
+              $type: "object",
+              $optional: true,
+              // World-frame x, y, z in metres.
+              position: { $type: "array", $items: "f64", $length: 3 },
+              // Rotation about the world's +z in radians.
+              yaw: "f64",
+            },
+          },
+          response_message_format: {
+            // The model's limbs, in the order the engine's own limb slots
+            // carry them, so a robot knows which pair drives which limb.
+            arm_names: { $type: "array", $items: "string" },
+            // Joints of each arm, index-aligned with arm_names: how many
+            // values that arm's pair carries.
+            arm_joints: { $type: "array", $items: "u32" },
+            gripper_names: { $type: "array", $items: "string" },
+          },
+        },
+        // One message once the engine has stood the robot; the stream ends
+        // with the goal, which is how the caller learns the stay is over
+        // without asking.
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            standing: "bool",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the stay ended on the engine's side: the engine
+            // took the robot out for a reason other than the caller's
+            // cancel, or another goal of the caller hosts the robot now;
+            // message says which.
+            success: "bool",
+            message: "string",
+          },
+        },
+      },
+    ],
+  },
+}
