@@ -1,0 +1,28 @@
+{
+  // Who a robot is: the name it stands under, the model it is and the core
+  // node hosting it. A distinct contract from robot_ready: identity, not
+  // readiness, so a consumer that tells robots apart needs no readiness link
+  // and the answer holds for the robot's whole session, ready or not.
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "robot_identity",
+    tag: "v1"
+  },
+  interfaces: {
+    services: [
+      {
+        name: "get_identity",
+        response_message_format: {
+          // The name this robot stands under everywhere: the copy it runs
+          // as, or its instance id for a robot launched outside a copy. A
+          // simulation hosting the robot lists it under this name.
+          robot: "string",
+          // The robot's model id, for example openarm_v2.
+          model: "string",
+          // The core node hosting the robot.
+          core_node: "string"
+        }
+      }
+    ]
+  }
+}
