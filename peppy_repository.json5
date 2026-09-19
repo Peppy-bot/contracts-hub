@@ -81,6 +81,11 @@
         path: "cameras/rgbd_camera.json5"
       }
     },
+    robot_identity: {
+      v1: {
+        path: "robot/robot_identity.json5"
+      }
+    },
     robot_ready: {
       v1: {
         path: "robot/robot_ready.json5"

@@ -9,8 +9,9 @@
 // on spawn. What is spawned, and where it stands, is not read here: the
 // engine's object_state contract reports it, so a commander that lists
 // objects binds both contracts to the same engine. Robot names come from
-// get_robots_list. Positions are world-frame x, y, z in meters, forces are
-// world-frame newtons, masses are kilograms.
+// get_robots_list. Positions are world-frame x, y, z in meters, headings are
+// a yaw in radians about the world's +z, forces are world-frame newtons,
+// masses are kilograms.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -48,7 +49,10 @@
               // The id of the engine's robot catalogue it stands as.
               model: "string",
               // Where its base stands: x, y, z in metres.
-              position: { $type: "array", $items: "f64" },
+              position: { $type: "array", $items: "f64", $length: 3 },
+              // Which way the base faces: rotation about the world's +z in
+              // radians.
+              yaw: "f64",
               // True for a robot that joined over simulation_robot, false
               // for a robot the world stands itself, which leaves only with
               // the simulation.
@@ -97,6 +101,8 @@
           request_message_format: {
             asset_id: "string",
             position: { $type: "array", $items: "f64", $length: 3 },
+            // Rotation about the world's +z in radians; 0 = as authored.
+            yaw: "f64",
             // Uniform scale; 1 = as authored.
             scale: "f64",
             // "dynamic" (simulated, falls and collides), "static" (collides,
@@ -169,15 +175,19 @@
         },
       },
       {
-        // Relocate one robot's base to a new world-frame position, keeping
-        // its joint configuration. `robot` is the instance name the engine
-        // reports in get_robots_list; an engine hosting several moves that
-        // one and leaves the rest standing.
+        // Relocate one robot's base to a new world-frame position and
+        // heading, keeping its joint configuration. `robot` is the instance
+        // name the engine reports in get_robots_list; an engine hosting
+        // several moves that one and leaves the rest standing. A caller that
+        // only translates passes back the yaw get_robots_list reports.
         name: "move_robot",
         goal_service: {
           request_message_format: {
             robot: "string",
             position: { $type: "array", $items: "f64", $length: 3 },
+            // Which way the base faces once moved: rotation about the
+            // world's +z in radians.
+            yaw: "f64",
           },
         },
         result_service: {
