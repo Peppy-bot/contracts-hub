@@ -7,12 +7,12 @@
 // contrast, in that device's units and bounds) and applies a control to
 // that camera's colour stream alone; the relay presents the result as the
 // rgb_camera or rgbd_camera contract and describes it through
-// camera_profile. Every request names the camera by its slot, the link id
-// the engine renders it on, which is also the relay's own pairing peer,
-// and by its robot, the copy the robot runs as. A relay leaves robot
-// empty: the engine tells the relay's robot by the camera pair the relay
-// holds, as it tells a limb's by its pair. A robot renders the cameras of
-// its rig while it holds their pairs, so a robot without a rig has none.
+// camera_profile. Every request names the camera by its name on the robot,
+// which is its relay's name in the copy (wrist_left, front), and by its
+// robot, the copy the robot runs as. A relay leaves robot empty: the engine
+// tells the relay's robot by the camera pair the relay holds, as it tells a
+// limb's by its pair. A robot renders the cameras of its rig while it holds
+// their pairs, so a robot without a rig has none.
 //
 // Response fields mirror the camera contracts' control responses so the
 // relay answers what the engine answers. An engine that does not model a
@@ -30,7 +30,7 @@
     services: [
       {
         // Every camera the engine renders, in the order its robots stand:
-        // its robot and slot, its kind ("rgb" or "rgbd") and its colour
+        // its robot and name, its kind ("rgb" or "rgbd") and its colour
         // stream, in the fields of the camera contracts' video_stream_info.
         name: "get_cameras",
         response_message_format: {
