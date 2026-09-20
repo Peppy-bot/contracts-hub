@@ -8,9 +8,22 @@
 // directly, one pair per limb over joint_link or gripper_link, and the copy
 // the engine reads on each pair is the one this goal named: that is how a
 // setpoint reaches the robot it was meant for and how its measured state
-// comes back on the same pair. Whether the engine is standing a robot and
-// holding every limb's pair is that robot's readiness, which the engine
-// answers on is_ready to the instance that attached it.
+// comes back on the same pair.
+//
+// An engine holds every robot's pairs on one slot per kind of pair, so
+// nothing in a slot's name says which limb a pair drives: the limb is the
+// name of the link the pair comes from on the robot's side. A robot
+// therefore names the links it pairs to an engine after its limbs, the
+// names it answers to in limb_motion and limb_state (left_arm, arm,
+// gripper), which are the names this contract lists for its model. No
+// schema holds that rule. A link named otherwise still pairs, and the
+// engine finds it in the match: a robot whose pairs name a limb its model
+// lacks, or miss one its model has, does not stay, and the engine ends its
+// stay naming both lists.
+//
+// Whether the engine is standing a robot and holding a pair for every limb
+// its model has is that robot's readiness, which the engine answers on
+// is_ready to the instance that attached it.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -21,9 +34,9 @@
     services: [
       {
         // Whether the asking instance's robot is ready to be driven: it
-        // stands in the scene and the engine holds every one of its limb
-        // pairs, so a setpoint reaches it and its measured state comes back.
-        // False for an instance that stands no robot here.
+        // stands in the scene and the engine holds a pair for every limb
+        // its model has, so a setpoint reaches each limb and its measured
+        // state comes back. False for an instance that stands no robot here.
         name: "is_ready",
         response_message_format: {
           ready: "bool",
@@ -66,12 +79,15 @@
             },
           },
           response_message_format: {
-            // The model's limbs, in the order the engine's own limb slots
-            // carry them, so a robot knows which pair drives which limb.
+            // The model's arms, under the names the robot answers to in
+            // limb_motion and limb_state, which are the names of the links
+            // its arm pairs come from.
             arm_names: { $type: "array", $items: "string" },
             // Joints of each arm, index-aligned with arm_names: how many
             // values that arm's pair carries.
             arm_joints: { $type: "array", $items: "u32" },
+            // The model's grippers, named the same way. A gripper has a
+            // name of its own, whichever arm carries it.
             gripper_names: { $type: "array", $items: "string" },
           },
         },
