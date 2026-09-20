@@ -6,6 +6,11 @@
         path: "system/alert.json5"
       }
     },
+    camera_geometry: {
+      v1: {
+        path: "cameras/camera_geometry.json5"
+      }
+    },
     camera_profile: {
       v1: {
         path: "cameras/camera_profile.json5"

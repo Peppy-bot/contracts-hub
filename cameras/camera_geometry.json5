@@ -1,0 +1,127 @@
+// Where a camera's pixels point: the intrinsics of each image it publishes,
+// which is its pinhole model and, for depth, what a sample measures; and the
+// extrinsics between its two streams, which is where the depth stream sits
+// against the colour one. The camera contracts carry frames and their
+// sizes and nothing that places a pixel in space, so a consumer that turns a
+// pixel and a depth into a position in the camera's own frame reads that
+// here. A camera node implements this beside rgb_camera or rgbd_camera when
+// it knows its own geometry: a rendered camera from its simulation, a device
+// from its calibration. A camera node that implements a camera contract
+// alone is complete without it.
+//
+// Only the camera's own geometry is here. Where the camera sits on a robot
+// is not the camera's to know, and no member of this contract says it.
+//
+// Conventions, the same for every implementer. They are OpenCV's, which
+// librealsense, the ZED calibration and ROS camera_info share, so a device's
+// own numbers cross into this contract unchanged:
+// - Pixels. u runs to the right and v down, and the centre of the top-left
+//   pixel is (0, 0), so pixel centres sit on whole numbers and an image of
+//   width W whose optical axis runs through its middle has cx = (W - 1) / 2.
+//   A grid resized by a factor s keeps the same camera with
+//   cx' = (cx + 0.5) * s - 0.5, and the same for cy; fx and fy scale by s.
+// - Optical frame. +X to the right of the image, +Y down it, +Z along the
+//   viewing direction. A pixel (u, v) whose depth sample reads d under
+//   depth_model "z" is the point ((u - cx) * d / fx, (v - cy) * d / fy, d)
+//   of that frame. A renderer that looks along its own -Z with +Y up, as
+//   MJCF and USD cameras do, is this frame turned half a turn about X.
+// - Distortion. "none" is an ideal pinhole, which a rendered or a rectified
+//   image is. "plumb_bob" carries k1, k2, p1, p2, k3 in that order, applied
+//   to the normalised image point before fx, fy, cx, cy, as OpenCV does.
+// - Depth against colour. An rgbd camera's two streams come from one
+//   viewpoint when its frames say align_mode "depth_to_color" or
+//   "color_to_depth", and from two when they say "none": the depth imager
+//   sits beside the colour one. get_depth_to_color_extrinsics gives the
+//   pose of the depth optical frame in the colour optical frame, both under
+//   the convention above, so a consumer can carry a depth sample into the
+//   colour image itself. A point p of the depth frame is R(q) * p + t of
+//   the colour frame. Aligned streams answer the identity.
+// - As published. Every answer describes the stream as it is published now.
+//   A camera that changes its alignment changes what it publishes, and the
+//   next answer follows: an aligned depth stream has the colour stream's
+//   viewpoint and the pinhole model that goes with it. The depth intrinsics
+//   and the extrinsics change together, so both answers name the alignment
+//   they describe: a consumer uses a pair that agrees with each other and
+//   with the align_mode of the frames it reads, and asks again otherwise.
+//
+// Every response says whether the node knows what is asked. success false
+// with the reason in message is the answer of a camera that has not heard
+// from its simulation yet, of a device without a calibration, and of a
+// colour-only camera asked about a depth stream it does not have; its other
+// fields are zero or empty and mean nothing.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "camera_geometry",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // The pinhole model of the colour stream, at the size video_stream
+        // publishes.
+        name: "get_color_intrinsics",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          width: "u32",
+          height: "u32",
+          // Focal lengths and principal point, pixels.
+          fx: "f64",
+          fy: "f64",
+          cx: "f64",
+          cy: "f64",
+          distortion_model: "string",   // "none" | "plumb_bob"
+          distortion: { $type: "array", $items: "f64" },   // empty for "none"
+        },
+      },
+      {
+        // The pinhole model of the depth stream, at the size depth_stream
+        // publishes, and what its samples measure. The depth grid has its
+        // own model: it is rarely the colour grid's size, and only an
+        // implementer knows how the two relate.
+        name: "get_depth_intrinsics",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          width: "u32",
+          height: "u32",
+          fx: "f64",
+          fy: "f64",
+          cx: "f64",
+          cy: "f64",
+          distortion_model: "string",   // "none" | "plumb_bob"
+          distortion: { $type: "array", $items: "f64" },   // empty for "none"
+          // "z": a sample is the distance from the camera to the plane
+          // through the point, square to the optical axis. "range": it is
+          // the straight-line distance from the camera to the point.
+          depth_model: "string",
+          // The depths the stream can report, metres. A sample outside them
+          // reads 0, the no-reading value.
+          min_depth_m: "f64",
+          max_depth_m: "f64",
+          // The alignment this answer describes, the value the frames carry
+          // in header.align_mode: "none" | "depth_to_color" |
+          // "color_to_depth".
+          align_mode: "string",
+        },
+      },
+      {
+        // The extrinsics between the two streams: where the depth stream's
+        // optical frame sits in the colour stream's.
+        name: "get_depth_to_color_extrinsics",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // The alignment this answer describes, as in get_depth_intrinsics.
+          align_mode: "string",
+          // The depth optical frame in the colour optical frame: x, y, z
+          // (m) and a unit quaternion [x, y, z, w]. Zeros and [0, 0, 0, 1]
+          // when the streams are aligned.
+          depth_to_color_position: { $type: "array", $items: "f64", $length: 3 },
+          depth_to_color_orientation: { $type: "array", $items: "f64", $length: 4 },
+        },
+      },
+    ],
+  },
+}
