@@ -61,6 +61,11 @@
         path: "robot/motor_health.json5"
       }
     },
+    object_controls: {
+      v1: {
+        path: "simulation/object_controls.json5"
+      }
+    },
     object_state: {
       v1: {
         path: "simulation/object_state.json5"

@@ -1,0 +1,106 @@
+// The adjustable controls of the objects a simulation engine spawned through
+// scene_manipulation: what a spawned object lets a caller set (a standing
+// desk's height, a conveyor's belt speed), read with its unit, bounds,
+// authored default and current value, and set one at a time. Which controls
+// an object offers is authored in its asset, so an engine implements this
+// contract once and needs no code per asset; an asset with nothing to
+// adjust offers no controls, and only objects that offer at least one are
+// listed. What a caller chooses when it picks the asset (a conveyor's width
+// or shape) is a catalogue entry, not a control.
+//
+// Object ids are the ones scene_manipulation minted, and an object is listed
+// from its spawn, at every control's default, until it is removed or the
+// scene is loaded or cleared. Within one object every control id is unique
+// and is what set_object_control takes. A control is a scalar in the unit
+// it reports; its bounds are inclusive, and bounds, default and value are
+// world quantities, so a length control on an object spawned at scale 2
+// reports twice its authored range. Where the object stands is
+// object_state's to report; a control's value is read here.
+//
+// A set takes effect within the goal, like a teleport: when the goal
+// completes the part stands at the new value, whatever the object's
+// physics, and anything resting on it is displaced, not carried. A caller
+// sets an object's controls before placing things on it. A setter validates
+// its whole request before it changes anything: a refused request (unknown
+// object or control, a value not finite or out of bounds) leaves the object
+// as it was and says why in message.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "object_controls",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // Every spawned object that offers a control, in the implementer's
+        // order, with every control it offers.
+        name: "get_object_controls",
+        response_message_format: {
+          // False when the implementer has no controls to report (it does
+          // not inspect its scene, or is not ready yet; message says why).
+          // Never a world without adjustable objects, which is success with
+          // an empty list.
+          success: "bool",
+          message: "string",
+          objects: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              object_id: "string",
+              // The asset it was spawned from.
+              asset_id: "string",
+              controls: {
+                $type: "array",
+                $items: {
+                  $type: "object",
+                  // What set_object_control takes; unique within the object.
+                  id: "string",
+                  // What the control adjusts, for a reader.
+                  label: "string",
+                  // The unit of min, max, default and value ("m", "m/s",
+                  // "rad").
+                  unit: "string",
+                  // Inclusive bounds of value.
+                  min: "f64",
+                  max: "f64",
+                  // The authored value, which a spawned object starts at.
+                  default: "f64",
+                  // The current value.
+                  value: "f64",
+                },
+              },
+            },
+          },
+        },
+      },
+    ],
+    actions: [
+      {
+        // Set one control of one spawned object to value, in the control's
+        // unit and within its bounds. The goal completes once the part
+        // stands at the new value.
+        name: "set_object_control",
+        goal_service: {
+          request_message_format: {
+            object_id: "string",
+            control: "string",
+            value: "f64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the request was refused or the change failed;
+            // message says why.
+            success: "bool",
+            message: "string",
+            // The control's value after the call: the requested one on
+            // success, the unchanged one when refused, 0 when the object
+            // or the control is unknown.
+            current_value: "f64",
+          },
+        },
+      },
+    ],
+  },
+}
