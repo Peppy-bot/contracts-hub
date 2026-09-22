@@ -27,7 +27,13 @@
 //   MJCF and USD cameras do, is this frame turned half a turn about X.
 // - Distortion. "none" is an ideal pinhole, which a rendered or a rectified
 //   image is. "plumb_bob" carries k1, k2, p1, p2, k3 in that order, applied
-//   to the normalised image point before fx, fy, cx, cy, as OpenCV does.
+//   to the normalised image point before fx, fy, cx, cy, as OpenCV does: the
+//   polynomial takes an undistorted point to the distorted one, and a
+//   consumer undistorts by inverting it. "inverse_plumb_bob" carries the
+//   same five coefficients in the same order, but the polynomial runs the
+//   other way, from the distorted normalised point to the undistorted one
+//   (librealsense's Inverse Brown-Conrady), so a consumer applies it once
+//   and inverts nothing.
 // - Depth against colour. An rgbd camera's two streams come from one
 //   viewpoint when its frames say align_mode "depth_to_color" or
 //   "color_to_depth", and from two when they say "none": the depth imager
@@ -71,7 +77,7 @@
           fy: "f64",
           cx: "f64",
           cy: "f64",
-          distortion_model: "string",   // "none" | "plumb_bob"
+          distortion_model: "string",   // "none" | "plumb_bob" | "inverse_plumb_bob"
           distortion: { $type: "array", $items: "f64" },   // empty for "none"
         },
       },
@@ -90,7 +96,7 @@
           fy: "f64",
           cx: "f64",
           cy: "f64",
-          distortion_model: "string",   // "none" | "plumb_bob"
+          distortion_model: "string",   // "none" | "plumb_bob" | "inverse_plumb_bob"
           distortion: { $type: "array", $items: "f64" },   // empty for "none"
           // "z": a sample is the distance from the camera to the plane
           // through the point, square to the optical axis. "range": it is
