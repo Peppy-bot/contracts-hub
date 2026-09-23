@@ -3,27 +3,33 @@
 // desk's height, a conveyor's belt speed), read with its unit, bounds,
 // authored default and current value, and set one at a time. Which controls
 // an object offers is authored in its asset, so an engine implements this
-// contract once and needs no code per asset; an asset with nothing to
-// adjust offers no controls, and only objects that offer at least one are
-// listed. What a caller chooses when it picks the asset (a conveyor's width
-// or shape) is a catalogue entry, not a control.
+// contract once and needs no code per asset; an asset with nothing to adjust
+// offers no controls, and only objects that offer at least one are listed.
+// What a caller chooses when it picks the asset (a conveyor's width or shape)
+// is a catalogue entry, not a control.
 //
 // Object ids are the ones scene_manipulation minted, and an object is listed
-// from its spawn, at every control's default, until it is removed or the
-// scene is loaded or cleared. Within one object every control id is unique
-// and is what set_object_control takes. A control is a scalar in the unit
-// it reports; its bounds are inclusive, and bounds, default and value are
-// world quantities, so a length control on an object spawned at scale 2
-// reports twice its authored range. Where the object stands is
-// object_state's to report; a control's value is read here.
+// from its spawn, every control at its default or at the value the scene that
+// placed it starts it at, until it is removed or the scene is loaded or
+// cleared. Within one object every control id is unique and is what
+// set_object_control takes. A control is a scalar in the unit it reports; its
+// bounds are inclusive, and bounds, default and value are world quantities,
+// so a length or speed control on an object spawned at scale 2 reports twice
+// its authored range. Where the object stands is object_state's to report; a
+// control's value is read here.
 //
-// A set takes effect within the goal, like a teleport: when the goal
-// completes the part stands at the new value, whatever the object's
-// physics, and anything resting on it is displaced, not carried. A caller
-// sets an object's controls before placing things on it. A setter validates
-// its whole request before it changes anything: a refused request (unknown
-// object or control, a value not finite or out of bounds) leaves the object
-// as it was and says why in message.
+// A control either holds a part at a displacement or drives a part at a
+// speed. A displacement set (unit "m" or "rad") takes effect within the goal,
+// like a teleport: when the goal completes the part stands at the new value,
+// whatever the object's physics, and anything resting on it is displaced, not
+// carried, so a caller sets such a control before placing things on the part.
+// A speed set (unit "m/s", such as a conveyor's belt) takes effect from the
+// next physics step and the goal completes then: the part stays where it
+// stands, its surface moves at the new speed (a negative value the other way)
+// and what rests on it is carried by friction. A setter validates its whole
+// request before it changes anything: a refused request (unknown object or
+// control, a value not finite or out of bounds) leaves the object as it was
+// and says why in message.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -79,7 +85,8 @@
       {
         // Set one control of one spawned object to value, in the control's
         // unit and within its bounds. The goal completes once the part
-        // stands at the new value.
+        // stands at the new value, or once a physics step has run the part
+        // at the new speed.
         name: "set_object_control",
         goal_service: {
           request_message_format: {
