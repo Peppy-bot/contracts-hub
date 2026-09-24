@@ -2,7 +2,9 @@
 // whole-robot snapshot per message: joint positions, the gripper grasp-point
 // pose of each arm, and each gripper's opening. Names match limb_motion
 // addressing: the same arm and gripper names select limbs there and label
-// them here. Distinct from the streamed per-pair states on the joint_link /
+// them here, and get_limb_names answers them on demand, so a consumer can
+// address a limb and size the arrays before a snapshot arrives. Distinct
+// from the streamed per-pair states on the joint_link /
 // gripper_link / pose_link pairings: this is a robot-wide summary any
 // consumer can read without holding a pairing.
 //
@@ -55,6 +57,24 @@
           // Measured opening fraction of each gripper (0 = closed, 1 = fully
           // open), index-aligned with gripper_names.
           gripper_openings: { $type: "array", $items: "f64" },
+        },
+      },
+    ],
+    services: [
+      {
+        // The robot's limb names and the joints behind each arm name: the
+        // names limb_motion goals address and limb_states labels, held by
+        // the implementer whatever its limbs are measuring.
+        name: "get_limb_names",
+        response_message_format: {
+          // The implementer's fixed set of arm names (e.g. "left_arm"), in
+          // its fixed order.
+          arm_names: { $type: "array", $items: "string" },
+          // Joint count of each arm, index-aligned with arm_names.
+          joints_per_arm: { $type: "array", $items: "u32" },
+          // The implementer's fixed set of gripper names (e.g.
+          // "left_gripper"), in its fixed order.
+          gripper_names: { $type: "array", $items: "string" },
         },
       },
     ],
