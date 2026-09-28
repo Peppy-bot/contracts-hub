@@ -62,7 +62,8 @@ review, not a truncated comparison or a claim of uniqueness.
 
 This review is advisory, not a merge gate or a guarantee of uniqueness. Similarities, missing
 credentials, and analysis failures do not fail the workflow. If GitHub rejects the comment,
-the workflow logs a warning. The repository-index check remains independent.
+the workflow logs a warning. The **Tests** workflow, whose checks a merge requires, stays
+independent of it.
 
 ### Claude authentication
 
@@ -78,8 +79,8 @@ isolated temporary environment without the GitHub token. Separate trusted code v
 response and posts the comment.
 
 Target-triggered automation runs from the base branch, so the workflow and its helper must be
-present there to review PRs. The **Contract similarity tests** workflow separately tests proposed
-automation changes without Claude credentials or write permissions.
+present there to review PRs. The `contract-similarity-tests` job of the **Tests** workflow
+separately tests proposed automation changes without Claude credentials or write permissions.
 
 ### Testing the automation
 
