@@ -65,13 +65,34 @@
     actions: [
       {
         // Replace the current scene with the asset named by asset_id, which
-        // must be of kind "scene". Spawned objects are removed first.
+        // must be of kind "scene". Spawned objects are removed first. A load
+        // that arrives while another one runs may replace it: the replaced
+        // goal then ends as cancelled, and its message names the load that
+        // replaced it.
         name: "load_scene",
         goal_service: {
           request_message_format: {
             asset_id: "string",
             // Uniform scale applied to the scene; 1 = as authored.
             scale: "f64",
+          },
+        },
+        // One message when the goal is accepted, then one whenever a field
+        // below changes, a few changes of a short period in one message,
+        // and none while nothing changes: silence means the goal makes no
+        // progress. The stream ends with the goal.
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            // Bytes of the scene's asset files received so far; 0 for an
+            // engine that fetches nothing.
+            bytes_fetched: "u64",
+            // Files of the scene that are ready: found in the engine's
+            // cache or received whole.
+            files_ready: "u64",
+            // True once every file is ready and the engine builds the
+            // scene.
+            building: "bool",
           },
         },
         result_service: {
@@ -110,6 +131,24 @@
             physics: "string",
             // Mass (kg) of a dynamic object; ignored otherwise.
             mass: "f64",
+          },
+        },
+        // One message when the goal is accepted, then one whenever a field
+        // below changes, a few changes of a short period in one message,
+        // and none while nothing changes: silence means the goal makes no
+        // progress. The stream ends with the goal.
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            // Bytes of the object's asset files received so far; 0 for an
+            // engine that fetches nothing.
+            bytes_fetched: "u64",
+            // Files of the object that are ready: found in the engine's
+            // cache or received whole.
+            files_ready: "u64",
+            // True once every file is ready and the engine builds the
+            // object.
+            building: "bool",
           },
         },
         result_service: {
