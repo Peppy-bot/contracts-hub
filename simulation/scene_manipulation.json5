@@ -80,7 +80,9 @@
         // One message when the goal is accepted, then one whenever a field
         // below changes, a few changes of a short period in one message,
         // and none while nothing changes: silence means the goal makes no
-        // progress. The stream ends with the goal.
+        // progress. The stream ends with the goal; a caller reads it until
+        // then, since a stream left unread holds up the caller's own
+        // connection once its buffer is full.
         feedback_topic: {
           qos_profile: "standard",
           message_format: {
@@ -136,7 +138,9 @@
         // One message when the goal is accepted, then one whenever a field
         // below changes, a few changes of a short period in one message,
         // and none while nothing changes: silence means the goal makes no
-        // progress. The stream ends with the goal.
+        // progress. The stream ends with the goal; a caller reads it until
+        // then, since a stream left unread holds up the caller's own
+        // connection once its buffer is full.
         feedback_topic: {
           qos_profile: "standard",
           message_format: {
