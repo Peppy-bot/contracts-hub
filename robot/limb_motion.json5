@@ -117,11 +117,18 @@
         },
         result_service: {
           response_message_format: {
+            // The action ends when the gripper stands still: its measured
+            // opening has stopped changing after the commanded move.
+            //
             // False when the move was refused, failed, or cancelled;
-            // message says which.
+            // message says which. A gripper that stands still short of the
+            // target did none of these, so success is true and message says
+            // where it stopped.
             success: "bool",
             message: "string",
-            // Measured opening fraction when the action ended.
+            // Measured opening fraction when the action ended: the target,
+            // or the opening where an object or the effort cap stopped the
+            // jaws. The caller judges a grasp from it.
             final_opening: "f64",
             // Wall-clock duration of the action (s).
             action_time: "f64",
