@@ -1,0 +1,61 @@
+// Where a robot carries its cameras: the pose of each camera in the robot
+// frame, now. camera_geometry gives a camera's own geometry and says that
+// where the camera sits on the robot is not the camera's to know; this
+// contract is where the robot says it. A consumer that turns a pixel and a
+// depth into a point of the camera's frame through camera_geometry carries
+// that point into the robot frame through the pose reported here.
+//
+// The values are the robot's design values: exact in a simulation, nominal
+// on hardware, where a camera stands within the tolerance of its mount. They
+// are not a calibration, and nothing here says how far a physical camera
+// stands from its design pose.
+//
+// Conventions:
+// - Robot frame. Fixed to the robot's base: its origin is the point the base
+//   stands on, +X points the way the robot faces, +Y to its left and +Z up.
+//   It moves with the robot, and it is not a frame of the room or of a
+//   simulated world.
+// - Camera pose. The pose of the camera's colour optical frame as
+//   camera_geometry defines it: +X to the right of the image, +Y down it,
+//   +Z along the viewing direction. A point p of that frame is R(q) * p + t
+//   of the robot frame, with t the camera's position and q its orientation.
+// - Now. A camera an arm carries moves with that arm, so its pose is
+//   computed from the joints measured at `timestamp`; a camera fixed to the
+//   base has one pose for the life of the robot.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "camera_mounts",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // The pose of every camera the robot's design carries, in the robot
+        // frame, at `timestamp`. A robot without cameras answers success
+        // with empty arrays. success false with the reason in message is
+        // the answer of a robot that has not measured its joints yet; its
+        // other fields are then empty and mean nothing.
+        name: "get_camera_poses",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // When the joints the poses are computed from were measured.
+          timestamp: "time",
+          // The names the robot's cameras run under (chest, wrist_left),
+          // in the robot's fixed order. The arrays below are index-aligned
+          // with this one.
+          camera_names: { $type: "array", $items: "string" },
+          // 3 entries per camera (x, y, z, m), in camera_names order.
+          positions: { $type: "array", $items: "f64" },
+          // 4 entries per camera, a unit quaternion [x, y, z, w], in
+          // camera_names order.
+          orientations: { $type: "array", $items: "f64" },
+          // The arm that carries each camera, by the name limb_motion
+          // addresses it under, or "" for a camera fixed to the base.
+          carried_by: { $type: "array", $items: "string" },
+        },
+      },
+    ],
+  },
+}
