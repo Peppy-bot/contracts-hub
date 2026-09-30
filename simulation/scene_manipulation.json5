@@ -118,7 +118,8 @@
       {
         // The scene that is loaded now: the "scene/<id>" asset load_scene
         // took, or the implementer's default scene after clear_scene, and
-        // the scale it stands at.
+        // the scale it stands at. An implementer that opens on no scene
+        // answers an empty asset_id until a load.
         name: "get_scene",
         response_message_format: {
           success: "bool",
