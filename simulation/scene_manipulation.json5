@@ -6,12 +6,15 @@
 //
 // Asset ids come from get_assets_list and carry their kind as a prefix
 // ("scene/<id>" or "object/<id>"). Object ids are minted by the implementer
-// on spawn. What is spawned, and where it stands, is not read here: the
-// engine's object_state contract reports it, so a commander that lists
-// objects binds both contracts to the same engine. Robot names come from
+// on spawn, and by the implementer that places the objects of a loaded
+// scene as objects of the same set. get_objects_list reports what stands in
+// the scene and where, for a caller that sets the world up and checks its
+// setup; the engine's object_state contract reports the same objects with
+// their velocities, as a stream, for evaluation. Robot names come from
 // get_robots_list. Positions are world-frame x, y, z in meters, headings are
-// a yaw in radians about the world's +z, forces are world-frame newtons,
-// masses are kilograms.
+// a yaw in radians about the world's +z, orientations are unit quaternions
+// [x, y, z, w] in the world frame, forces are world-frame newtons, masses
+// are kilograms.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -22,14 +25,107 @@
     services: [
       {
         // The catalogue of placeable assets, as a JSON array in assets_json.
-        // Every entry carries at least asset_id, display_name, kind ("scene" or
-        // "object") and category; implementers may add engine-specific
-        // fields.
+        // Every entry carries at least asset_id, display_name, description,
+        // kind ("scene" or "object") and category; implementers may add
+        // engine-specific fields. Each request field narrows the list; a
+        // field that is absent narrows nothing, so a request without fields
+        // lists the whole catalogue.
         name: "get_assets_list",
+        request_message_format: {
+          // "scene" or "object". Another value is refused.
+          kind: { $type: "string", $optional: true },
+          // A category get_asset_categories reports. An unknown one lists
+          // nothing.
+          category: { $type: "string", $optional: true },
+          // Text an entry's asset_id, display_name or description must
+          // contain, compared without regard to case.
+          query: { $type: "string", $optional: true },
+        },
         response_message_format: {
           success: "bool",
           message: "string",
           assets_json: "string",
+        },
+      },
+      {
+        // The categories of the catalogue and how many assets each one
+        // holds, so a caller filters get_assets_list before it lists.
+        name: "get_asset_categories",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          categories: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              // "scene" or "object".
+              kind: "string",
+              category: "string",
+              // Assets of this kind in this category.
+              count: "u32",
+            },
+          },
+        },
+      },
+      {
+        // What stands in the scene and where, for a caller that sets the
+        // world up and checks its setup: every object the implementer
+        // tracks, spawned by a caller or placed by the loaded scene, with
+        // its pose as of `timestamp`. A dynamic object can move after that
+        // instant. The order is the implementer's object order.
+        name: "get_objects_list",
+        request_message_format: {
+          // "spawned" lists the objects a caller spawned, "scene" the
+          // objects the loaded scene placed. Absent lists both. Another
+          // value is refused. An implementer that tracks no scene-placed
+          // object as an object answers "scene" with an empty list.
+          source: { $type: "string", $optional: true },
+          // A category get_asset_categories reports. Absent lists every
+          // category.
+          category: { $type: "string", $optional: true },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // Capture time of the poses, on the implementer's clock.
+          timestamp: "time",
+          objects: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              // The id move_object, remove_object and apply_force take.
+              object_id: "string",
+              // The "object/<id>" asset the object is an instance of.
+              asset_id: "string",
+              // The asset's category, as get_asset_categories reports it.
+              category: "string",
+              // "spawned" or "scene".
+              source: "string",
+              // "dynamic", "static" or "none", as spawn_object takes it.
+              physics: "string",
+              // Mass (kg).
+              mass: "f64",
+              // Uniform scale; 1 = as authored.
+              scale: "f64",
+              // Where the object's origin stands: x, y, z (m).
+              position: { $type: "array", $items: "f64", $length: 3 },
+              // How the object is turned: a unit quaternion [x, y, z, w].
+              orientation: { $type: "array", $items: "f64", $length: 4 },
+            },
+          },
+        },
+      },
+      {
+        // The scene that is loaded now: the "scene/<id>" asset load_scene
+        // took, or the implementer's default scene after clear_scene, and
+        // the scale it stands at.
+        name: "get_scene",
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          asset_id: "string",
+          // Uniform scale of the scene; 1 = as authored.
+          scale: "f64",
         },
       },
       {
@@ -123,7 +219,13 @@
             asset_id: "string",
             position: { $type: "array", $items: "f64", $length: 3 },
             // Rotation about the world's +z in radians; 0 = as authored.
+            // Ignored when orientation is present.
             yaw: "f64",
+            // When present, the object's orientation in the world frame, a
+            // unit quaternion [x, y, z, w], in place of yaw. A quaternion
+            // whose length differs from 1 by more than 0.001 is refused;
+            // inside that, the implementer normalises it.
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
             // Uniform scale; 1 = as authored.
             scale: "f64",
             // "dynamic" (simulated, falls and collides), "static" (collides,
@@ -163,13 +265,18 @@
         },
       },
       {
-        // Teleport a spawned object to a new position, keeping its
-        // orientation and zeroing its velocity.
+        // Teleport an object to a new position, zeroing its velocity. It
+        // keeps its orientation unless the goal carries one.
         name: "move_object",
         goal_service: {
           request_message_format: {
             object_id: "string",
             position: { $type: "array", $items: "f64", $length: 3 },
+            // When present, the object's new orientation in the world
+            // frame, a unit quaternion [x, y, z, w], validated as
+            // spawn_object validates it. Absent keeps the orientation the
+            // object has.
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
           },
         },
         result_service: {
@@ -180,7 +287,7 @@
         },
       },
       {
-        // Delete a spawned object.
+        // Delete an object.
         name: "remove_object",
         goal_service: {
           request_message_format: {
