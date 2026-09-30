@@ -5,9 +5,17 @@
 // setpoints on the joint_link / gripper_link / pose_link pairings.
 //
 // Every Cartesian pose, commanded or reported, is the gripper's grasp point
-// (on the jaw closing axis midway between the pads), in the implementer's
-// world frame, position in meters and orientation as a unit quaternion
-// [x, y, z, w].
+// (on the jaw closing axis midway between the pads), in the robot frame,
+// position in meters and orientation as a unit quaternion [x, y, z, w].
+//
+// The robot frame is fixed to the robot's base: its origin is the point
+// the base stands on, +X points the way the robot faces, +Y to its left
+// and +Z up. It moves with the robot, and it is not a frame of the room or
+// of a simulated world.
+//
+// A move runs until it ends, its caller cancels it, or the stop service
+// ends every move in flight, whoever started them. check_arm_move asks
+// whether a Cartesian move has a plan, and moves nothing.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -54,7 +62,7 @@
             // names (e.g. "left_arm"). An unknown name is refused in the
             // result.
             arm_name: "string",
-            // Target grasp-point position, world frame: x, y, z (m).
+            // Target grasp-point position, robot frame: x, y, z (m).
             position: { $type: "array", $items: "f64", $length: 3 },
             // Target grasp-point orientation, quaternion [x, y, z, w].
             orientation: { $type: "array", $items: "f64", $length: 4 },
@@ -133,6 +141,56 @@
             // Wall-clock duration of the action (s).
             action_time: "f64",
           },
+        },
+      },
+    ],
+    services: [
+      {
+        // Ends every planned move in flight on this robot, whoever started
+        // it: the moves of this contract and the posture moves of the same
+        // implementer. Each limb holds where it is commanded, as after a
+        // cancel, and each goal ends as cancelled with a message that names
+        // the stop and its reason. A goal that arrives after the stop runs
+        // as usual. Setpoints streamed on a pairing are not stopped.
+        name: "stop",
+        request_message_format: {
+          // Why the moves are stopped, carried into the message of each
+          // goal the stop ends. Empty is accepted.
+          reason: "string",
+        },
+        response_message_format: {
+          // False only when the stop itself could not be carried out;
+          // message says why. A stop with nothing in flight succeeds.
+          success: "bool",
+          message: "string",
+          // The limbs whose move was stopped, by their limb names; empty
+          // when nothing moved.
+          stopped: { $type: "array", $items: "string" },
+        },
+      },
+      {
+        // Whether a move_arm goal with these fields has a plan from where
+        // the arm is commanded now, without moving it. It checks what
+        // move_arm checks before it moves, and no more: it does not check
+        // collisions with the robot itself or with what stands around it.
+        name: "check_arm_move",
+        request_message_format: {
+          // The fields of the move_arm goal, with the same meaning.
+          arm_name: "string",
+          position: { $type: "array", $items: "f64", $length: 3 },
+          orientation: { $type: "array", $items: "f64", $length: 4 },
+          duration_s: "f64",
+          plan_position_tolerance_m: "f64",
+          plan_orientation_tolerance_rad: "f64",
+        },
+        response_message_format: {
+          // True when a plan exists. False with the words a move_arm
+          // refusal gives when none does, when the arm is unknown, or when
+          // the arm is executing a move, which the check does not disturb.
+          success: "bool",
+          message: "string",
+          // The time the move would take (s); 0 when success is false.
+          duration_s: "f64",
         },
       },
     ],

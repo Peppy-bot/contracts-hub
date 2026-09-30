@@ -18,8 +18,13 @@
 // arm arrays.
 //
 // Every grasp-point pose is the gripper's grasp point (on the jaw closing
-// axis midway between the pads), in the implementer's world frame, position
-// in meters and orientation as a unit quaternion [x, y, z, w].
+// axis midway between the pads), in the robot frame, position in meters and
+// orientation as a unit quaternion [x, y, z, w].
+//
+// The robot frame is fixed to the robot's base: its origin is the point
+// the base stands on, +X points the way the robot faces, +Y to its left
+// and +Z up. It moves with the robot, and it is not a frame of the room or
+// of a simulated world.
 {
   peppy_schema: "contract/v1",
   manifest: {
