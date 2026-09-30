@@ -28,8 +28,8 @@
         // Every entry carries at least asset_id, display_name, description,
         // kind ("scene" or "object") and category; implementers may add
         // engine-specific fields. Each request field narrows the list; a
-        // field that is absent narrows nothing, so a request without fields
-        // lists the whole catalogue.
+        // field that is absent, or sent empty, narrows nothing, so a request
+        // without fields lists the whole catalogue.
         name: "get_assets_list",
         request_message_format: {
           // "scene" or "object". Another value is refused.
@@ -76,12 +76,13 @@
         name: "get_objects_list",
         request_message_format: {
           // "spawned" lists the objects a caller spawned, "scene" the
-          // objects the loaded scene placed. Absent lists both. Another
-          // value is refused. An implementer that tracks no scene-placed
-          // object as an object answers "scene" with an empty list.
+          // objects the loaded scene placed. Absent, or empty, lists both.
+          // Another value is refused. An implementer that tracks no
+          // scene-placed object as an object answers "scene" with an empty
+          // list.
           source: { $type: "string", $optional: true },
-          // A category get_asset_categories reports. Absent lists every
-          // category.
+          // A category get_asset_categories reports. Absent, or empty,
+          // lists every category.
           category: { $type: "string", $optional: true },
         },
         response_message_format: {
