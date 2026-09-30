@@ -15,9 +15,11 @@
       {
         // Renders the world as seen from `position`, looking at `target`,
         // both world-frame points in metres, with +Z up in the picture. A
-        // position equal to the target is refused. success false with the
-        // reason in message is the answer of an engine that renders nothing;
-        // its other fields are then zero or empty and mean nothing.
+        // position equal to the target is refused, and so is a line of
+        // sight straight along the vertical, which leaves the picture with
+        // no up. success false with the reason in message is the answer of
+        // an engine that renders nothing; its other fields are then zero or
+        // empty and mean nothing.
         name: "render_view",
         request_message_format: {
           // Where the viewpoint is: x, y, z (m).
