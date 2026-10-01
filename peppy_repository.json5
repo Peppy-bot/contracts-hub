@@ -11,6 +11,11 @@
         path: "cameras/camera_geometry.json5"
       }
     },
+    camera_mounts: {
+      v1: {
+        path: "robot/camera_mounts.json5"
+      }
+    },
     camera_profile: {
       v1: {
         path: "cameras/camera_profile.json5"
@@ -116,6 +121,11 @@
         path: "simulation/scene_materials.json5"
       }
     },
+    scene_view: {
+      v1: {
+        path: "simulation/scene_view.json5"
+      }
+    },
     sensor_readout: {
       v1: {
         path: "simulation/sensor_readout.json5"
@@ -124,6 +134,11 @@
     sim_camera_control: {
       v1: {
         path: "simulation/sim_camera_control.json5"
+      }
+    },
+    simulation_clock: {
+      v1: {
+        path: "simulation/simulation_clock.json5"
       }
     },
     simulation_robot: {

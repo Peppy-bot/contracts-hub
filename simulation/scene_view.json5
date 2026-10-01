@@ -1,0 +1,74 @@
+// Pictures of the simulated world, for a caller that sets the world up
+// and looks at what it builds: a view of the world from a free viewpoint,
+// and the preview of an asset of the catalogue scene_manipulation lists,
+// to pick an asset before placing it. Only a simulation can give them: no
+// robot sees these pictures, and the cameras a robot carries publish
+// through the camera contracts. A view is rendered on request from the
+// world as it stands at that instant, with the lighting and materials the
+// scene renders under; a preview is the picture the catalogue holds for
+// the asset, the same whatever the world holds.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "scene_view",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // Renders the world as seen from `position`, looking at `target`,
+        // both world-frame points in metres, with +Z up in the picture. A
+        // position equal to the target is refused, and so is a line of
+        // sight straight along the vertical, which leaves the picture with
+        // no up. success false with the reason in message is the answer of
+        // an engine that renders nothing; its other fields are then zero or
+        // empty and mean nothing.
+        name: "render_view",
+        request_message_format: {
+          // Where the viewpoint is: x, y, z (m).
+          position: { $type: "array", $items: "f64", $length: 3 },
+          // The point the view looks at: x, y, z (m).
+          target: { $type: "array", $items: "f64", $length: 3 },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // The simulated instant the picture shows.
+          timestamp: "time",
+          // The pixel format of frame: "rgb8".
+          encoding: "string",
+          width: "u32",
+          height: "u32",
+          // The picture, width x height pixels, rows from the top, each
+          // pixel three bytes.
+          frame: { $type: "array", $items: "u8" },
+        },
+      },
+      {
+        // The preview the catalogue holds for the asset `asset_id` names:
+        // an object shown alone as authored, a scene shown whole, over a
+        // white background. It shows the asset, not the world as it
+        // stands. An id the catalogue lacks, and an entry the catalogue
+        // holds no preview for, are refused: success false with the reason
+        // in message, the other fields zero or empty and meaning nothing.
+        name: "preview_asset",
+        request_message_format: {
+          // The asset, as get_assets_list of scene_manipulation names it:
+          // "scene/<id>" or "object/<id>".
+          asset_id: "string",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // The pixel format of frame: "rgb8".
+          encoding: "string",
+          width: "u32",
+          height: "u32",
+          // The picture, width x height pixels, rows from the top, each
+          // pixel three bytes.
+          frame: { $type: "array", $items: "u8" },
+        },
+      },
+    ],
+  },
+}

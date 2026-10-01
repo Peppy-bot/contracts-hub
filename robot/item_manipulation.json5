@@ -6,11 +6,16 @@
 // and carry no knowledge of what the limb is reaching for. Finding an item
 // is item_perception's job; the identifier it mints is what grab_item takes.
 //
-// Every pose, commanded or reported, is in the implementer's world frame,
-// position in meters and orientation as a unit quaternion [x, y, z, w]. A
-// pose is the gripper's grasp point, the same convention item_perception
-// reports an item's pose in. Grippers are named from the implementer's fixed
-// set of gripper names, which get_state lists.
+// Every pose, commanded or reported, is in the robot frame, position in
+// meters and orientation as a unit quaternion [x, y, z, w]. A pose is the
+// gripper's grasp point, the same convention item_perception reports an
+// item's pose in. Grippers are named from the implementer's fixed set of
+// gripper names, which get_state lists.
+//
+// The robot frame is fixed to the robot's base: its origin is the point
+// the base stands on, +X points the way the robot faces, +Y to its left
+// and +Z up. It moves with the robot, and it is not a frame of the room or
+// of a simulated world.
 //
 // A position says where and is always required. An orientation says how and
 // is optional wherever it appears: absent on a goal leaves the choice to the
@@ -71,7 +76,7 @@
             // first. An identifier the implementer no longer recognises is
             // refused in the result.
             item_id: "string",
-            // Grasp-point position, world frame: x, y, z (m). Read only when
+            // Grasp-point position, robot frame: x, y, z (m). Read only when
             // item_id is empty; a goal that names an item_id sends zeros here.
             position: { $type: "array", $items: "f64", $length: 3 },
             // Grasp-point orientation, quaternion [x, y, z, w]. Read only
@@ -156,7 +161,7 @@
             // none or more than one holds. An unknown name is refused in the
             // result, as is a gripper holding nothing.
             gripper_name: "string",
-            // Grasp-point position when the jaws open, world frame:
+            // Grasp-point position when the jaws open, robot frame:
             // x, y, z (m). It is where the gripper lets go, not a waypoint
             // on the way there.
             position: { $type: "array", $items: "f64", $length: 3 },
@@ -184,7 +189,7 @@
             // Identifier of the item that was placed, as grab_item reported
             // it.
             item_id: "string",
-            // Measured grasp-point position when the jaws opened, world
+            // Measured grasp-point position when the jaws opened, robot
             // frame: x, y, z (m).
             final_position: { $type: "array", $items: "f64", $length: 3 },
             // Wall-clock duration of the action (s).

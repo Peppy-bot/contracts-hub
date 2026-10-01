@@ -7,11 +7,22 @@
 // action is a whole sequence the implementer carries out and returns a result
 // for when it ends.
 //
-// Every position reported is in the implementer's world frame, in meters,
-// and an orientation, where an action reports one, is a unit quaternion
+// Every position reported is in the robot frame, in meters, and an
+// orientation, where an action reports one, is a unit quaternion
 // [x, y, z, w]. An item's pose is the pose the implementer would drive a
 // gripper's grasp point to in order to take it, the same convention
 // item_manipulation commands by.
+//
+// The robot frame is fixed to the robot's base: its origin is the point
+// the base stands on, +X points the way the robot faces, +Y to its left
+// and +Z up. It moves with the robot, and it is not a frame of the room or
+// of a simulated world.
+//
+// Each result also reports where each item is in the picture the
+// implementer looked at: a region in the pixels of the colour frame of the
+// camera the result names, x to the right and y down, at the frame's size,
+// with the capture time of that frame. An implementer without a picture
+// reports no region and names no camera.
 //
 // A position says where and is always reported. An orientation says how and
 // is optional where it appears: absent means the implementer never resolved
@@ -68,12 +79,27 @@
             // and distinct identifiers, and callers tell them apart by
             // position.
             labels: { $type: "array", $items: "string" },
-            // Item positions, world frame: 3 entries (x, y, z, m) per item,
+            // Item positions, robot frame: 3 entries (x, y, z, m) per item,
             // in item_ids order.
             positions: { $type: "array", $items: "f64" },
             // How sure the implementer is of each identification, 0 to 1.
             // 0 where the implementer reports no confidence of its own.
             confidences: { $type: "array", $items: "f64" },
+            // Where each item is in the picture: 4 entries (x0, y0, x1, y1,
+            // pixels) per item, in item_ids order, the corners of the
+            // region that holds the item. Four zeros for an item this scan
+            // did not see and reports from an earlier look. Empty when the
+            // implementer has no picture.
+            regions: { $type: "array", $items: "f64" },
+            // The name the camera the regions belong to runs under; empty
+            // when the implementer has no picture.
+            camera: "string",
+            // The size of that camera's colour frame, pixels; 0 when the
+            // implementer has no picture.
+            image_width: "u32",
+            image_height: "u32",
+            // The capture time of the frame the scan looked at.
+            frame_timestamp: "time",
             // Wall-clock duration of the action (s).
             action_time: "f64",
           },
@@ -110,7 +136,7 @@
             // What the implementer recognised the item as, in whatever
             // vocabulary it uses. Empty when it has no name for the item.
             label: "string",
-            // Item position, world frame: x, y, z (m).
+            // Item position, robot frame: x, y, z (m).
             position: { $type: "array", $items: "f64", $length: 3 },
             // Item orientation, quaternion [x, y, z, w]. Absent when the
             // implementer located the item without resolving how it is
@@ -121,6 +147,19 @@
             // How sure the implementer is of this identification, 0 to 1.
             // 0 when the implementer reports no confidence of its own.
             confidence: "f64",
+            // Where the item is in the picture: x0, y0, x1, y1 (pixels),
+            // the corners of the region that holds it. Absent when the
+            // implementer has no picture.
+            region: { $type: "array", $items: "f64", $length: 4, $optional: true },
+            // The name the camera the region belongs to runs under; empty
+            // when the implementer has no picture.
+            camera: "string",
+            // The size of that camera's colour frame, pixels; 0 when the
+            // implementer has no picture.
+            image_width: "u32",
+            image_height: "u32",
+            // The capture time of the frame the search looked at.
+            frame_timestamp: "time",
             // Wall-clock duration of the action (s).
             action_time: "f64",
           },
