@@ -1,9 +1,12 @@
-// A picture of the simulated world from a free viewpoint, for a caller that
-// sets the world up and looks at what it built from wherever it likes. Only
-// a simulation can give it: no robot sees this picture, and the cameras a
-// robot carries publish through the camera contracts. A view is rendered on
-// request from the world as it stands at that instant, with the lighting
-// and materials the scene renders under.
+// Pictures of the simulated world, for a caller that sets the world up
+// and looks at what it builds: a view of the world from a free viewpoint,
+// and the preview of an asset of the catalogue scene_manipulation lists,
+// to pick an asset before placing it. Only a simulation can give them: no
+// robot sees these pictures, and the cameras a robot carries publish
+// through the camera contracts. A view is rendered on request from the
+// world as it stands at that instant, with the lighting and materials the
+// scene renders under; a preview is the picture the catalogue holds for
+// the asset, the same whatever the world holds.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -32,6 +35,31 @@
           message: "string",
           // The simulated instant the picture shows.
           timestamp: "time",
+          // The pixel format of frame: "rgb8".
+          encoding: "string",
+          width: "u32",
+          height: "u32",
+          // The picture, width x height pixels, rows from the top, each
+          // pixel three bytes.
+          frame: { $type: "array", $items: "u8" },
+        },
+      },
+      {
+        // The preview the catalogue holds for the asset `asset_id` names:
+        // an object shown alone as authored, a scene shown whole, over a
+        // white background. It shows the asset, not the world as it
+        // stands. An id the catalogue lacks, and an entry the catalogue
+        // holds no preview for, are refused: success false with the reason
+        // in message, the other fields zero or empty and meaning nothing.
+        name: "preview_asset",
+        request_message_format: {
+          // The asset, as get_assets_list of scene_manipulation names it:
+          // "scene/<id>" or "object/<id>".
+          asset_id: "string",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
           // The pixel format of frame: "rgb8".
           encoding: "string",
           width: "u32",
