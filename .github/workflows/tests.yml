@@ -4,6 +4,9 @@ name: Tests
 #
 # check-index holds `peppy_repository.json5` to the tree (see its job).
 #
+# check-mcp-exposures holds the exposures of mcp-hub to the contracts of the
+# pull request (see its job).
+#
 # contract-similarity-tests tests the automation of the Contract similarity
 # workflow (contract-similarity.yml and the scripts under .github/scripts/).
 # The proposed test code runs without the adviser's OAuth secret or write
@@ -42,7 +45,8 @@ jobs:
   # release build waits for nothing.
   wait-for-peppy:
     name: Wait for the peppy dev build
-    # check-index, the one job that needs it, runs on pull requests alone.
+    # check-index and check-mcp-exposures, the jobs that need it, run on pull
+    # requests alone.
     if: github.event_name == 'pull_request'
     # The smallest RunsOn runner, 1 vCPU: the job only looks for the build.
     runs-on: runs-on=${{ github.run_id }}/runner=peppy-ci-ubuntu-24.04-x86_64/image=peppy-ubuntu24/cpu=1/ram=2+4/family=c8a+c7a+m8a+m7a${{ fromJSON(github.run_attempt) >= 3 && '/spot=false' || '' }}  # custom Peppy AMI
@@ -104,6 +108,107 @@ jobs:
       - name: Check peppy_repository.json5 matches the repository
         run: peppy repo index . --check
 
+  # An exposure of mcp-hub can pin a contract of this repository by the
+  # sha256 of its document, and a launch that resolves other bytes for that
+  # contract refuses to serve the exposure. The CI of mcp-hub runs on mcp-hub
+  # pull requests alone, so a change here to a pinned contract leaves every
+  # launch of the exposure broken until mcp-hub pins the new bytes. This job
+  # checks every exposure of mcp-hub against the contracts of this pull
+  # request: such a change fails here until a branch of mcp-hub with the same
+  # name pins the new bytes, and that branch merges with this one as one set.
+  #
+  # The check is the one the CI of mcp-hub runs. It resolves the contracts
+  # through the caches of a daemon, so the job starts one.
+  check-mcp-exposures:
+    needs: wait-for-peppy
+    if: github.event_name == 'pull_request'
+    # A light RunsOn runner: the check boots a daemon and clones the hubs. A
+    # pull request from a fork runs on the same runners, so what holds fork
+    # code is the repository's fork-PR approval gate.
+    runs-on: runs-on=${{ github.run_id }}/runner=peppy-ci-ubuntu-24.04-x86_64/image=peppy-ubuntu24/cpu=4/ram=8+16/family=c8a+c7a+m8a+m7a${{ fromJSON(github.run_attempt) >= 3 && '/spot=false' || '' }}  # custom Peppy AMI
+    # Nothing here legitimately takes minutes; a hung step should fail fast
+    # rather than hold a runner for the default six hours.
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      # Each hub is checked out in a directory of its own, so the checkout
+      # the daemon reads as this repository holds no other hub.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: contracts-hub
+          persist-credentials: false
+
+      # The action unpacks the whole peppy release archive under RUNNER_TEMP
+      # and puts its bin on PATH: the daemon below needs its bundled router
+      # beside the binary. It exports a PEPPY_HOME under RUNNER_TEMP and
+      # writes there the repository registry the daemon reads: this checkout
+      # as the contracts-hub entry, and every other hub pinned at the commit
+      # of the set, mcp-hub at the head of its branch named like this pull
+      # request's head branch where it has one, and at the head of its main
+      # otherwise. The `set` output names those commits.
+      - name: Install peppy and register the hub repositories
+        id: peppy
+        uses: Peppy-bot/peppy/.github/actions/hub-ci-peppy@dev
+        with:
+          hub-path: ${{ github.workspace }}/contracts-hub
+
+      # The daemon runs a pre-flight check on the apptainer beside it and
+      # refuses to start where unprivileged user namespaces are unavailable,
+      # which on Ubuntu 24.04 means an AppArmor profile for the `starter`
+      # binary of this install. `peppy container setup` writes it through
+      # sudo and rechecks before exiting 0, and it is keyed to the install's
+      # path under RUNNER_TEMP, so it grants nothing beyond this run's binary.
+      # Needs the passwordless sudo the runner image grants.
+      - name: Ready the bundled apptainer for unprivileged use
+        run: peppy container setup
+
+      # The daemon's data root is the PEPPY_HOME the action exported, where
+      # the registry it wrote lives. The CLI finds the daemon through
+      # PEPPY_HOME/daemon_state.json5, so the run's own directory is discovery
+      # and isolation from any other daemon in one, and the daemon gets a port
+      # of its own. The name carries the run id because core-node names must
+      # be unique among daemons that can reach each other.
+      - name: Start an isolated peppy daemon
+        run: |
+          set -euo pipefail
+          PEPPY_MESSAGING_PORT=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+          echo "PEPPY_MESSAGING_PORT=$PEPPY_MESSAGING_PORT" >> "$GITHUB_ENV"
+          export PEPPY_MESSAGING_PORT
+
+          nohup peppy service serve --core-node-name "ci-exposures-$GITHUB_RUN_ID" \
+            > "$RUNNER_TEMP/peppy-serve.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            if [ -f "$PEPPY_HOME/daemon_state.json5" ]; then exit 0; fi
+            sleep 1
+          done
+          echo "daemon did not come up; serve log:" >&2
+          cat "$RUNNER_TEMP/peppy-serve.log" >&2
+          exit 1
+
+      # Caches the contracts of this checkout. With --strict, a hub that CI
+      # cannot read fails this step instead of leaving its items out.
+      - name: Cache the contracts of this pull request
+        run: |
+          set -euo pipefail
+          peppy repo refresh --strict
+
+      # mcp-hub at the commit the registry pins: the exposures the check
+      # reads come from this checkout.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: Peppy-bot/mcp-hub
+          ref: ${{ fromJSON(steps.peppy.outputs.set).hubs['mcp-hub'].commit }}
+          path: mcp-hub
+          persist-credentials: false
+
+      - name: Check every exposure of mcp-hub against the contracts of this pull request
+        run: |
+          set -euo pipefail
+          peppy repo index mcp-hub --check --validate-mcp-exposures
+
   contract-similarity-tests:
     runs-on: runs-on=${{ github.run_id }}/runner=peppy-ci-ubuntu-24.04-x86_64/image=peppy-ubuntu24/cpu=2/ram=4+8/family=c8a+c7a+m8a+m7a${{ fromJSON(github.run_attempt) >= 3 && '/spot=false' || '' }}  # custom Peppy AMI
     timeout-minutes: 5
@@ -128,7 +233,7 @@ jobs:
   # when every job above succeeded or was skipped, so a red job blocks the
   # merge whichever job it ran in.
   test:
-    needs: [wait-for-peppy, check-index, contract-similarity-tests]
+    needs: [wait-for-peppy, check-index, check-mcp-exposures, contract-similarity-tests]
     # Runs whatever happened above: on the default condition a failed or
     # cancelled job would leave this check unreported instead of red.
     if: always()
