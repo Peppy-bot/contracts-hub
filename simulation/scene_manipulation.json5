@@ -191,6 +191,19 @@
             // True once every file is ready and the engine builds the
             // scene.
             building: "bool",
+            // Bytes of the scene's asset files that are in the engine's
+            // cache: each file found there or received whole, and the bytes
+            // received so far of each file in transfer, each byte counted
+            // once. bytes_ready of bytes_total is the share of the fetch
+            // that is done.
+            bytes_ready: "u64",
+            // Bytes of every asset file the scene needs, as the catalogue
+            // records them; 0 for an engine that fetches nothing.
+            bytes_total: "u64",
+            // Bytes received per second over the last two seconds, the
+            // rate of bytes_fetched; 0 once nothing arrived for two
+            // seconds, and once the engine builds the scene.
+            bytes_per_second: "u64",
           },
         },
         result_service: {
@@ -253,6 +266,19 @@
             // True once every file is ready and the engine builds the
             // object.
             building: "bool",
+            // Bytes of the object's asset files that are in the engine's
+            // cache: each file found there or received whole, and the bytes
+            // received so far of each file in transfer, each byte counted
+            // once. bytes_ready of bytes_total is the share of the fetch
+            // that is done.
+            bytes_ready: "u64",
+            // Bytes of every asset file the object needs, as the catalogue
+            // records them; 0 for an engine that fetches nothing.
+            bytes_total: "u64",
+            // Bytes received per second over the last two seconds, the
+            // rate of bytes_fetched; 0 once nothing arrived for two
+            // seconds, and once the engine builds the object.
+            bytes_per_second: "u64",
           },
         },
         result_service: {
