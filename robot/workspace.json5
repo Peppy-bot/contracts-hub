@@ -15,18 +15,21 @@
 // - Grasp point. The gripper's grasp point, on the jaw closing axis midway
 //   between the pads, as limb_motion defines it.
 // - Reachable. Some arm brings its grasp point within 0.01 m of the point
-//   with its gripper pointing straight down or straight forward (along the
-//   robot frame's -Z or +X), at any of eight rolls about that direction, a
-//   45 degree step apart.
+//   with its gripper's approach axis within 0.05 rad (about 3 degrees) of
+//   straight down or straight forward (along the robot frame's -Z or +X).
+//   The reach is tried at eight rolls about that direction, a 45 degree step
+//   apart, and the roll the gripper ends at is not checked.
 // - Perception camera. The robot's one camera that gives depth and that no
 //   arm carries: the camera it finds items with, which stays where it is
 //   between a scan and the next action. A robot without one is judged on
 //   reach alone.
 // - In view. Inside the perception camera's field of view, from the
-//   camera's own colour intrinsics, and inside its depth range. Nothing is
-//   said to hide a point.
+//   camera's own colour intrinsics, and where its depth stream reads a
+//   depth: the point's depth, along the optical axis or in a straight line
+//   as the camera's depth model says, lies inside the depths it reports.
+//   Nothing is said to hide a point.
 // - Workable. Reachable and in view; reachable alone for a robot without a
-//   perception camera, or whose perception camera's geometry it cannot read.
+//   perception camera, or for one that has no camera geometry for it.
 // - A surface is measured on a grid of points 0.0 to 1.0 m ahead of the
 //   robot every 0.02 m and 0.30 m to either side every 0.05 m, each at a
 //   target 0.04 m above the surface. It is workable when its workable
@@ -84,8 +87,9 @@
         name: "check_positions",
         request_message_format: {
           // The points, 3 entries each (x, y, z, m) in the robot frame. An
-          // empty list, a length that is not a multiple of 3 and a value
-          // that is not a finite number are refused.
+          // empty list, a length that is not a multiple of 3, a value that
+          // is not a finite number and a coordinate more than 1000 m from
+          // the robot's base point are refused.
           positions: { $type: "array", $items: "f64" },
         },
         response_message_format: {
@@ -109,8 +113,10 @@
               // The arm that reaches it, by the name limb_motion addresses
               // it under; "" when none does.
               arm: "string",
-              // How far short of it the closest arm stops (m); 0 when an arm
-              // reaches it.
+              // How far short of it the closest arm's grasp point stops (m),
+              // whichever way the gripper points; 0 when an arm reaches it.
+              // At most 0.01 with reachable false: the arms come that close,
+              // but none reaches it with its gripper pointing down or forward.
               short_by: "f64",
               // Whether the perception camera sees it.
               in_view: "bool",

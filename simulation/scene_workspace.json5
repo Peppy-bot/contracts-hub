@@ -18,31 +18,45 @@
 // - Grasp point. The gripper's grasp point, on the jaw closing axis midway
 //   between the pads.
 // - Reachable. Some arm brings its grasp point within 0.01 m of the point
-//   with its gripper pointing straight down or straight forward (along the
-//   world's -z, or the robot's +x), at any of eight rolls about that
-//   direction, a 45 degree step apart, solved from the pose the robot's
-//   model starts in. What stands in the way of the arm is not asked.
+//   with its gripper's approach axis within 0.05 rad (about 3 degrees) of
+//   straight down or straight forward (along the world's -z, or the robot's
+//   +x). The reach is tried at eight rolls about that direction, a 45 degree
+//   step apart, solved from the pose the robot's model starts in, and the
+//   roll the gripper ends at is not checked. What stands in the way of the
+//   arm is not asked.
 // - Perception camera. The robot's one camera that gives depth and that no
 //   arm carries. A robot without one is judged on reach alone.
-// - In view. Inside the perception camera's field of view and depth range,
-//   with nothing that stays where it is between the camera and the point.
+// - In view. Inside the perception camera's field of view, where its depth
+//   stream reads a depth, and with nothing that stays where it is between
+//   the camera and the point.
 //   Robots and objects that move do not hide a point of a surface; anything
 //   but the robot's own body hides an object.
 // - Workable. Reachable and in view; reachable alone for a robot without a
 //   perception camera.
 // - A surface is measured where rays cast straight down find its top, on a
 //   grid in the robot's own frame 0.0 to 1.0 m ahead of the robot every
-//   0.02 m and 0.30 m to either side every 0.05 m, each point at a target
-//   0.04 m above the top. It is workable when its workable points cover at
-//   least 0.03 m^2, each point standing for 0.001 m^2.
+//   0.02 m and 0.30 m to either side every 0.05 m. The rays look for a
+//   declared surface's top within 0.1 m of the height the scene declares
+//   for it, and for a requested object's top at the top of its bounding
+//   box; the top is the median height they find it at, and the grid points
+//   measured are those within 0.01 m of it, each at a target 0.04 m above
+//   it. A declared surface whose object was raised or lowered further than
+//   0.1 m is not found there: name its object in surface_object_ids. A
+//   surface is workable when its workable points cover at least 0.03 m^2,
+//   each point standing for 0.001 m^2.
 // - An object stands at the centre of its bounding box, and the target an
 //   arm reaches for is that centre.
 //
 // success false with the reason in message is the answer to a request the
-// implementer refuses (a robot that does not stand in the world, an object
-// id that does not exist, a robot model without arms) and of an
-// implementer that cannot read its scene now; its other fields are then
-// empty or zero and mean nothing.
+// implementer refuses and of an implementer that cannot read its scene now;
+// its other fields are then empty or zero and mean nothing. A request is
+// refused for a robot that does not stand in the world, a robot model whose
+// arms or perception camera cannot be measured (a model without arms, an
+// arm that declares no grasp point, two cameras that could each be the
+// perception camera, a perception camera whose field of view a sensor size
+// sets), an object id that does not exist, and an object
+// without a bounding box (one with neither colliding geometry nor a soft
+// surface).
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -53,8 +67,8 @@
     services: [
       {
         // Where the robot can work each surface: the loaded scene's declared
-        // work surfaces, as get_assets_list lists them for the scene, and
-        // the objects the request names besides.
+        // work surfaces whose objects stand, as get_assets_list lists them
+        // for the scene, and the objects the request names besides.
         name: "describe_workspace",
         request_message_format: {
           // The robot, by the name get_robots_list gives.
@@ -141,9 +155,17 @@
               asset_id: "string",
               // The centre of its bounding box: x, y, z.
               position: { $type: "array", $items: "f64", $length: 3 },
-              // The object it rests on, directly or through others (a book
-              // on a book on a table rests on the table); "" when it rests on
-              // the floor or on nothing.
+              // The object it rests on: followed down through the free
+              // objects it rests on, the first that stands fixed or that the
+              // scene declares as a work surface (a book on a book on a table
+              // rests on the table). When that chain reaches a floor first
+              // (the world's floor, or an object that stands fixed where it is
+              // touched at the floor's height, such as a room's floor slab or
+              // a doorway's threshold), the lowest object of the chain above
+              // the floor (a cup on a side table that can move rests on the
+              // side table); "" for an object that rests on a floor itself or
+              // on nothing, and for one that stands fixed, part of the
+              // furniture.
               resting_on: "string",
               // Whether the robot can work it.
               workable: "bool",
@@ -152,8 +174,10 @@
               // The arm that reaches it, by the name limb_motion addresses
               // it under; "" when none does.
               arm: "string",
-              // How far short of it the closest arm stops (m); 0 when an arm
-              // reaches it.
+              // How far short of it the closest arm's grasp point stops (m),
+              // whichever way the gripper points; 0 when an arm reaches it.
+              // At most 0.01 with reachable false: the arms come that close,
+              // but none reaches it with its gripper pointing down or forward.
               short_by: "f64",
               // Whether the perception camera sees it.
               in_view: "bool",
@@ -163,9 +187,15 @@
               // What stands in the way when view is "hidden"; "" otherwise.
               hidden_by: "string",
               // A workable point on the top of the object it rests on, the
-              // nearest to it: x, y, z. Empty when the object is workable,
-              // rests on no object, or that object's top has no workable
-              // point.
+              // nearest to it in plan: x, y, z. That top is the work surface
+              // the scene declares on that object nearest below the object
+              // (the nearest one when none lies below), or the top of that
+              // object's bounding box when the scene declares none on it. Empty when the object is workable, rests
+              // on no object, or that top has no workable point; empty too
+              // when the nearest workable point is the one under the object
+              // on the top it stands on, since what keeps it from being
+              // workable then (what hides it, or the height of its centre)
+              // stays where it is.
               suggested_position: { $type: "array", $items: "f64" },
               // One line that says why it is workable or not, and where to
               // move it.
