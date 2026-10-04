@@ -17,8 +17,7 @@
 // - Reachable. Some arm brings its grasp point within 0.01 m of the point
 //   with its gripper's approach axis within 0.05 rad (about 3 degrees) of
 //   straight down or straight forward (along the robot frame's -Z or +X).
-//   The reach is tried at eight rolls about that direction, a 45 degree step
-//   apart, and the roll the gripper ends at is not checked.
+//   The roll the gripper ends at about that direction is not checked.
 // - Perception camera. The robot's one camera that gives depth and that no
 //   arm carries: the camera it finds items with, which stays where it is
 //   between a scan and the next action. A robot without one is judged on
@@ -54,7 +53,8 @@
         name: "describe_workspace",
         request_message_format: {
           // Height of the surface above the robot's base point (m). A value
-          // that is not a finite number is refused.
+          // that is not a finite number and a height more than 1000 m from
+          // the robot's base point are refused.
           surface_height: "f64",
         },
         response_message_format: {
