@@ -126,6 +126,11 @@
         path: "simulation/scene_view.json5"
       }
     },
+    scene_workspace: {
+      v1: {
+        path: "simulation/scene_workspace.json5"
+      }
+    },
     sensor_readout: {
       v1: {
         path: "simulation/sensor_readout.json5"
@@ -144,6 +149,11 @@
     simulation_robot: {
       v1: {
         path: "simulation/simulation_robot.json5"
+      }
+    },
+    workspace: {
+      v1: {
+        path: "robot/workspace.json5"
       }
     }
   }

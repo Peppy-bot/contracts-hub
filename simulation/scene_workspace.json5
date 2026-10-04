@@ -1,0 +1,179 @@
+// Where a robot standing in a simulated world can work, measured in that
+// world: the surfaces its arms reach and its perception camera sees, with
+// what stands in the way, and whether given objects are workable where they
+// stand. It is for a caller that sets a simulated world up and checks its
+// setup; it moves nothing, and a robot's task still finds its items through
+// the robot's own perception. get_objects_list of scene_manipulation says
+// where objects stand; this contract says whether a robot can work them
+// there, and where on a surface it could. The workspace contract of a robot
+// answers the same questions from the robot's design alone, in the robot
+// frame, with the same definitions.
+//
+// Positions are world-frame x, y, z in metres, headings a yaw in radians
+// about the world's +z. Robot names come from get_robots_list, object ids
+// from get_objects_list. A robot's own frame has its origin where its base
+// stands, +x the way it faces and +y to its left.
+//
+// The definitions, the same as the workspace contract's:
+// - Grasp point. The gripper's grasp point, on the jaw closing axis midway
+//   between the pads.
+// - Reachable. Some arm brings its grasp point within 0.01 m of the point
+//   with its gripper pointing straight down or straight forward (along the
+//   world's -z, or the robot's +x), at any of eight rolls about that
+//   direction, a 45 degree step apart, solved from the pose the robot's
+//   model starts in. What stands in the way of the arm is not asked.
+// - Perception camera. The robot's one camera that gives depth and that no
+//   arm carries. A robot without one is judged on reach alone.
+// - In view. Inside the perception camera's field of view and depth range,
+//   with nothing that stays where it is between the camera and the point.
+//   Robots and objects that move do not hide a point of a surface; anything
+//   but the robot's own body hides an object.
+// - Workable. Reachable and in view; reachable alone for a robot without a
+//   perception camera.
+// - A surface is measured where rays cast straight down find its top, on a
+//   grid in the robot's own frame 0.0 to 1.0 m ahead of the robot every
+//   0.02 m and 0.30 m to either side every 0.05 m, each point at a target
+//   0.04 m above the top. It is workable when its workable points cover at
+//   least 0.03 m^2, each point standing for 0.001 m^2.
+// - An object stands at the centre of its bounding box, and the target an
+//   arm reaches for is that centre.
+//
+// success false with the reason in message is the answer to a request the
+// implementer refuses (a robot that does not stand in the world, an object
+// id that does not exist, a robot model without arms) and of an
+// implementer that cannot read its scene now; its other fields are then
+// empty or zero and mean nothing.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "scene_workspace",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // Where the robot can work each surface: the loaded scene's declared
+        // work surfaces, as get_assets_list lists them for the scene, and
+        // the objects the request names besides.
+        name: "describe_workspace",
+        request_message_format: {
+          // The robot, by the name get_robots_list gives.
+          robot: "string",
+          // Objects to measure as surfaces besides the scene's declared
+          // ones, for example a table the caller spawned; each one's top is
+          // the top of its bounding box. Absent, or empty, measures the
+          // declared ones alone.
+          surface_object_ids: { $type: "array", $items: "string", $optional: true },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // The robot, as asked.
+          robot: "string",
+          // The name the perception camera runs under on the robot, or ""
+          // for a robot without one.
+          perception_camera: "string",
+          // Where the robot's base stands, and the heading it faces.
+          robot_position: { $type: "array", $items: "f64", $length: 3 },
+          robot_yaw: "f64",
+          // The declared surfaces in the scene's order, then the requested
+          // ones in the request's order.
+          surfaces: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              // The declared label, or the object's asset id for a requested
+              // object.
+              label: "string",
+              // The object whose top the surface is.
+              object_id: "string",
+              // Whether the scene declares the surface.
+              declared: "bool",
+              // Whether the rays found its top; top is 0 when they did not.
+              top_found: "bool",
+              // Height of its top as the rays found it (m).
+              top: "f64",
+              // Whether the robot can work it.
+              workable: "bool",
+              // Area of its workable part (m^2).
+              area: "f64",
+              // The centre of the largest rectangle of workable grid points,
+              // on the top: x, y, z. Empty when no point is workable.
+              center: { $type: "array", $items: "f64" },
+              // The rectangle's four corners on the top, 3 entries each (x,
+              // y, z), counter-clockwise seen from above from the one nearest
+              // the robot on its right: put objects inside them. Empty when
+              // no point is workable.
+              corners: { $type: "array", $items: "f64" },
+              // One line that says why it is workable or not.
+              message: "string",
+            },
+          },
+        },
+      },
+      {
+        // Whether the robot can work each of the given objects where it
+        // stands: whether an arm reaches it and the perception camera sees
+        // it, and, for an object it cannot work, a workable point on the
+        // surface the object rests on to move it to.
+        name: "check_objects",
+        request_message_format: {
+          // The robot, by the name get_robots_list gives.
+          robot: "string",
+          // The objects, by the ids get_objects_list gives. An empty list is
+          // refused.
+          object_ids: { $type: "array", $items: "string" },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // As in describe_workspace.
+          perception_camera: "string",
+          // Whether the robot can work every object.
+          all_workable: "bool",
+          // One entry per object, in the request's order.
+          objects: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              object_id: "string",
+              // The "object/<id>" asset the object is an instance of.
+              asset_id: "string",
+              // The centre of its bounding box: x, y, z.
+              position: { $type: "array", $items: "f64", $length: 3 },
+              // The object it rests on, directly or through others (a book
+              // on a book on a table rests on the table); "" when it rests on
+              // the floor or on nothing.
+              resting_on: "string",
+              // Whether the robot can work it.
+              workable: "bool",
+              // Whether an arm reaches it.
+              reachable: "bool",
+              // The arm that reaches it, by the name limb_motion addresses
+              // it under; "" when none does.
+              arm: "string",
+              // How far short of it the closest arm stops (m); 0 when an arm
+              // reaches it.
+              short_by: "f64",
+              // Whether the perception camera sees it.
+              in_view: "bool",
+              // "seen", "outside_field", "out_of_depth", "hidden", or
+              // "no_camera" for a robot without a perception camera.
+              view: "string",
+              // What stands in the way when view is "hidden"; "" otherwise.
+              hidden_by: "string",
+              // A workable point on the top of the object it rests on, the
+              // nearest to it: x, y, z. Empty when the object is workable,
+              // rests on no object, or that object's top has no workable
+              // point.
+              suggested_position: { $type: "array", $items: "f64" },
+              // One line that says why it is workable or not, and where to
+              // move it.
+              message: "string",
+            },
+          },
+        },
+      },
+    ],
+  },
+}
