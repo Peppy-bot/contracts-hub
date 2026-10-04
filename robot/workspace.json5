@@ -1,0 +1,134 @@
+// Where a robot can work: where its arms reach and where the camera it finds
+// items with sees, from the robot's design and that camera's field of view.
+// It knows nothing of the world around the robot: a surface is a flat, level
+// plane at a given height, with nothing on it and nothing in the way. Every
+// member reads; none moves the robot. check_arm_move of limb_motion asks
+// whether one given pose has a plan from where an arm is now; this contract
+// asks where the robot can work at all, from its design alone.
+//
+// The robot frame is fixed to the robot's base: its origin is the point
+// the base stands on, +X points the way the robot faces, +Y to its left
+// and +Z up. It moves with the robot, and it is not a frame of the room or
+// of a simulated world. Positions are in meters.
+//
+// The definitions, the same for every implementer:
+// - Grasp point. The gripper's grasp point, on the jaw closing axis midway
+//   between the pads, as limb_motion defines it.
+// - Reachable. Some arm brings its grasp point within 0.01 m of the point
+//   with its gripper's approach axis within 0.05 rad (about 3 degrees) of
+//   straight down or straight forward (along the robot frame's -Z or +X).
+//   The reach is tried at eight rolls about that direction, a 45 degree step
+//   apart, and the roll the gripper ends at is not checked.
+// - Perception camera. The robot's one camera that gives depth and that no
+//   arm carries: the camera it finds items with, which stays where it is
+//   between a scan and the next action. A robot without one is judged on
+//   reach alone.
+// - In view. Inside the perception camera's field of view, from the
+//   camera's own colour intrinsics, and where its depth stream reads a
+//   depth: the point's depth, along the optical axis or in a straight line
+//   as the camera's depth model says, lies inside the depths it reports.
+//   Nothing is said to hide a point.
+// - Workable. Reachable and in view; reachable alone for a robot without a
+//   perception camera, or for one that has no camera geometry for it.
+// - A surface is measured on a grid of points 0.0 to 1.0 m ahead of the
+//   robot every 0.02 m and 0.30 m to either side every 0.05 m, each at a
+//   target 0.04 m above the surface. It is workable when its workable
+//   points cover at least 0.03 m^2, each point standing for 0.001 m^2.
+//
+// success false with the reason in message is the answer to a request the
+// implementer refuses, and of an implementer that cannot read its perception
+// camera's geometry now; its other fields are then empty or zero and mean
+// nothing.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "workspace",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // Where on a flat, level surface at a given height the robot can
+        // work: the largest rectangle of workable points, and the parts its
+        // arms reach and its perception camera sees.
+        name: "describe_workspace",
+        request_message_format: {
+          // Height of the surface above the robot's base point (m). A value
+          // that is not a finite number is refused.
+          surface_height: "f64",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // The name the perception camera runs under on the robot
+          // (camera_mounts names it), or "" for a robot without one.
+          perception_camera: "string",
+          // Whether the robot can work the surface.
+          workable: "bool",
+          // Area of the workable part (m^2).
+          area: "f64",
+          // [x_min, x_max, y_min, y_max] in the robot frame (m) of the
+          // largest rectangle whose every grid point is workable, its
+          // corners on grid points: where to put items. Absent when no point
+          // is workable.
+          rectangle: { $type: "array", $items: "f64", $length: 4, $optional: true },
+          // [x_min, x_max, y_min, y_max] in the robot frame (m) bounding the
+          // grid points an arm reaches. Absent when none.
+          reach: { $type: "array", $items: "f64", $length: 4, $optional: true },
+          // [x_min, x_max, y_min, y_max] in the robot frame (m) bounding the
+          // grid points the perception camera sees. Absent when it sees none,
+          // and for a robot whose view is not checked.
+          view: { $type: "array", $items: "f64", $length: 4, $optional: true },
+        },
+      },
+      {
+        // Whether the robot can work each of the given points: whether an
+        // arm reaches it and the perception camera sees it.
+        name: "check_positions",
+        request_message_format: {
+          // The points, 3 entries each (x, y, z, m) in the robot frame. An
+          // empty list, a length that is not a multiple of 3, a value that
+          // is not a finite number and a coordinate more than 1000 m from
+          // the robot's base point are refused.
+          positions: { $type: "array", $items: "f64" },
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // As in describe_workspace.
+          perception_camera: "string",
+          // Whether the robot can work every point.
+          all_workable: "bool",
+          // One entry per point, in the request's order.
+          results: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              // The point, as asked.
+              position: { $type: "array", $items: "f64", $length: 3 },
+              // Whether the robot can work it.
+              workable: "bool",
+              // Whether an arm reaches it.
+              reachable: "bool",
+              // The arm that reaches it, by the name limb_motion addresses
+              // it under; "" when none does.
+              arm: "string",
+              // How far short of it the closest arm's grasp point stops (m),
+              // whichever way the gripper points; 0 when an arm reaches it.
+              // At most 0.01 with reachable false: the arms come that close,
+              // but none reaches it with its gripper pointing down or forward.
+              short_by: "f64",
+              // Whether the perception camera sees it.
+              in_view: "bool",
+              // "seen", "outside_field", "out_of_depth", or "no_camera" for
+              // a robot whose view is not checked.
+              view: "string",
+              // One line that says why it is workable or not.
+              message: "string",
+            },
+          },
+        },
+      },
+    ],
+  },
+}
