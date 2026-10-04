@@ -2,12 +2,28 @@
 // bringing every limb to a named posture. Two postures cover the operating
 // loop:
 // - home: the rest posture, the robot's natural pose to start from and power
-//   down at. For an arm, hanging at its sides.
+//   down at. For an arm, low and close to the robot's body.
 // - ready: the working posture, out in the robot's main workspace and poised
 //   to take commands. For an arm, raised out in front.
 // The exact joint values behind each name are the implementer's business.
 // Distinct from the streamed setpoints on the *_link pairings: these are
 // discrete planned moves with a result.
+//
+// Each result reports where every arm ended, as limb_state reports it: the
+// per-arm arrays are index-aligned with arm_names, positions carries 3
+// entries per arm (x, y, z) and orientations 4 per arm (quaternion x, y, z,
+// w), at index i*3 and i*4 respectively. The arrays hold the measured pose
+// of every arm when the action ended, whatever success says: after a cancel
+// or a stop, the pose where each arm stopped.
+//
+// Every grasp-point pose is the gripper's grasp point (on the jaw closing
+// axis midway between the pads), in the robot frame, position in meters and
+// orientation as a unit quaternion [x, y, z, w].
+//
+// The robot frame is fixed to the robot's base: its origin is the point
+// the base stands on, +X points the way the robot faces, +Y to its left
+// and +Z up. It moves with the robot, and it is not a frame of the room or
+// of a simulated world.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -31,6 +47,17 @@
             // message says which.
             success: "bool",
             message: "string",
+            // The implementer's fixed set of arm names (e.g. "left_arm"), in
+            // its fixed order.
+            arm_names: { $type: "array", $items: "string" },
+            // Measured grasp-point positions when the action ended, 3 entries
+            // (x, y, z, m) per arm in arm_names order.
+            positions: { $type: "array", $items: "f64" },
+            // Measured grasp-point orientations when the action ended, 4
+            // entries (quaternion x, y, z, w) per arm in arm_names order. The
+            // three arrays are empty when the implementer has no measurement
+            // of its joints, and message then says so.
+            orientations: { $type: "array", $items: "f64" },
           },
         },
       },
@@ -49,6 +76,17 @@
             // message says which.
             success: "bool",
             message: "string",
+            // The implementer's fixed set of arm names (e.g. "left_arm"), in
+            // its fixed order.
+            arm_names: { $type: "array", $items: "string" },
+            // Measured grasp-point positions when the action ended, 3 entries
+            // (x, y, z, m) per arm in arm_names order.
+            positions: { $type: "array", $items: "f64" },
+            // Measured grasp-point orientations when the action ended, 4
+            // entries (quaternion x, y, z, w) per arm in arm_names order. The
+            // three arrays are empty when the implementer has no measurement
+            // of its joints, and message then says so.
+            orientations: { $type: "array", $items: "f64" },
           },
         },
       },
