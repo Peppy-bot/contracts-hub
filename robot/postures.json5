@@ -44,15 +44,12 @@
             // message says which.
             success: "bool",
             message: "string",
-            // The implementer's fixed set of arm names (e.g. "left_arm"), in
-            // its fixed order, per the header's pose rule.
+            // The implementer's arm names (e.g. "left_arm") in its fixed
+            // order, or none, per the header's pose rule.
             arm_names: { $type: "array", $items: "string" },
-            // Measured grasp-point positions, 3 entries (x, y, z, m) per arm
-            // in arm_names order, per the header's pose rule.
+            // Measured grasp-point positions (m), per the header's pose rule.
             positions: { $type: "array", $items: "f64" },
-            // Measured grasp-point orientations, 4 entries (quaternion
-            // x, y, z, w) per arm in arm_names order, per the header's pose
-            // rule.
+            // Measured grasp-point orientations, per the header's pose rule.
             orientations: { $type: "array", $items: "f64" },
           },
         },
@@ -72,15 +69,12 @@
             // message says which.
             success: "bool",
             message: "string",
-            // The implementer's fixed set of arm names (e.g. "left_arm"), in
-            // its fixed order, per the header's pose rule.
+            // The implementer's arm names (e.g. "left_arm") in its fixed
+            // order, or none, per the header's pose rule.
             arm_names: { $type: "array", $items: "string" },
-            // Measured grasp-point positions, 3 entries (x, y, z, m) per arm
-            // in arm_names order, per the header's pose rule.
+            // Measured grasp-point positions (m), per the header's pose rule.
             positions: { $type: "array", $items: "f64" },
-            // Measured grasp-point orientations, 4 entries (quaternion
-            // x, y, z, w) per arm in arm_names order, per the header's pose
-            // rule.
+            // Measured grasp-point orientations, per the header's pose rule.
             orientations: { $type: "array", $items: "f64" },
           },
         },
