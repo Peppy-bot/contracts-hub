@@ -14,13 +14,13 @@
 // - The per-arm arrays are index-aligned with arm_names. positions carries
 //   3 entries per arm (x, y, z), at index i*3. orientations carries 4
 //   entries per arm (quaternion x, y, z, w), at index i*4.
-// - The implementer measures the pose of each arm when the move of that
-//   arm ends, whatever success says. After a cancel or a stop, the pose is
-//   where the arm stopped.
-// - When an arm has no fresh measured pose at the end of its move, the
-//   three arrays are empty and message says why. For example, the
-//   implementer never measured the joints of that arm, their last
-//   measurement is stale, or its move did not report its end.
+// - The implementer measures the pose of every arm when the action ends,
+//   after the moves of all its arms ended, whatever success says.
+// - When an arm has no fresh measured pose then, the three arrays are
+//   empty and message says why. For example, the implementer never
+//   measured the joints of that arm, or their last measurement is stale.
+// - After a cancel or a stop, an arm that was still moving can come to
+//   rest away from the reported pose.
 //
 // A grasp-point pose is the gripper's grasp point, in the robot frame,
 // position in meters and orientation as a unit quaternion [x, y, z, w]. On
