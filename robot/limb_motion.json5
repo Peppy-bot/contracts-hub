@@ -9,7 +9,7 @@
 // quaternion [x, y, z, w]. On a gripper whose jaws close symmetrically, it
 // is on the jaw closing axis midway between the pads. The SO-101 gripper
 // has one moving jaw, so the midpoint of its pads moves with the opening.
-// Thus, the SO-101 reports a fixed point near its jaws.
+// Thus, the SO-101 takes and reports a fixed point near its jaws.
 //
 // The robot frame is fixed to the robot's base: its origin is the point
 // the base stands on, +X points the way the robot faces, +Y to its left
