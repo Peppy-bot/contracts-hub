@@ -2,12 +2,25 @@
 // bringing every limb to a named posture. Two postures cover the operating
 // loop:
 // - home: the rest posture, the robot's natural pose to start from and power
-//   down at. For an arm, hanging at its sides.
+//   down at. For an arm, low and close to the robot's body.
 // - ready: the working posture, out in the robot's main workspace and poised
 //   to take commands. For an arm, raised out in front.
 // The exact joint values behind each name are the implementer's business.
 // Distinct from the streamed setpoints on the *_link pairings: these are
 // discrete planned moves with a result.
+//
+// Pose rule for the results: a result reports where each arm ended, as
+// limb_state reports it, or no pose and the reason:
+// - Each pose is the grasp-point pose of an arm in the robot frame. The
+//   header of limb_state defines the grasp point, the robot frame and the
+//   slicing of the arrays.
+// - The implementer measures the pose of every arm when the action ends,
+//   after the moves of all its arms ended, whatever success says.
+// - When an arm has no fresh measured pose then, the three arrays are
+//   empty and message says why. For example, the implementer never
+//   measured the joints of that arm, or their last measurement is stale.
+// - After a cancel or a stop, an arm that was still moving can come to
+//   rest away from the reported pose.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -31,6 +44,13 @@
             // message says which.
             success: "bool",
             message: "string",
+            // The implementer's arm names (e.g. "left_arm") in its fixed
+            // order, or none, per the header's pose rule.
+            arm_names: { $type: "array", $items: "string" },
+            // Measured grasp-point positions (m), per the header's pose rule.
+            positions: { $type: "array", $items: "f64" },
+            // Measured grasp-point orientations, per the header's pose rule.
+            orientations: { $type: "array", $items: "f64" },
           },
         },
       },
@@ -49,6 +69,13 @@
             // message says which.
             success: "bool",
             message: "string",
+            // The implementer's arm names (e.g. "left_arm") in its fixed
+            // order, or none, per the header's pose rule.
+            arm_names: { $type: "array", $items: "string" },
+            // Measured grasp-point positions (m), per the header's pose rule.
+            positions: { $type: "array", $items: "f64" },
+            // Measured grasp-point orientations, per the header's pose rule.
+            orientations: { $type: "array", $items: "f64" },
           },
         },
       },
