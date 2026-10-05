@@ -9,8 +9,8 @@
 // Distinct from the streamed setpoints on the *_link pairings: these are
 // discrete planned moves with a result.
 //
-// Pose rule for the results: each result reports where every arm ended, as
-// limb_state reports it.
+// Pose rule for the results: a result reports where each arm ended, as
+// limb_state reports it, or no pose and the reason:
 // - The per-arm arrays are index-aligned with arm_names. positions carries
 //   3 entries per arm (x, y, z), at index i*3. orientations carries 4
 //   entries per arm (quaternion x, y, z, w), at index i*4.
@@ -22,11 +22,12 @@
 //   example, it never measured the joints of that arm, their last
 //   measurement is stale, or the move of that arm did not report its end.
 //
-// Every grasp-point pose is the gripper's grasp point (on the jaw closing
-// axis midway between the pads), in the robot frame, position in meters and
-// orientation as a unit quaternion [x, y, z, w]. The SO-101 gripper has one
-// moving jaw, so the midpoint of its pads moves with the opening. The
-// SO-101 reports a fixed point near its jaws instead.
+// A grasp-point pose is the gripper's grasp point, in the robot frame,
+// position in meters and orientation as a unit quaternion [x, y, z, w]. On
+// a gripper whose jaws close symmetrically, it is on the jaw closing axis
+// midway between the pads. The SO-101 gripper has one moving jaw, so the
+// midpoint of its pads moves with the opening; the SO-101 reports a fixed
+// point near its jaws.
 //
 // The robot frame is fixed to the robot's base: its origin is the point
 // the base stands on, +X points the way the robot faces, +Y to its left
