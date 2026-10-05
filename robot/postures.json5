@@ -14,11 +14,11 @@
 // - The per-arm arrays are index-aligned with arm_names. positions carries
 //   3 entries per arm (x, y, z), at index i*3. orientations carries 4
 //   entries per arm (quaternion x, y, z, w), at index i*4.
-// - The implementer measures the pose of each arm when the action ends,
-//   whatever success says. After a cancel or a stop, the pose is where the
-//   arm stopped.
-// - When the implementer has no fresh measured pose of an arm to report at
-//   that moment, the three arrays are empty and message says why. For
+// - The implementer measures the pose of each arm when the move of that
+//   arm ends, whatever success says. After a cancel or a stop, the pose is
+//   where the arm stopped.
+// - When the implementer has no fresh measured pose of an arm at the end
+//   of its move, the three arrays are empty and message says why. For
 //   example, it never measured the joints of that arm, their last
 //   measurement is stale, or the move of that arm did not report its end.
 //
