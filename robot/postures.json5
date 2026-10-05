@@ -17,17 +17,17 @@
 // - The implementer measures the pose of each arm when the move of that
 //   arm ends, whatever success says. After a cancel or a stop, the pose is
 //   where the arm stopped.
-// - When the implementer has no fresh measured pose of an arm at the end
-//   of its move, the three arrays are empty and message says why. For
-//   example, it never measured the joints of that arm, their last
-//   measurement is stale, or the move of that arm did not report its end.
+// - When an arm has no fresh measured pose at the end of its move, the
+//   three arrays are empty and message says why. For example, the
+//   implementer never measured the joints of that arm, their last
+//   measurement is stale, or its move did not report its end.
 //
 // A grasp-point pose is the gripper's grasp point, in the robot frame,
 // position in meters and orientation as a unit quaternion [x, y, z, w]. On
 // a gripper whose jaws close symmetrically, it is on the jaw closing axis
 // midway between the pads. The SO-101 gripper has one moving jaw, so the
-// midpoint of its pads moves with the opening; the SO-101 reports a fixed
-// point near its jaws.
+// midpoint of its pads moves with the opening. Thus, the SO-101 reports a
+// fixed point near its jaws.
 //
 // The robot frame is fixed to the robot's base: its origin is the point
 // the base stands on, +X points the way the robot faces, +Y to its left
