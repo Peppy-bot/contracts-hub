@@ -3,16 +3,24 @@
 // consumer (a panel, a headset overlay, a logger) renders every producer's
 // alerts without knowing what any of them measure.
 //
-// An alert is identified by (source, kind): a producer raises one by emitting
-// a non-zero severity and retires it by emitting severity 0 for the same pair,
-// so a consumer holds at most one alert per pair. Producers re-emit every
-// active alert at least every 2000 ms, since a consumer that starts late
-// cannot receive a transition that already happened; a consumer ages an
-// alert out a fixed multiple of that ceiling after its arrival, on its own
-// clock, so a producer that dies takes its alerts off every surface rather
-// than leaving them burned in. An aged-out alert means the producer went
-// quiet and its condition is UNKNOWN, not cleared: only severity 0 says
-// cleared.
+// A producer publishes the whole set of alerts it holds active, as one
+// message, whenever that set changes and at least every 2000 ms while it
+// runs. The topic retains the newest message, so a consumer that subscribes
+// later reads each producer's current set at once. A producer that holds
+// nothing active publishes the empty set, so a consumer can tell a quiet
+// producer from one that has not started.
+//
+// Within a producer an alert is identified by (source, kind): a message that
+// lists the pair raises or updates it, and a message that omits the pair
+// clears it. A consumer holds each producer's last set until the next one,
+// and drops a producer's alerts when that producer leaves the slot's bound
+// set. A set that has not been refreshed for three cadence periods means the
+// producer went quiet and its conditions are UNKNOWN, not cleared.
+//
+// The cadence bounds how stale a message's text can be, recovers a consumer
+// that lost or refused one, and is the only staleness signal this topic
+// carries. It is not a liveness check on the producing node: a node that is
+// running but has stopped measuring still publishes its last set.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -23,23 +31,46 @@
     topics: [
       {
         name: "alerts",
-        // Individually meaningful and low rate: dropping a raise leaves the
-        // operator unwarned and dropping a clear leaves a phantom alert.
+        // Individually meaningful and low rate: dropping a message leaves the
+        // operator unwarned, or leaves a phantom alert on screen until the
+        // next cadence period.
         qos_profile: "reliable",
+        // A consumer needs the current set the moment it subscribes, and the
+        // newest message is that set.
+        retention: { latest: 1 },
         message_format: {
-          // Producer-side time this alert was raised, re-emitted, or cleared.
+          // Producer-side time this set was published. A consumer ages a set
+          // out against it, so it is the publish time and not the time any
+          // condition began.
           timestamp: "time",
-          // What the alert is about, in operator language: the component
-          // and, for a per-motor alert, the motor ("left arm j2").
-          source: "string",
-          // Category of condition, stable per producer: "motor_condition".
-          // Consumers group and route on this without parsing the message.
-          kind: "string",
-          // 0 clears the (source, kind) alert; 1 warning, 2 critical,
-          // 3 fault (the condition already stopped the component).
-          severity: "u8",
-          // Operator-facing one-liner naming the actual measurement.
-          message: "string",
+          // Every alert the producer holds active, empty when it holds none.
+          //
+          // A consumer refuses an entry whose source or kind is empty, whose
+          // severity is outside 1..3, or whose (source, kind) another entry
+          // in the same message already carries, and renders the rest of the
+          // set. A producer that wants its alert shown keeps inside those
+          // rules.
+          active: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              // What the alert is about, in operator language: the component
+              // and, for a per-motor alert, the motor ("left arm j2").
+              source: "string",
+              // Category of condition, named by the producer and stable for
+              // the life of an alert, so an alert that moves between causes
+              // keeps one identity ("motor_condition"). Producers choose
+              // their own; no consumer parses it.
+              kind: "string",
+              // 1 warning, 2 critical, 3 fault (the condition already
+              // stopped the component). A listed alert is active, so there
+              // is no value for a healthy source: leave it out instead.
+              severity: "u8",
+              // Operator-facing one-liner naming the measurement that drove
+              // the condition, as of this message.
+              message: "string",
+            },
+          },
         },
       },
     ],
