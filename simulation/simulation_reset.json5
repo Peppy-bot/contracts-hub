@@ -1,0 +1,46 @@
+// The reset of a simulation to the world it started as, in one goal, for a
+// caller that starts its work over on a blank slate. After a reset that
+// succeeds:
+// - the scene is the one the simulation opened on, at scale 1, and its
+//   objects stand where that scene places them, whole, each under a new
+//   object id; no object a caller spawned stands;
+// - every robot stands where it came to stand: where the world places it,
+//   or where it joined. The reset removes no robot and adds none;
+// - the lighting and every material, the robots' materials too, have their
+//   authored values, and every camera has its device's defaults;
+// - no push acts on any object, and the clock runs. A step in progress
+//   ends.
+//
+// Simulated time goes on: it is the clock the simulation's messages are
+// stamped with, and it never goes back. What a robot's own nodes hold is
+// the robot's, and the reset leaves it: the targets its limbs were last
+// sent, which they hold until a robot command moves them, and what its
+// gripper is known to hold. A load or a spawn that has not handed its
+// command to the engine when the reset comes, one that still fetches its
+// files, ends as cancelled and builds nothing.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "simulation_reset",
+    tag: "v1",
+  },
+  interfaces: {
+    actions: [
+      {
+        // Puts the simulation back as it started, as the header says. The
+        // goal ends once the world is rebuilt and runs.
+        name: "reset",
+        goal_service: {},
+        result_service: {
+          response_message_format: {
+            // False when the simulation refused the reset or could not
+            // rebuild its world, which then stands as it was; message says
+            // why.
+            success: "bool",
+            message: "string",
+          },
+        },
+      },
+    ],
+  },
+}
