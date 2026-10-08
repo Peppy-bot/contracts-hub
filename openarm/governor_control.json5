@@ -2,6 +2,13 @@
 // toggle, the band, and the speed caps. A contract rather than an
 // operator-node topic so the backbone names no operator node, which keeps the
 // backbone <-> operator dependency graph acyclic.
+//
+// A latched setting: the producer publishes when the operator changes a
+// control, and the topic retains the newest message, so a backbone that
+// starts later reads the setting in force at once. The values stand until the
+// next message, with no cadence and no staleness: a backbone that loses its
+// producer keeps governing on the last setting it was given, and one that
+// never had a producer governs on its launch parameters.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -12,7 +19,11 @@
     topics: [
       {
         name: "governor_control",
-        qos_profile: "sensor_data",
+        // Each message is a change the backbone governs by until the next
+        // one, so losing one leaves the robot on a setting the operator has
+        // moved away from.
+        qos_profile: "reliable",
+        retention: { latest: 1 },
         message_format: {
           // Collision governor on/off. False = passthrough, no throttling.
           collision_governor_enabled: "bool",
