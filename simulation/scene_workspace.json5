@@ -23,18 +23,19 @@
 // floor plane and the fixed parts of the scene that are not objects.
 // Nothing in a measurement depends on what the face is. The loaded scene
 // declares some work surfaces (get_assets_list lists them for the scene);
-// a request names any other by a reference, an object with one of these
-// two fields:
+// a request names any other by a reference, an object with two fields of
+// which it gives exactly one, the other empty:
 // - object_id: the highest face of the object, the top of its bounding
-//   box.
+//   box. "" gives no object.
 // - point: [x, y, z], the first face that a ray cast straight down from
 //   0.01 m above the point meets, on the object or the part of the world
 //   that it meets. The ray passes through robots, and through what it meets
 //   from inside. A point on a face names that face: the second step of a
-//   stair, the lower level of a shelf, the floor in front of the robot.
-// A reference with both fields or with neither, an object id that does not
-// exist, a point that is not finite and a point whose ray meets nothing
-// are refused.
+//   stair, the lower level of a shelf, the floor in front of the robot. An
+//   empty point gives no point.
+// A reference that gives both fields or neither, a point that does not
+// hold 3 numbers, an object id that does not exist, a point that is not
+// finite and a point whose ray meets nothing are refused.
 //
 // The definitions, the same as the workspace contract's:
 // - Grasp point. The gripper's grasp point, on the jaw closing axis midway
@@ -107,16 +108,15 @@
           robot: "string",
           // Faces to measure as surfaces besides the scene's declared ones,
           // for example a table the caller spawned or the floor in front of
-          // the robot, each by a reference (the header): object_id or point,
-          // exactly one of the two. Absent, or empty, measures the declared
-          // ones alone.
+          // the robot, each by a reference (the header). Absent, or empty,
+          // measures the declared ones alone.
           surfaces: {
             $type: "array",
             $optional: true,
             $items: {
               $type: "object",
-              object_id: { $type: "string", $optional: true },
-              point: { $type: "array", $items: "f64", $length: 3, $optional: true },
+              object_id: "string",
+              point: { $type: "array", $items: "f64" },
             },
           },
         },
@@ -140,9 +140,9 @@
               // The declared label; for a face the request names, the asset
               // id of its object, or "world" for a face of the world.
               label: "string",
-              // The object the face belongs to; absent for a face of the
+              // The object the face belongs to; "" for a face of the
               // world.
-              object_id: { $type: "string", $optional: true },
+              object_id: "string",
               // Whether the scene declares the surface.
               declared: "bool",
               // Whether the rays found its top; top is 0 when they did not.
@@ -308,38 +308,41 @@
         // every condition. The same world and the same request always give
         // the same answer. Besides the refusals of the header, a request is
         // refused for an asset id that is not an object of the catalogue,
-        // an item that is not one of the two forms below, an object named
-        // twice, the object the surface belongs to named as an item, an
-        // empty items and a margin that is not a finite number from 0.
+        // an item that is not one of the two forms below, a near that does
+        // not hold 0 or 2 numbers, an object named twice, the object the
+        // surface belongs to named as an item, an empty items and a margin
+        // that is not a finite number from 0.
         name: "find_places",
         request_message_format: {
           // The robot, by the name get_robots_list gives.
           robot: "string",
-          // The work surface, by a reference (the header): object_id or
-          // point, exactly one of the two.
+          // The work surface, by a reference (the header).
           surface: {
             $type: "object",
-            object_id: { $type: "string", $optional: true },
-            point: { $type: "array", $items: "f64", $length: 3, $optional: true },
+            object_id: "string",
+            point: { $type: "array", $items: "f64" },
           },
-          // The items of the task: object_id for an object in the world, or
-          // asset_id and scale for an object to spawn, an "object/<id>"
-          // asset at a uniform scale that is a finite number above zero.
-          // near, when given, is a world-frame x, y where the caller prefers
-          // the item to stand.
+          // The items of the task, each in one of two forms:
+          // - an object in the world: object_id, with asset_id "" and scale
+          //   0;
+          // - an object to spawn: asset_id, an "object/<id>" asset, and
+          //   scale, a uniform scale that is a finite number above zero,
+          //   with object_id "".
+          // near is a world-frame [x, y] where the caller prefers the item
+          // to stand, or empty for no preference.
           items: {
             $type: "array",
             $items: {
               $type: "object",
-              object_id: { $type: "string", $optional: true },
-              asset_id: { $type: "string", $optional: true },
-              scale: { $type: "f64", $optional: true },
-              near: { $type: "array", $items: "f64", $length: 2, $optional: true },
+              object_id: "string",
+              asset_id: "string",
+              scale: "f64",
+              near: { $type: "array", $items: "f64" },
             },
           },
-          // The least gap seen from above between two items (m); absent is
-          // 0.02.
-          margin: { $type: "f64", $optional: true },
+          // The least gap seen from above between two items (m), for
+          // example 0.02.
+          margin: "f64",
         },
         response_message_format: {
           success: "bool",
