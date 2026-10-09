@@ -1,14 +1,15 @@
 // Where a robot standing in a simulated world can work, measured in that
 // world: the work surfaces its arms reach and its perception camera sees,
 // with what stands in the way, whether given objects are workable where
-// they stand, and where on a work surface the objects of a task fit. It is
-// for a caller that sets a simulated world up and checks its setup; it
-// moves nothing, and a robot's task still finds its items through the
-// robot's own perception. get_objects_list of scene_manipulation says
-// where objects stand; this contract says whether a robot can work them
-// there, and where on a surface it could. The workspace contract of a
-// robot answers the same questions from the robot's design alone, in the
-// robot frame, with the same definitions.
+// they stand, where on a work surface the objects of a task fit, and the
+// stand of a robot at a work surface of the scene. It is for a caller that
+// sets a simulated world up and checks its setup; it moves nothing but the
+// robot that stand_at stands, and a robot's task still finds its items
+// through the robot's own perception. get_objects_list of
+// scene_manipulation says where objects stand; this contract says whether
+// a robot can work them there, and where on a surface it could. The
+// workspace contract of a robot answers the same questions from the
+// robot's design alone, in the robot frame, with the same definitions.
 //
 // Positions are world-frame x, y, z in metres, headings a yaw in radians
 // about the world's +z, orientations unit quaternions [x, y, z, w] in the
@@ -82,14 +83,15 @@
 //
 // success false with the reason in message is the answer to a request the
 // implementer refuses and of an implementer that cannot read its scene now;
-// its other fields are then empty or zero and mean nothing. A request is
-// refused for a robot that does not stand in the world, a robot model whose
-// arms or perception camera cannot be measured (a model without arms, an
-// arm that declares no grasp point, two cameras that could each be the
-// perception camera, a perception camera whose field of view a sensor size
-// sets), an object id that does not exist, an object without a bounding
-// box (one with neither colliding geometry nor a soft surface), and a
-// reference that names no face.
+// its other fields are then empty or zero and mean nothing. A question of
+// describe_workspace, check_objects or find_places is refused for a robot
+// that does not stand in the world, a robot model whose arms or perception
+// camera cannot be measured (a model without arms, an arm that declares no
+// grasp point, two cameras that could each be the perception camera, a
+// perception camera whose field of view a sensor size sets), an object id
+// that does not exist, an object without a bounding box (one with neither
+// colliding geometry nor a soft surface), and a reference that names no
+// face. stand_at says what it refuses.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -388,6 +390,53 @@
               // One line that says why the item has no place.
               reason: "string",
             },
+          },
+        },
+      },
+    ],
+    actions: [
+      {
+        // Stands the robot at a work surface that the loaded scene
+        // declares, by the robot's stance, wherever it stands now, and ends
+        // once it stands there. A robot that rests on its own base goes to
+        // the joining spot in front of the surface (the robot_position and
+        // robot_yaw that get_assets_list gives for the surface), facing the
+        // way the spot faces, and settles there. A robot whose base is fixed
+        // where it is placed is clamped on the edge of the surface's top
+        // nearest that spot: on the first point of the top along the spot's
+        // heading, found in the world as it stands, facing across the top
+        // along that heading, at the height of the top plus the height that
+        // keeps the robot, in the pose it holds, clear of the top. The
+        // implementer reads the robot's stance and geometry, never its model:
+        // two models of one stance and one geometry stand at one place. The
+        // robot keeps its joint positions and the targets its limbs last
+        // received, as move_robot of scene_manipulation keeps them. The
+        // stand is refused for a robot that does not stand in the world, a
+        // surface that the loaded scene does not declare or whose object no
+        // longer stands, a robot whose base is fixed where it is placed at a
+        // surface whose top has no point along the spot's heading, and a
+        // place that the implementer's placement rules refuse (another robot
+        // too near, or the robot sinking into what stands around it); a
+        // refused stand moves nothing.
+        name: "stand_at",
+        goal_service: {
+          request_message_format: {
+            // The robot, by the name get_robots_list gives.
+            robot: "string",
+            // The work surface, by the label get_assets_list gives it in
+            // the loaded scene's entry.
+            surface: "string",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            success: "bool",
+            message: "string",
+            // Where the robot's base now stands: for a robot that rests on
+            // its own base, the point it settles from.
+            robot_position: { $type: "array", $items: "f64", $length: 3 },
+            // The heading the base now faces.
+            robot_yaw: "f64",
           },
         },
       },
