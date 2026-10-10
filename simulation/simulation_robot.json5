@@ -46,11 +46,16 @@
     actions: [
       {
         // Joins the scene. The goal is accepted when the model is in the
-        // engine's catalogue and the placement is free, and it runs for as
-        // long as the robot is in the scene. A caller holds one robot: a
-        // second attach naming another robot while its first stands is
-        // refused, and so is one naming another model for the robot it
-        // stands.
+        // engine's catalogue, the name can stand beside the robots of the
+        // scene and of the goals the engine already accepted, and the engine
+        // can promise a placement: the one the goal names, or a free spot of
+        // its own choosing. The engine then builds the robot, places it,
+        // sends the feedback below once the robot stands, and runs the goal
+        // for as long as the robot is in the scene. An engine that cannot
+        // send that feedback takes the robot out and ends the goal. A caller
+        // holds one robot: a second attach naming another robot while its
+        // first stands is refused, and so is one naming another model for
+        // the robot it stands.
         //
         // A caller attaching the robot it already stands is registering
         // that robot again, which is what an instance that died and came
