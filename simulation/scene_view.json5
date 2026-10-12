@@ -73,15 +73,18 @@
       },
       {
         // The preview the catalogue holds for the asset `asset_id` names:
-        // an object shown alone as authored, a scene shown whole, over a
-        // white background. It shows the asset, not the world as it
-        // stands. An id the catalogue lacks, and an entry the catalogue
-        // holds no preview for, are refused: success false with the reason
-        // in message, the other fields zero or empty and meaning nothing.
+        // an object shown alone as authored, a scene shown whole, a robot
+        // model standing alone at its start pose, over a white background.
+        // It shows the asset, not the world as it stands. An id the
+        // catalogue lacks, and an entry the catalogue holds no preview for,
+        // are refused: success false with the reason in message, the other
+        // fields zero or empty and meaning nothing.
         name: "preview_asset",
         request_message_format: {
           // The asset, as get_assets_list of scene_manipulation names it:
-          // "scene/<id>" or "object/<id>".
+          // "scene/<id>" or "object/<id>"; or a robot model of the
+          // catalogue, "robot/<model>", by the model id that
+          // get_robots_list of scene_manipulation reports.
           asset_id: "string",
         },
         response_message_format: {
