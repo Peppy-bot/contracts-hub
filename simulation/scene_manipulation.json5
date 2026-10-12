@@ -17,6 +17,27 @@
 // a yaw in radians about the world's +z, orientations are unit quaternions
 // [x, y, z, w] in the world frame, forces are world-frame newtons, masses
 // are kilograms.
+//
+// A snap, which spawn_object and move_object take, places an object so
+// that one of its belt ends continues a belt end of another object. Each
+// end is a landmark of use "inlet" or "outlet" (get_object lists an
+// object's landmarks, get_assets_list an asset's) whose outer edge, on its
+// axis behind an inlet's centre and ahead of an outlet's, is where its belt
+// ends. The two edges meet, centred on each other, the two belts running
+// away from the joint on either side of it, and the two belt tops level:
+// the placed object stands upright, turned about the world's +z, its
+// origin at the height of the other object's origin, and the implementer
+// sets the control that raises the body of its end, a displacement along
+// +z such as a conveyor's height, to the value that brings its end to the
+// other's height. Things then run from one belt onto the other across an
+// inlet snapped to an outlet when both belts run forward, and across two
+// inlets or two outlets when one of them runs backward. A snap is refused
+// for an object id that names no object, a landmark the object or the
+// asset does not declare, a landmark whose use is neither "inlet" nor
+// "outlet", two ends whose widths (their size across) differ by more than
+// 0.001 m, an end that does not face up, and an end of the placed object
+// that no control brings to the other's height within its range. An
+// implementer that keeps no landmark refuses every snap.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -432,6 +453,19 @@
             physics: "string",
             // Mass (kg) of a dynamic object; ignored otherwise.
             mass: "f64",
+            // When present, the object stands where the snap of the header
+            // places it, and position, yaw and orientation are not read.
+            snap_to: {
+              $type: "object",
+              $optional: true,
+              // The object whose belt end this one continues: an id
+              // get_objects_list gives.
+              object_id: "string",
+              // That object's landmark at its belt end, by name.
+              landmark: "string",
+              // The landmark of the asset that meets it, by name.
+              own_landmark: "string",
+            },
           },
         },
         // One message when the goal is accepted, then one whenever a field
@@ -489,6 +523,20 @@
             // spawn_object validates it. Absent keeps the orientation the
             // object has.
             orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
+            // When present, the object moves where the snap of the header
+            // places it, and position and orientation are not read. An
+            // object never snaps to itself.
+            snap_to: {
+              $type: "object",
+              $optional: true,
+              // The object whose belt end this one continues: an id
+              // get_objects_list gives.
+              object_id: "string",
+              // That object's landmark at its belt end, by name.
+              landmark: "string",
+              // The landmark of the moved object that meets it, by name.
+              own_landmark: "string",
+            },
           },
         },
         result_service: {
