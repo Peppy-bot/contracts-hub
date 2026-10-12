@@ -1,0 +1,32 @@
+// Where a teleoperation headset's page is: the node that serves the page a
+// headset's browser opens publishes the page's URLs, one per address of its
+// machine, so a consumer on another machine can show the link to someone
+// not wearing the headset and send it to the headset. The topic retains
+// the newest message, so a consumer that subscribes later, or sees the
+// producer enter its slot, reads the URLs at once. Distinct from the
+// pairings the headset drives robots through (the *_link pairings): this
+// topic carries the page's URLs alone.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "headset",
+    tag: "v1",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "page",
+        // Every message matters: a lost one leaves a consumer without the
+        // link.
+        qos_profile: "reliable",
+        retention: { latest: 1 },
+        message_format: {
+          // One URL per address of the producer's machine, the outbound
+          // route first. Empty when the page is served on a loopback
+          // address only.
+          urls: { $type: "array", $items: "string" },
+        },
+      },
+    ],
+  },
+}
