@@ -8,9 +8,11 @@
 // ("scene/<id>" or "object/<id>"). Object ids are minted by the implementer
 // on spawn, and by the implementer that places the objects of a loaded
 // scene as objects of the same set. get_objects_list reports what stands in
-// the scene and where, for a caller that sets the world up and checks its
-// setup; the engine's object_state contract reports the same objects with
-// their velocities, as a stream, for evaluation. Robot names come from
+// the scene and where, and get_object reports one object at one instant,
+// its landmarks in the world frame and its state, for a caller that sets
+// the world up, checks its setup and checks an event it asked for; the
+// engine's object_state contract reports the same objects with their
+// velocities, as a stream, for evaluation. Robot names come from
 // get_robots_list. Positions are world-frame x, y, z in meters, headings are
 // a yaw in radians about the world's +z, orientations are unit quaternions
 // [x, y, z, w] in the world frame, forces are world-frame newtons, masses
@@ -112,6 +114,188 @@
               position: { $type: "array", $items: "f64", $length: 3 },
               // How the object is turned: a unit quaternion [x, y, z, w].
               orientation: { $type: "array", $items: "f64", $length: 4 },
+            },
+          },
+        },
+      },
+      {
+        // One object at one instant, for a caller that sets the world up,
+        // checks its setup and checks an event it asked for: its pose, its
+        // landmarks in the world frame and its state, all as of
+        // `timestamp`. Each state field is present only for an object whose
+        // asset simulates it. An object_id that names no object is refused.
+        name: "get_object",
+        request_message_format: {
+          // The id get_objects_list gives.
+          object_id: "string",
+        },
+        response_message_format: {
+          success: "bool",
+          message: "string",
+          // The simulated instant of the pose, the landmarks and the
+          // state, on the implementer's clock.
+          timestamp: "time",
+          object_id: "string",
+          // The "object/<id>" asset the object is an instance of.
+          asset_id: "string",
+          // Where the object's origin stands: x, y, z (m), as
+          // get_objects_list gives it.
+          position: { $type: "array", $items: "f64", $length: 3 },
+          // How the object is turned: a unit quaternion [x, y, z, w].
+          orientation: { $type: "array", $items: "f64", $length: 4 },
+          // Uniform scale; 1 = as authored.
+          scale: "f64",
+          // The working parts of the object that its asset declares, in
+          // the world frame: each at the pose its body has now and sized by
+          // the scale. Empty for an asset that declares none.
+          landmarks: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              // Unique in the asset, such as "base" or "zone_front_left".
+              name: "string",
+              // "base" (the face the object rests on), "support" (a face
+              // that things rest on or in, such as the inside bottom of a
+              // pan or a cooker zone), "opening" (the mouth of a
+              // container), "grip" (a handle), "inlet" or "outlet" (where a
+              // belt takes or gives things) or "tip" (the end of a spout or
+              // a tool).
+              use: "string",
+              // "point", "disc", "rectangle" or "bar".
+              shape: "string",
+              // The body of the object the landmark is fixed to; "root"
+              // for the object's root body.
+              body: "string",
+              // Its centre: x, y, z (m).
+              centre: { $type: "array", $items: "f64", $length: 3 },
+              // The unit vector it faces out of the object along: down for
+              // a base, up for a support, out of the mouth for an opening,
+              // the side a hand comes from for a grip, up from the belt for
+              // an inlet or an outlet, the way a tip points.
+              normal: { $type: "array", $items: "f64", $length: 3 },
+              // A unit vector at a right angle to normal, along which the
+              // first side of size lies: the first side of a rectangle, the
+              // length of a bar, the direction of travel at an inlet or an
+              // outlet; any such vector for a disc or a point.
+              axis: { $type: "array", $items: "f64", $length: 3 },
+              // Along axis, then across it (m): a disc's diameter twice, a
+              // bar's length and thickness, [0, 0] for a point.
+              size: { $type: "array", $items: "f64", $length: 2 },
+            },
+          },
+          // The world-frame box of every colliding geometry of the object
+          // now: its body, its loose pieces and its contents. Its lowest
+          // x, y, z and its highest x, y, z (m). Absent for an object with
+          // no colliding geometry.
+          bounds: {
+            $type: "object",
+            $optional: true,
+            min: { $type: "array", $items: "f64", $length: 3 },
+            max: { $type: "array", $items: "f64", $length: 3 },
+          },
+          // For an asset with pieces that break off: how many have broken
+          // off, of how many. The object is broken when pieces_off is above
+          // 0.
+          breakage: {
+            $type: "object",
+            $optional: true,
+            pieces_off: "u32",
+            pieces_total: "u32",
+          },
+          // For an asset that holds a liquid: one entry for each phase of
+          // the liquid.
+          contents: {
+            $type: "array",
+            $optional: true,
+            $items: {
+              $type: "object",
+              // The phase's id, such as "yolk".
+              phase: "string",
+              // Its mass now (kg). It drops as water boils off.
+              mass: "f64",
+              // The share of that mass inside the shell, 0 to 1; 0 for an
+              // object without a shell.
+              in_shell: "f64",
+              // The centre of that mass: x, y, z (m).
+              centre: { $type: "array", $items: "f64", $length: 3 },
+              // The radius around the centre, in the horizontal plane,
+              // that holds 95 % of that mass (m).
+              spread: "f64",
+              // What the phase rests on: the object itself while its shell
+              // holds most of the phase, else what a ray straight down from
+              // the centre meets first past the whole object, named as
+              // scene_view's locate_in_view names a thing.
+              below: {
+                $type: "object",
+                // "object", "robot", "floor" or "backdrop"; "" when the ray
+                // meets nothing.
+                kind: "string",
+                // For an object: its object_id and its "object/<id>" asset.
+                object_id: "string",
+                asset_id: "string",
+                // For a robot: its name, and the part the ray meets, an arm
+                // or a gripper under the name the robot's limbs answer to,
+                // or "body" for the rest of the robot.
+                robot: "string",
+                part: "string",
+                // For "backdrop": the name the scene gives the piece.
+                name: "string",
+              },
+              // How far the phase has set and browned, each a mean over its
+              // mass, 0 to 1.
+              set: "f64",
+              browned: "f64",
+              // Its temperature, the mean over its mass (degrees C).
+              temperature_c: "f64",
+            },
+          },
+          // For each phase of the contents that a membrane holds, such as
+          // a yolk: whether the membrane is whole.
+          membranes: {
+            $type: "array",
+            $optional: true,
+            $items: {
+              $type: "object",
+              phase: "string",
+              whole: "bool",
+            },
+          },
+          // For an asset with a part that crushes, one entry for each such
+          // part.
+          crush: {
+            $type: "array",
+            $optional: true,
+            $items: {
+              $type: "object",
+              // The body that crushes.
+              body: "string",
+              // True once its load passed the load that crushes it. What
+              // is crushed stays crushed.
+              crushed: "bool",
+              // How far its rest point moved from where it started: metres
+              // along a slide, radians about a hinge.
+              crushed_by: "f64",
+            },
+          },
+          // For an object that takes and gives heat: its temperature now.
+          heat: {
+            $type: "object",
+            $optional: true,
+            // Degrees C.
+            temperature_c: "f64",
+          },
+          // For an object with heaters, one entry for each heater: the
+          // temperature of what it heats directly, the glass of an
+          // induction zone or the air of an oven.
+          heaters: {
+            $type: "array",
+            $optional: true,
+            $items: {
+              $type: "object",
+              // The heater's name, such as "zone_front_left" or "oven".
+              name: "string",
+              // Degrees C.
+              temperature_c: "f64",
             },
           },
         },
