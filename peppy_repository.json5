@@ -41,6 +41,11 @@
         path: "recording/episode_recording.json5"
       }
     },
+    headset: {
+      v1: {
+        path: "teleop/headset.json5"
+      }
+    },
     item_manipulation: {
       v1: {
         path: "robot/item_manipulation.json5"
