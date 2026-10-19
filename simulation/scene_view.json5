@@ -37,9 +37,18 @@
         // both world-frame points in metres, with +Z up in the picture. A
         // position equal to the target is refused, and so is a line of
         // sight straight along the vertical, which leaves the picture with
-        // no up. success false with the reason in message is the answer of
-        // an engine that renders nothing; its other fields are then zero or
-        // empty and mean nothing.
+        // no up. The picture leaves out each wall, ceiling and floor of a
+        // room of the scene that `position` stands behind, as seen from
+        // the room: a wall when `position` is past its inner face, a
+        // ceiling when `position` is above its underside, a floor when
+        // `position` is below its top. The parts it leaves out still cast
+        // their shadows. From outside a room or above it, the picture so
+        // shows the room's inside; from inside a room, it leaves nothing
+        // out. The cameras a robot carries see every part. Past the walls
+        // and through the doorways and windows, the picture shows the
+        // scene's ground and sky. success false with the reason in message
+        // is the answer of an engine that renders nothing; its other
+        // fields are then zero or empty and mean nothing.
         name: "render_view",
         request_message_format: {
           // Where the viewpoint is: x, y, z (m).
@@ -109,9 +118,12 @@
         // stops at the first thing it meets within 50 m: geometry the
         // world's cameras draw, or the collision geometry of the scene's
         // backdrop, which stands in for the backdrop's drawn mesh. A ray
-        // meets no liquid and no soft object. A ray meets the floor where it
-        // meets the world's floor, or a fixed piece of the scene that is no
-        // object within 0.01 m of the floor's height.
+        // passes through each wall, ceiling and floor that render_view
+        // leaves out of a picture taken from the camera's position. A ray
+        // meets no liquid and no soft object. A ray meets the floor where
+        // it meets the world's floor, the scene's ground, which reaches to
+        // the horizon, or a fixed piece of the scene that is no object
+        // within 0.01 m of z = 0, the height of the rooms' floors.
         //
         // Refused, with success false and the reason in message, the other
         // fields then zero or empty and meaning nothing: a value that is
