@@ -1,0 +1,87 @@
+// Which model a brain runs for each of its roles, the models it can run, and
+// the way to change one while the brain runs. A role is a part of the
+// brain's work that a model does: "perception" finds and names items
+// (item_perception), "manipulation" moves them (item_manipulation). A brain
+// lists every role it has, and that set is fixed for the brain's life. A
+// role's model may be "none": the brain then refuses that role's goals,
+// naming the missing model.
+//
+// Model names are the brain's own names for the models it can run, the same
+// in every member of this contract. They are opaque: callers compare them and
+// pass them back, and read nothing into their text.
+//
+// Each role has one active model. A goal uses the model of its own role
+// alone: scan_items and identify_item the perception model, grab_item,
+// drop_item and place_item the manipulation model. A switch never changes
+// the model of a goal that runs.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "brain_model",
+    tag: "v1",
+  },
+  interfaces: {
+    actions: [
+      {
+        name: "switch_model",
+        goal_service: {
+          request_message_format: {
+            // The role whose model changes, as get_model names it.
+            role: "string",
+            // The model to make active for that role, one of the names
+            // list_models gives for that role.
+            model: "string",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // False when the switch was refused, failed, or was cancelled;
+            // message says which, and the role keeps the model it had.
+            // Refused when the brain runs no model for the role, when the
+            // model is not one list_models gives for the role, while a goal
+            // of that role runs (scan_items or identify_item for
+            // perception; grab_item, drop_item or place_item for
+            // manipulation; the message names it), and while another
+            // switch_model for the role runs. Failed when the brain cannot
+            // reach the model or the model cannot serve the role. role and
+            // model are empty when success is false; action_time is the
+            // elapsed time whatever the outcome.
+            success: "bool",
+            message: "string",
+            // The role, as the goal named it.
+            role: "string",
+            // The model now active for the role.
+            model: "string",
+            // Wall-clock duration of the action (s), whatever the outcome.
+            action_time: "f64",
+          },
+        },
+      },
+    ],
+    services: [
+      {
+        // The active model of each role the brain has.
+        name: "get_model",
+        response_message_format: {
+          // One entry per role, in a stable order. The array below is
+          // index aligned with this one.
+          roles: { $type: "array", $items: "string" },
+          // The active model of that role.
+          models: { $type: "array", $items: "string" },
+        },
+      },
+      {
+        // Every model switch_model accepts, per role.
+        name: "list_models",
+        response_message_format: {
+          // One entry per model a role accepts, grouped by role in
+          // get_model's order: a role repeats once per model. The array
+          // below is index aligned with this one.
+          roles: { $type: "array", $items: "string" },
+          // A model that role accepts, its active model among them.
+          models: { $type: "array", $items: "string" },
+        },
+      },
+    ],
+  },
+}
