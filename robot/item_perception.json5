@@ -100,7 +100,7 @@
             image_height: "u32",
             // The capture time of the frame the scan looked at.
             frame_timestamp: "time",
-            // Wall-clock duration of the action (s).
+            // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
         },
@@ -126,8 +126,8 @@
             // False when the search was refused, found nothing, failed, or
             // was cancelled; message says which. Refused before searching
             // when another search is running or no perception source is
-            // available. All other fields are zero or empty when success is
-            // false.
+            // available. All other fields except action_time are zero or
+            // empty when success is false.
             success: "bool",
             message: "string",
             // Identifier minted for the item that was found, to be passed to
@@ -160,7 +160,7 @@
             image_height: "u32",
             // The capture time of the frame the search looked at.
             frame_timestamp: "time",
-            // Wall-clock duration of the action (s).
+            // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
         },

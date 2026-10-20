@@ -97,8 +97,8 @@
             // another sequence is running, the named gripper is unknown or
             // already holds an item, no gripper is free for a goal that
             // named none, or the item_id is one the implementer no longer
-            // recognises. All other fields are zero or empty when success is
-            // false.
+            // recognises. All other fields except action_time are zero or
+            // empty when success is false.
             success: "bool",
             message: "string",
             // Gripper that now holds the item, from the implementer's fixed
@@ -112,7 +112,7 @@
             // item the goal addressed by pose, so the held item is always
             // addressable afterwards.
             item_id: "string",
-            // Wall-clock duration of the action (s).
+            // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
         },
@@ -136,8 +136,8 @@
             // aborted; message says which. Refused before releasing when
             // another sequence is running, the named gripper is unknown or
             // holds nothing, or the name is empty while no gripper or more
-            // than one holds. All other fields are zero or empty when
-            // success is false.
+            // than one holds. All other fields except action_time are zero
+            // or empty when success is false.
             success: "bool",
             message: "string",
             // Gripper that released the item, from the implementer's fixed
@@ -146,7 +146,7 @@
             // Identifier of the item that was released, as grab_item
             // reported it.
             item_id: "string",
-            // Wall-clock duration of the action (s).
+            // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
         },
@@ -180,7 +180,7 @@
             // holds nothing, the name is empty while no gripper or more than
             // one holds, or the target is one the implementer cannot reach,
             // which it refuses rather than approximates. All other fields
-            // are zero or empty when success is false.
+            // except action_time are zero or empty when success is false.
             success: "bool",
             message: "string",
             // Gripper that placed the item, from the implementer's fixed set
@@ -192,7 +192,7 @@
             // Measured grasp-point position when the jaws opened, robot
             // frame: x, y, z (m).
             final_position: { $type: "array", $items: "f64", $length: 3 },
-            // Wall-clock duration of the action (s).
+            // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
         },
@@ -215,7 +215,7 @@
             // Name of the action that was stopped, as it appears in this
             // contract. Empty when no sequence was running.
             aborted_action: "string",
-            // Wall-clock duration of the action (s).
+            // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
         },
