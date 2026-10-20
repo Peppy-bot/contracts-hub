@@ -6,6 +6,11 @@
         path: "system/alert.json5"
       }
     },
+    brain_model: {
+      v1: {
+        path: "robot/brain_model.json5"
+      }
+    },
     camera_geometry: {
       v1: {
         path: "cameras/camera_geometry.json5"
