@@ -37,9 +37,24 @@
         // both world-frame points in metres, with +Z up in the picture. A
         // position equal to the target is refused, and so is a line of
         // sight straight along the vertical, which leaves the picture with
-        // no up. success false with the reason in message is the answer of
-        // an engine that renders nothing; its other fields are then zero or
-        // empty and mean nothing.
+        // no up. The picture leaves out each part of a room of the scene (a
+        // wall, a piece of a fence, a ceiling or a floor) when `position`
+        // stands behind the inner face of that part, as seen from the room.
+        // The inner face of a part is the plane across the direction from
+        // the part into its room, through the point farthest along that
+        // direction of the boxes around the shapes the part is drawn with,
+        // each box aligned with its shape: a post of a wall that juts into
+        // the room puts the wall's inner face at the far side of the post's
+        // box, which can stand past the post's tip. The parts it leaves out
+        // still cast their shadows.
+        // From outside a room or above it, the picture so shows the room's
+        // inside; from a position on the room's side of the inner face of
+        // every part, it leaves nothing out. The cameras a robot carries
+        // see every part. Past the walls and through the doorways and
+        // windows, the picture shows the scene's ground and sky. success
+        // false with the reason in message is the answer of an engine that
+        // renders nothing; its other fields are then zero or empty and mean
+        // nothing.
         name: "render_view",
         request_message_format: {
           // Where the viewpoint is: x, y, z (m).
@@ -74,12 +89,17 @@
       },
       {
         // The preview the catalogue holds for the asset `asset_id` names:
-        // an object shown alone as authored, a scene shown whole, a robot
-        // model standing alone at its start pose, over a white background.
-        // It shows the asset, not the world as it stands. An id the
-        // catalogue lacks, and an entry the catalogue holds no preview for,
-        // are refused: success false with the reason in message, the other
-        // fields zero or empty and meaning nothing.
+        // an object shown alone as authored, or a robot model standing
+        // alone at its start pose, over a white background; a scene seen
+        // from the viewpoint it opens on, under its own lighting with its
+        // exposure raised by up to 3 stops until the picture is bright, on
+        // the ground and under the sky of its site, and without the parts of
+        // its rooms (walls, pieces of fences, ceilings and floors) that
+        // render_view leaves out of a picture from that viewpoint. It shows
+        // the asset, not the world as it stands. An id the catalogue lacks,
+        // and an entry the catalogue holds no preview for, are refused:
+        // success false with the reason in message, the other fields zero or
+        // empty and meaning nothing.
         name: "preview_asset",
         request_message_format: {
           // The asset, as get_assets_list of scene_manipulation names it:
@@ -109,9 +129,13 @@
         // stops at the first thing it meets within 50 m: geometry the
         // world's cameras draw, or the collision geometry of the scene's
         // backdrop, which stands in for the backdrop's drawn mesh. A ray
-        // meets no liquid and no soft object. A ray meets the floor where it
-        // meets the world's floor, or a fixed piece of the scene that is no
-        // object within 0.01 m of the floor's height.
+        // passes through each part of a room (a wall, a piece of a fence, a
+        // ceiling or a floor) that render_view leaves out of a picture taken
+        // from the camera's position. A ray meets no liquid and no soft
+        // object. A ray meets the floor where it meets the world's floor,
+        // the scene's ground, which reaches to the horizon, or a fixed piece
+        // of the scene that is no object within 0.01 m of z = 0, the height
+        // of the rooms' floors.
         //
         // Refused, with success false and the reason in message, the other
         // fields then zero or empty and meaning nothing: a value that is

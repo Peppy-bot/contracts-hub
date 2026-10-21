@@ -240,12 +240,13 @@
               // objects it rests on, the first that stands fixed or that the
               // scene declares as a work surface (a book on a book on a table
               // rests on the table). When that chain reaches a floor first
-              // (the world's floor, or an object that stands fixed where it is
-              // touched at the floor's height, such as a room's floor slab or
-              // a doorway's threshold), the lowest object of the chain above
-              // the floor (a cup on a side table that can move rests on the
-              // side table); "" for an object that rests on a floor itself or
-              // on nothing, and for one that stands fixed, part of the
+              // (the world's floor, which is the scene's ground, or an object
+              // that stands fixed where it is touched within 0.01 m of z = 0,
+              // the height of the rooms' floors, such as a room's floor slab
+              // or a doorway's threshold), the lowest object of the chain
+              // above the floor (a cup on a side table that can move rests on
+              // the side table); "" for an object that rests on a floor itself
+              // or on nothing, and for one that stands fixed, part of the
               // furniture.
               resting_on: "string",
               // Whether the robot can work it.
