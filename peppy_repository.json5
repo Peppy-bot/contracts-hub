@@ -151,6 +151,11 @@
         path: "simulation/sim_camera_control.json5"
       }
     },
+    sim_sensor_streams: {
+      v1: {
+        path: "simulation/sim_sensor_streams.json5"
+      }
+    },
     simulation_clock: {
       v1: {
         path: "simulation/simulation_clock.json5"
