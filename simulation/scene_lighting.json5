@@ -16,7 +16,12 @@
 // "spot" (a lamp with a cone: flux, colour, position, direction, cone
 // angles) and "environment" (a photographed environment map: a radiance
 // scale and an orientation). Ambient and fill levels are the renderers'
-// approximation of indirect light and are reported, never set.
+// approximation of indirect light and are reported, never set. A scene can
+// carry baked indirect light: for each light, the light it sends onto the
+// scene's fixed surfaces after it bounces, computed offline for the
+// light's authored position, direction or orientation. A renderer that
+// shows baked indirect light gives the ambient and fill levels no light
+// while any baked indirect light of the scene is on.
 //
 // Positions are world-frame metres, Z up; directions are unit vectors in
 // the world frame, pointing the way the light travels; colours are linear
@@ -43,11 +48,19 @@
         // Every light of the loaded scene, as a JSON object in
         // lighting_json: {"scene": "<scene asset id>", "ambient_lux": <n>,
         // "fill_lux": <n>, "lights": [...]}. Each light carries "id",
-        // "kind", "label" and "properties", an object keyed by property
-        // name ("illuminance_lux", "luminous_flux_lm", "radiance_scale",
-        // "color_rgb", "position_m", "direction", "inner_angle_rad",
-        // "outer_angle_rad", "orientation_xyzw"), each with "unit",
-        // "default", "value" and, for scalars, "min" and "max". A light
+        // "kind", "label", "baked_indirect" and "properties", an object
+        // keyed by property name ("illuminance_lux", "luminous_flux_lm",
+        // "radiance_scale", "color_rgb", "position_m", "direction",
+        // "inner_angle_rad", "outer_angle_rad", "orientation_xyzw"), each
+        // with "unit", "default", "value" and, for scalars, "min" and
+        // "max". "baked_indirect" is "on" while the light's baked indirect
+        // light matches the scene; "none" when the scene has no baked
+        // indirect light for the light; "off_light_moved" while the light's
+        // position, direction or orientation differs from the one its baked
+        // indirect light was computed for (reset_lighting, a reset of the
+        // simulation, or setting it back, turns it on); "off_scene_changed"
+        // after a fixed object of the scene was moved or removed, until
+        // load_scene or a reset of the simulation loads a scene. A light
         // lists only the properties it supports.
         name: "get_lighting",
         response_message_format: {
