@@ -8,8 +8,8 @@
 // own rate (live) while one does, from its next period. A hold names a robot
 // by the name it stands under, a holder, and some sensors of the robot by
 // their names on the robot, or no sensor to hold every sensor the robot has
-// now and pairs later. A hold lasts lease_ms from the call: the holder renews
-// it with the same hold call before it lapses, about every third of lease_ms.
+// now and pairs later. A hold lasts hold_ms from the call: the holder renews
+// it with the same hold call before it lapses, about every third of hold_ms.
 // A hold of a robot replaces the previous hold of the same holder on that
 // robot. A release ends the hold of its holder on the robot at once. When the
 // last hold of a sensor ends or lapses, the sensor goes back to 1 Hz. A robot
@@ -41,7 +41,7 @@
           success: "bool",
           message: "string",
           // How long a hold lasts from the call that made or renewed it (ms).
-          lease_ms: "u32",
+          hold_ms: "u32",
           sensors: {
             $type: "array",
             $items: {
@@ -104,7 +104,7 @@
       },
       {
         // Holds sensors of a robot for holder, or renews that hold, for
-        // lease_ms. sensors names some sensors of the robot; empty holds every
+        // hold_ms. sensors names some sensors of the robot; empty holds every
         // sensor it has now and pairs later. Refused, and nothing changes,
         // when holder is empty, when no robot stands under robot, or when a
         // name is not a sensor of the robot's rig.
@@ -117,7 +117,7 @@
         response_message_format: {
           success: "bool",
           message: "string",
-          lease_ms: "u32",
+          hold_ms: "u32",
           sensors: {
             $type: "array",
             $items: {
@@ -172,7 +172,7 @@
         response_message_format: {
           success: "bool",
           message: "string",
-          lease_ms: "u32",
+          hold_ms: "u32",
           sensors: {
             $type: "array",
             $items: {
