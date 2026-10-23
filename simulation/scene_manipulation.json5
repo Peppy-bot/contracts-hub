@@ -387,7 +387,9 @@
         // must be of kind "scene". Spawned objects are removed first. A load
         // that arrives while another one runs may replace it: the replaced
         // goal then ends cancelled, with a reason that names the load that
-        // replaced it. The load is refused with `rejected` for an asset_id
+        // replaced it. A build of simulation_world that comes before the load
+        // has handed its command over ends it cancelled the same way, naming
+        // the build. The load is refused with `rejected` for an asset_id
         // that names no scene of the catalogue and for a scale the
         // implementer does not take, and fails with `attempt_failed` when
         // the scene does not load.
@@ -445,7 +447,9 @@
         // unknown or the arguments are invalid. It fails with
         // `precondition_failed` when the placement rules of the header
         // refuse its place, and with `attempt_failed` when the object does
-        // not spawn.
+        // not spawn. A build of simulation_world that comes before the spawn
+        // has handed its command over ends it cancelled, with a reason that
+        // names the build, and it spawns nothing.
         name: "spawn_object",
         goal_service: {
           request_message_format: {

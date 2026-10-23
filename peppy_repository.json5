@@ -171,6 +171,11 @@
         path: "simulation/simulation_robot.json5"
       }
     },
+    simulation_world: {
+      v1: {
+        path: "simulation/simulation_world.json5"
+      }
+    },
     workspace: {
       v1: {
         path: "robot/workspace.json5"
