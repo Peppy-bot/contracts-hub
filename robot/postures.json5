@@ -33,8 +33,8 @@
         name: "move_to_ready",
         goal_service: {
           request_message_format: {
-            // Requested move duration (s); floored at the implementer's
-            // velocity-limit duration. 0 = fastest.
+            // Requested move duration (s), up to 60; floored at the
+            // implementer's velocity-limit duration. 0 = fastest.
             duration_s: "f64",
           },
         },
@@ -58,8 +58,8 @@
         name: "move_to_home",
         goal_service: {
           request_message_format: {
-            // Requested move duration (s); floored at the implementer's
-            // velocity-limit duration. 0 = fastest.
+            // Requested move duration (s), up to 60; floored at the
+            // implementer's velocity-limit duration. 0 = fastest.
             duration_s: "f64",
           },
         },
