@@ -55,10 +55,10 @@
         // when the last physics step of the duration has run. A step waits
         // for the step before it to end. The step is refused with
         // `precondition_failed` while the simulation runs. A resume, or a
-        // reset of the simulation, that comes before the last physics step
-        // of the duration has run ends the step cancelled, with a reason
-        // that names it. A cancelled step gives the reason of the cancel and
-        // its result.
+        // build of simulation_world, that comes before the last physics
+        // step of the duration has run ends the step cancelled, with a
+        // reason that names it. A cancelled step gives the reason of the
+        // cancel and its result.
         name: "step",
         goal_service: {
           request_message_format: {

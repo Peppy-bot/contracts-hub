@@ -52,18 +52,22 @@
         // keyed by property name ("illuminance_lux", "luminous_flux_lm",
         // "radiance_scale", "color_rgb", "position_m", "direction",
         // "inner_angle_rad", "outer_angle_rad", "orientation_xyzw"), each
-        // with "unit", "default", "value" and, for scalars, "min" and
-        // "max". "baked_indirect" is "on" while the light's baked indirect
-        // light matches the scene; "none" when the scene has no baked
-        // indirect light for the light; "off_light_moved" while the light's
-        // position, direction or orientation differs from the one its baked
-        // indirect light was computed for (reset_lighting, a reset of the
-        // simulation, or setting it back, turns it on); "off_scene_changed"
-        // after a fixed object of the scene was moved or removed, until
-        // load_scene or a reset of the simulation loads a scene. A light
-        // lists only the properties it supports. An engine that has no
-        // lighting to report, because no scene is loaded yet, gives an error
-        // reply with `precondition_failed`.
+        // with "unit", "default", "value" and, for scalars, "min" and "max".
+        // "baked_indirect" is "on" while the light's baked indirect light
+        // matches the scene; "none" when the scene has no baked indirect
+        // light for the light; "off_light_moved" while the light's position,
+        // direction or orientation differs from the one its baked indirect
+        // light was computed for (reset_lighting or setting it back turns it
+        // on, and so does a build of simulation_world whose world moves and
+        // removes none of the objects that the baked indirect light covers
+        // and does not move the light); "off_scene_changed", whatever the
+        // lighting, after an object of the scene that the baked indirect
+        // light covers was moved or removed, until load_scene loads a scene
+        // or a build of simulation_world builds a world that moves and
+        // removes none of those objects. A light lists only the properties
+        // it supports. An engine that has no lighting to report, because no
+        // scene is loaded yet, gives an error reply with
+        // `precondition_failed`.
         name: "get_lighting",
         response_message_format: {
           lighting_json: "string",
