@@ -10,6 +10,8 @@
 // a robot can work them there, and where on a surface it could. The
 // workspace contract of a robot answers the same questions from the
 // robot's design alone, in the robot frame, with the same definitions.
+// name_location keeps a place of the task under a name, for the setup
+// record of the simulation (simulation_world).
 //
 // Positions are world-frame x, y, z in metres, headings a yaw in radians
 // about the world's +z, orientations unit quaternions [x, y, z, w] in the
@@ -391,35 +393,67 @@
           },
         },
       },
+      {
+        // Keeps a place of the task under a name, for the setup record of
+        // the simulation: a landmark of an object, a work surface, a named
+        // pose or a named region of the loaded scene, one of the four. A
+        // name is lowercase letters, digits and "_"; a name given again
+        // replaces its location. An empty field counts as absent. The call
+        // gets an error reply with `rejected`, and nothing changes, for a
+        // name of another form, for a request that names none of the four or
+        // more than one, for an object, landmark, surface, pose or region
+        // the world does not hold, for an object that a feeder spawned (it
+        // is no part of the setup), and from an implementer that lets no
+        // caller inspect its world.
+        name: "name_location",
+        request_message_format: {
+          name: "string",
+          // A landmark of an object: the object by the name get_objects_list
+          // of scene_manipulation gives, the landmark by the name its asset
+          // declares.
+          object: { $type: "string", $optional: true },
+          landmark: { $type: "string", $optional: true },
+          // A work surface, by the label get_assets_list gives it in the
+          // loaded scene's entry.
+          surface: { $type: "string", $optional: true },
+          // A named pose of the loaded scene.
+          at: { $type: "string", $optional: true },
+          // A named region of the loaded scene.
+          region: { $type: "string", $optional: true },
+        },
+      },
     ],
     actions: [
       {
-        // Stands the robot at a work surface that the loaded scene
-        // declares, by the robot's stance, wherever it stands now, and ends
-        // once it stands there. A robot that rests on its own base goes to
-        // the joining spot in front of the surface (the robot_position and
+        // Stands the robot at a work surface that the loaded scene declares,
+        // by the robot's stance, wherever it stands now, and ends once it
+        // stands there. A robot that rests on its own base goes to the
+        // joining spot in front of the surface (the robot_position and
         // robot_yaw that get_assets_list gives for the surface), facing the
         // way the spot faces, and settles there. A robot whose base is fixed
         // where it is placed is clamped on the edge of the surface's top
         // nearest that spot: on the first point of the top along the spot's
         // heading, found in the world as it stands, facing across the top
         // along that heading, at the height of the top plus the height that
-        // keeps the robot, in the pose it holds, clear of the top. The
-        // implementer reads the robot's stance and geometry, never its model:
-        // two models of one stance and one geometry stand at one place. The
-        // robot keeps its joint positions and the targets its limbs last
-        // received, as move_robot of scene_manipulation keeps them. An
-        // implementer that lets no caller inspect its world refuses the
-        // stand with `rejected`. The other checks read the world as it
-        // stands when the stand runs, so a stand that does not pass them
-        // fails once it started: with `resource_unavailable` for a robot
-        // that does not stand in the world; with `rejected` for a surface
-        // that the loaded scene does not declare, and for a robot whose base
-        // is fixed where it is placed at a surface whose top has no point
-        // along the spot's heading; and with `precondition_failed` for a
-        // surface whose object no longer stands, and for a place that the
-        // implementer's placement rules refuse (another robot too near, or
-        // the robot sinking into what stands around it). A refused or
+        // keeps the robot, in the pose it holds, clear of the top. An offset
+        // in the request moves either robot from that place, the joining
+        // spot or the point on the edge, on the robot's own axes. The
+        // implementer reads the robot's stance and geometry, never its
+        // model: two models of one stance and one geometry stand at one
+        // place. The robot keeps its joint positions and the targets its
+        // limbs last received, as move_robot of scene_manipulation keeps
+        // them. Every implementer refuses an offset that is not finite with
+        // `rejected`, and an implementer that lets no caller inspect its
+        // world refuses the stand with `rejected`. The other checks read the
+        // world as it stands when the stand runs, so a stand that does not
+        // pass them fails once it started: with `resource_unavailable` for a
+        // robot that does not stand in the world; with `rejected` for a
+        // surface that the loaded scene does not declare, and for a robot
+        // whose base is fixed where it is placed at a surface whose top has
+        // no point along the spot's heading; and with `precondition_failed`
+        // for a surface whose object no longer stands, and for a place that
+        // the implementer's placement rules refuse (another robot too near,
+        // or the robot sinking into what stands around it). A refused or
         // failed stand moves nothing.
         name: "stand_at",
         goal_service: {
@@ -429,6 +463,17 @@
             // The work surface, by the label get_assets_list gives it in
             // the loaded scene's entry.
             surface: "string",
+            // Where the robot stands relative to the place stand_at gives
+            // it (the joining spot for a robot that rests on its own base,
+            // the point on the edge of the top for a robot whose base is
+            // fixed), on its own axes: ahead of that place and to its left,
+            // in metres. Absent, the robot stands at that place.
+            offset: {
+              $type: "object",
+              $optional: true,
+              ahead_m: "f64",
+              side_m: "f64",
+            },
           },
         },
         result_service: {
