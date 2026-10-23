@@ -25,7 +25,9 @@
 // grasp is expected to stop short, so a gripper move never fails on its
 // settle. Any move ends early when its caller cancels it or the stop
 // service ends every move in flight, whoever started them. check_arm_move
-// asks whether a Cartesian move has a plan, and moves nothing.
+// asks whether a Cartesian move has a plan, and moves nothing. An
+// implementer that guards the robot's own body against itself refuses a
+// move whose planned path its guard would stop, before the move starts.
 //
 // Every tolerance a goal carries is a positive number in its unit, and
 // every duration and timeout a number of seconds from 0 to 60: an arm move
@@ -222,8 +224,10 @@
       {
         // Whether a move_arm goal with these fields has a plan from where
         // the arm is commanded now, without moving it. It checks what
-        // move_arm checks before it moves, and no more: it does not check
-        // collisions with the robot itself or with what stands around it.
+        // move_arm checks before it moves, and no more: an implementer with
+        // a collision guard over the robot's own body refuses a path the
+        // guard would stop, from the check and from move_arm alike; neither
+        // checks collisions with what stands around the robot.
         name: "check_arm_move",
         request_message_format: {
           // The fields of the move_arm goal that decide whether it has a
