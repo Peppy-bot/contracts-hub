@@ -54,13 +54,19 @@
         // scene and of the goals the engine already accepted, and the engine
         // can promise a placement: the one the goal names, or a free spot of
         // its own choosing. Otherwise the engine refuses it: with `rejected`
-        // for a model that is not in its catalogue, and with
+        // for a model that is not in its catalogue or that it cannot stand,
+        // and for a name or a placement that it does not take; and with
         // `precondition_failed` for a name that cannot stand beside the
-        // others and for a placement it cannot promise. The engine then
-        // builds the robot, places it, sends the feedback below once the
-        // robot stands, and runs the goal for as long as the robot is in the
-        // scene. An engine that cannot send that feedback takes the robot
-        // out and fails the goal with `resource_unavailable`. A caller holds
+        // others, for a name whose robot still joins or leaves the scene,
+        // and for a placement it cannot promise. The engine then builds the
+        // robot, places it, sends the feedback below once the robot stands,
+        // and runs the goal for as long as the robot is in the scene. A
+        // robot that the engine cannot stand once it accepted the goal fails
+        // the goal: with `attempt_failed` when the robot's files do not come
+        // or its model does not build, and with `precondition_failed` when
+        // the place it promised is no longer free. An engine that cannot
+        // send that feedback takes the robot out and fails the goal with
+        // `resource_unavailable`. A caller holds
         // one robot: a second attach naming another robot while its first
         // stands is refused with `precondition_failed`, and so is one naming
         // another model for the robot it stands.

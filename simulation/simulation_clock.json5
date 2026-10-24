@@ -12,6 +12,9 @@
 // and leaves it paused. A robot that runs on wall time cannot move while
 // the simulation is paused: its limbs go silent, and a move in flight fails.
 // Resume before a robot moves.
+//
+// Before the clock has a time, get_clock and set_paused give an error reply
+// with `precondition_failed`.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -49,9 +52,13 @@
       {
         // Advances a paused simulation by duration_s of simulated time, at
         // the engine's normal pace, and leaves it paused. The goal completes
-        // when the last physics step of the duration has run. The step is
-        // refused with `precondition_failed` while the simulation runs. A
-        // cancelled step gives the reason of the cancel and its result.
+        // when the last physics step of the duration has run. A step waits
+        // for the step before it to end. The step is refused with
+        // `precondition_failed` while the simulation runs. A resume, or a
+        // reset of the simulation, that comes before the last physics step
+        // of the duration has run ends the step cancelled, with a reason
+        // that names it. A cancelled step gives the reason of the cancel and
+        // its result.
         name: "step",
         goal_service: {
           request_message_format: {

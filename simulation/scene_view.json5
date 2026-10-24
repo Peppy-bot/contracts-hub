@@ -52,7 +52,8 @@
         // every part, it leaves nothing out. The cameras a robot carries
         // see every part. Past the walls and through the doorways and
         // windows, the picture shows the scene's ground and sky. An engine
-        // that renders nothing gives an error reply with `rejected`.
+        // that renders nothing gives an error reply with `rejected`, and an
+        // engine whose clock has no time yet one with `precondition_failed`.
         name: "render_view",
         request_message_format: {
           // Where the viewpoint is: x, y, z (m).
@@ -94,7 +95,8 @@
         // render_view leaves out of a picture from that viewpoint. It shows
         // the asset, not the world as it stands. An id the catalogue lacks,
         // and an entry the catalogue holds no preview for, get an error
-        // reply with `rejected`.
+        // reply with `rejected`; a preview the implementer cannot fetch or
+        // decode gets one with `attempt_failed`.
         name: "preview_asset",
         request_message_format: {
           // The asset, as get_assets_list of scene_manipulation names it:

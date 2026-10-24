@@ -88,8 +88,9 @@
         // Set one control of one spawned object to value, in the control's
         // unit and within its bounds. The goal completes once the part
         // stands at the new value, or once a physics step has run the part
-        // at the new speed or the heater at the new setting. It fails with
-        // `attempt_failed` when the change fails.
+        // at the new speed or the heater at the new setting. An implementer
+        // that does not inspect its scene refuses every set with `rejected`.
+        // It fails with `attempt_failed` when the change fails.
         name: "set_object_control",
         goal_service: {
           request_message_format: {

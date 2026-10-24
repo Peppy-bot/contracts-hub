@@ -89,9 +89,10 @@
 // grasp point, two cameras that could each be the perception camera, a
 // perception camera whose field of view a sensor size sets), an object id
 // that does not exist, an object without a bounding box (one with neither
-// colliding geometry nor a soft surface), and a reference that names no
-// face; and with `precondition_failed` from an implementer that cannot read
-// its scene now. stand_at says what it refuses.
+// colliding geometry nor a soft surface), a reference that names no face,
+// and every question to an implementer that lets no caller inspect its
+// world; and with `precondition_failed` from an implementer that cannot
+// read its scene now. stand_at says how it is refused or fails.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -311,7 +312,8 @@
         // two forms below, a near that does not hold 0 or 2 numbers, an
         // object named twice, the object the surface belongs to named as an
         // item, an empty items and a margin that is not a finite number from
-        // 0.
+        // 0, and with `attempt_failed` when the implementer cannot fetch the
+        // files of an asset it places.
         name: "find_places",
         request_message_format: {
           // The robot, by the name get_robots_list gives.
@@ -406,16 +408,19 @@
         // implementer reads the robot's stance and geometry, never its model:
         // two models of one stance and one geometry stand at one place. The
         // robot keeps its joint positions and the targets its limbs last
-        // received, as move_robot of scene_manipulation keeps them. The
-        // stand is refused with `resource_unavailable` for a robot that does
-        // not stand in the world; with `rejected` for a surface that the
-        // loaded scene does not declare, and for a robot whose base is fixed
-        // where it is placed at a surface whose top has no point along the
-        // spot's heading; and with `precondition_failed` for a surface whose
-        // object no longer stands, and for a place that the implementer's
-        // placement rules refuse (another robot too near, or the robot
-        // sinking into what stands around it). A refused stand moves
-        // nothing.
+        // received, as move_robot of scene_manipulation keeps them. An
+        // implementer that lets no caller inspect its world refuses the
+        // stand with `rejected`. The other checks read the world as it
+        // stands when the stand runs, so a stand that does not pass them
+        // fails once it started: with `resource_unavailable` for a robot
+        // that does not stand in the world; with `rejected` for a surface
+        // that the loaded scene does not declare, and for a robot whose base
+        // is fixed where it is placed at a surface whose top has no point
+        // along the spot's heading; and with `precondition_failed` for a
+        // surface whose object no longer stands, and for a place that the
+        // implementer's placement rules refuse (another robot too near, or
+        // the robot sinking into what stands around it). A refused or
+        // failed stand moves nothing.
         name: "stand_at",
         goal_service: {
           request_message_format: {
