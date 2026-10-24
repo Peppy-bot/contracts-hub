@@ -28,10 +28,11 @@
         // the role. It is refused with `precondition_failed` while a goal of
         // that role runs (scan_items or identify_item for perception;
         // grab_item, drop_item or place_item for manipulation; the message
-        // names it), and while another switch_model for the role runs. It
-        // fails with `resource_unavailable` when the brain cannot reach the
-        // model, and with `attempt_failed` when the model cannot serve the
-        // role. A refused, failed or cancelled switch leaves the role with
+        // names it), and while another switch_model for the role runs; a
+        // switch that meets such a goal or switch only once it started fails
+        // with `precondition_failed`. It fails with `resource_unavailable`
+        // when the brain cannot reach the model, and with `attempt_failed`
+        // when the model cannot serve the role. A refused, failed or cancelled switch leaves the role with
         // the model it had. A cancelled switch gives the reason of the
         // cancel, and its role and model are empty.
         name: "switch_model",

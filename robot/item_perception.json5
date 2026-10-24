@@ -43,11 +43,13 @@
 //
 // One search at a time, scan and identify alike. A goal that arrives while a
 // search is running is refused with `precondition_failed`, and the running
-// search continues untouched. A goal is refused with `resource_unavailable`
-// when no perception source is available. A search fails with `timeout`
-// when its upper bound passes before it has an answer, and with
-// `attempt_failed` when it cannot look for another reason. A failed goal
-// gives no result.
+// search continues untouched; a goal that meets another search only once it
+// started fails with `precondition_failed`. A goal is refused with
+// `resource_unavailable` when no perception source is available, and a
+// search that finds its source gone when it looks fails with
+// `resource_unavailable`. A search fails with `timeout` when its upper bound
+// passes before it has an answer, and with `attempt_failed` when it cannot
+// look for another reason. A failed goal gives no result.
 {
   peppy_schema: "contract/v1",
   manifest: {
