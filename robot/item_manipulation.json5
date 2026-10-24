@@ -49,7 +49,9 @@
 // the jaws: a sequence stopped partway can leave the gripper holding what the
 // flag does not report, or the reverse, and the flag stays as it was until a
 // later grab_item, drop_item, or place_item succeeds. get_state reports the
-// flag.
+// flag, and beside it the opening of each gripper as the implementer last
+// measured it: an item that slips out of the jaws after grab_item succeeded
+// leaves the flag set and the opening near 0.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -163,7 +165,9 @@
             gripper_name: "string",
             // Grasp-point position when the jaws open, robot frame:
             // x, y, z (m). It is where the gripper lets go, not a waypoint
-            // on the way there.
+            // on the way there. The implementer lowers the item to it and,
+            // when the item comes to rest on something on the way, may let
+            // go there instead: final_position says where the jaws opened.
             position: { $type: "array", $items: "f64", $length: 3 },
             // Grasp-point orientation when the jaws open, quaternion
             // [x, y, z, w]. Absent leaves it to the implementer, which is
@@ -225,8 +229,9 @@
       {
         // What the implementer is doing and what it is holding, as of this
         // call. It answers "is action X being performed?" by comparing X
-        // against current_action, and "is the robot holding an item?" from
-        // the per-gripper arrays.
+        // against current_action, "is the robot holding an item?" from the
+        // held flags, and "are the jaws still on it?" from the measured
+        // openings.
         name: "get_state",
         response_message_format: {
           // Name of the sequence running now, as it appears in this contract
@@ -237,13 +242,18 @@
           // running.
           current_action_elapsed_s: "f64",
           // The implementer's fixed set of gripper names, in a stable order.
-          // The two arrays below carry one entry per gripper in this order.
+          // The arrays below carry one entry per gripper in this order.
           gripper_names: { $type: "array", $items: "string" },
           // True where that gripper holds an item.
           holding: { $type: "array", $items: "bool" },
           // Identifier of the item that gripper holds, addressable by
           // drop_item and place_item. Empty where holding is false.
           held_item_ids: { $type: "array", $items: "string" },
+          // Measured opening fraction of that gripper (0 = closed, 1 = fully
+          // open), as the implementer last measured it: what the jaws do now,
+          // whatever the held flag says. Empty, not one entry per gripper,
+          // while the implementer has no measurement of every gripper.
+          gripper_openings: { $type: "array", $items: "f64" },
         },
       },
     ],
