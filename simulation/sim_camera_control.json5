@@ -16,7 +16,8 @@
 //
 // Response fields mirror the camera contracts' control responses so the
 // relay answers what the engine answers. An engine that does not model a
-// control for a camera refuses it with success false and says so.
+// control for a camera gives an error reply with `rejected` to a request
+// for that control.
 //
 // No MCP exposure publishes this contract, and it has no counterpart on a
 // physical robot, where the camera node drives the device itself.
@@ -34,8 +35,6 @@
         // stream, in the fields of the camera contracts' video_stream_info.
         name: "get_cameras",
         response_message_format: {
-          success: "bool",
-          message: "string",
           cameras: {
             $type: "array",
             $items: {
@@ -60,8 +59,6 @@
           camera: "string",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           profile_json: "string",
         },
       },
@@ -76,8 +73,6 @@
           value: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -92,8 +87,6 @@
           temperature: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_temperature: "i32",
         },
       },
@@ -105,8 +98,6 @@
           value: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -118,8 +109,6 @@
           value: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -131,8 +120,6 @@
           value: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -142,10 +129,6 @@
         request_message_format: {
           robot: "string",
           camera: "string",
-        },
-        response_message_format: {
-          success: "bool",
-          message: "string",
         },
       },
     ],

@@ -3,8 +3,8 @@
 // brain's work that a model does: "perception" finds and names items
 // (item_perception), "manipulation" moves them (item_manipulation). A brain
 // lists every role it has, and that set is fixed for the brain's life. A
-// role's model may be "none": the brain then refuses that role's goals,
-// naming the missing model.
+// role's model may be "none": the brain then refuses that role's goals with
+// `precondition_failed`, and the message names the missing model.
 //
 // Model names are the brain's own names for the models it can run, the same
 // in every member of this contract. They are opaque: callers compare them and
@@ -23,6 +23,17 @@
   interfaces: {
     actions: [
       {
+        // The switch is refused with `rejected` when the brain runs no model
+        // for the role, and when the model is not one list_models gives for
+        // the role. It is refused with `precondition_failed` while a goal of
+        // that role runs (scan_items or identify_item for perception;
+        // grab_item, drop_item or place_item for manipulation; the message
+        // names it), and while another switch_model for the role runs. It
+        // fails with `resource_unavailable` when the brain cannot reach the
+        // model, and with `attempt_failed` when the model cannot serve the
+        // role. A refused, failed or cancelled switch leaves the role with
+        // the model it had. A cancelled switch gives the reason of the
+        // cancel, and its role and model are empty.
         name: "switch_model",
         goal_service: {
           request_message_format: {
@@ -35,24 +46,11 @@
         },
         result_service: {
           response_message_format: {
-            // False when the switch was refused, failed, or was cancelled;
-            // message says which, and the role keeps the model it had.
-            // Refused when the brain runs no model for the role, when the
-            // model is not one list_models gives for the role, while a goal
-            // of that role runs (scan_items or identify_item for
-            // perception; grab_item, drop_item or place_item for
-            // manipulation; the message names it), and while another
-            // switch_model for the role runs. Failed when the brain cannot
-            // reach the model or the model cannot serve the role. role and
-            // model are empty when success is false; action_time is the
-            // elapsed time whatever the outcome.
-            success: "bool",
-            message: "string",
             // The role, as the goal named it.
             role: "string",
             // The model now active for the role.
             model: "string",
-            // Wall-clock duration of the action (s), whatever the outcome.
+            // Wall-clock duration of the action (s).
             action_time: "f64",
           },
         },

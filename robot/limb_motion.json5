@@ -19,11 +19,23 @@
 // A move runs until it ends, its caller cancels it, or the stop service
 // ends every move in flight, whoever started them. check_arm_move asks
 // whether a Cartesian move has a plan, and moves nothing.
+//
+// A move goal is refused with `leader_streaming` while a leader streams
+// its limb, and with `precondition_failed` while the limb executes another
+// move. A leader is a robot commander, such as a leader arm or the browser
+// panel, or the headset. A move fails with `resource_unavailable` when its
+// limb stops answering, and with `attempt_failed` when it cannot go on for
+// another reason. A cancelled goal gives the reason of the cancel and its
+// result, measured when the move ended. A failed goal gives no result.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "limb_motion",
     tag: "v1",
+  },
+  failure_kinds: {
+    unreachable: "No plan to the target",
+    leader_streaming: "A leader streams a limb of the goal",
   },
   interfaces: {
     actions: [
@@ -32,8 +44,8 @@
         goal_service: {
           request_message_format: {
             // Which arm, named from the implementer's fixed set of limb
-            // names (e.g. "left_arm"). An unknown name is refused in the
-            // result.
+            // names (e.g. "left_arm"). An unknown name is refused with
+            // `rejected`.
             arm_name: "string",
             // Target joint positions (rad), one per joint of the arm in its
             // fixed joint order.
@@ -45,10 +57,6 @@
         },
         result_service: {
           response_message_format: {
-            // False when the move was refused, failed, or cancelled;
-            // message says which.
-            success: "bool",
-            message: "string",
             // Measured joint positions (rad) when the action ended, one per
             // joint of the arm in its fixed joint order.
             final_joint_positions: { $type: "array", $items: "f64" },
@@ -62,8 +70,8 @@
         goal_service: {
           request_message_format: {
             // Which arm, named from the implementer's fixed set of limb
-            // names (e.g. "left_arm"). An unknown name is refused in the
-            // result.
+            // names (e.g. "left_arm"). An unknown name is refused with
+            // `rejected`.
             arm_name: "string",
             // Target grasp-point position, robot frame: x, y, z (m).
             position: { $type: "array", $items: "f64", $length: 3 },
@@ -78,7 +86,7 @@
             // rather than let the implementer decide how close is close enough,
             // the caller names the slack it will accept and the goal is planned
             // within it. A goal that no solution reaches inside both tolerances
-            // is rejected rather than quietly approximated.
+            // fails with `unreachable` rather than being quietly approximated.
             //
             // They bound the plan, not the path taken to it, and they promise
             // nothing about where the arm finally stops. Read final_position and
@@ -96,10 +104,6 @@
         },
         result_service: {
           response_message_format: {
-            // False when the move was refused, failed, or cancelled;
-            // message says which.
-            success: "bool",
-            message: "string",
             // Measured grasp-point position when the action ended: x, y, z (m).
             final_position: { $type: "array", $items: "f64", $length: 3 },
             // Measured grasp-point orientation, quaternion [x, y, z, w].
@@ -115,7 +119,7 @@
           request_message_format: {
             // Which gripper, named from the implementer's fixed set of
             // gripper names (e.g. "left_gripper"). An unknown name is
-            // refused in the result.
+            // refused with `rejected`.
             gripper_name: "string",
             // Target opening as a fraction of full jaw travel: 0 = closed,
             // 1 = fully open.
@@ -129,14 +133,9 @@
         result_service: {
           response_message_format: {
             // The action ends when the gripper stands still: its measured
-            // opening has stopped changing after the commanded move.
-            //
-            // False when the move was refused, failed, or cancelled;
-            // message says which. A gripper that stands still short of the
-            // target did none of these, so success is true and message says
-            // where it stopped.
-            success: "bool",
-            message: "string",
+            // opening has stopped changing after the commanded move. A
+            // gripper that stands still short of the target completes the
+            // goal, and final_opening says where it stopped.
             // Measured opening fraction when the action ended: the target,
             // or the opening where an object or the effort cap stopped the
             // jaws. The caller judges a grasp from it.
@@ -152,22 +151,20 @@
         // Ends every planned move in flight on this robot, whoever started
         // it: the moves of this contract and the posture moves of the same
         // implementer. Each limb holds where it is commanded, as after a
-        // cancel, and each goal ends as cancelled with a message that names
-        // the stop and its reason. A goal that arrives after the stop runs
-        // as usual. Setpoints streamed on a pairing are not stopped.
+        // cancel, and each goal that the stop ends is cancelled, with a
+        // reason that names the stop and the reason of the stop request. A
+        // goal that arrives after the stop runs as usual. Setpoints streamed
+        // on a pairing are not stopped. The stop gives an error reply, with
+        // `attempt_failed`, only when the stop itself cannot be carried out.
         name: "stop",
         request_message_format: {
-          // Why the moves are stopped, carried into the message of each
-          // goal the stop ends. Empty is accepted.
+          // Why the moves are stopped, carried into the reason of each goal
+          // the stop ends. Empty is accepted.
           reason: "string",
         },
         response_message_format: {
-          // False only when the stop itself could not be carried out;
-          // message says why. A stop with nothing in flight succeeds.
-          success: "bool",
-          message: "string",
           // The limbs whose move was stopped, by their limb names; empty
-          // when nothing moved.
+          // when nothing moved, as for a stop with nothing in flight.
           stopped: { $type: "array", $items: "string" },
         },
       },
@@ -176,6 +173,11 @@
         // the arm is commanded now, without moving it. It checks what
         // move_arm checks before it moves, and no more: it does not check
         // collisions with the robot itself or with what stands around it.
+        // A request that move_arm would refuse gets an error reply with the
+        // kind of that refusal: `rejected` for an unknown arm or a field
+        // that move_arm does not take, `precondition_failed` while the arm
+        // executes a move, which the check does not disturb, and
+        // `leader_streaming` while a leader streams the arm.
         name: "check_arm_move",
         request_message_format: {
           // The fields of the move_arm goal, with the same meaning.
@@ -187,12 +189,12 @@
           plan_orientation_tolerance_rad: "f64",
         },
         response_message_format: {
-          // True when a plan exists. False with the words a move_arm
-          // refusal gives when none does, when the arm is unknown, or when
-          // the arm is executing a move, which the check does not disturb.
-          success: "bool",
-          message: "string",
-          // The time the move would take (s); 0 when success is false.
+          // True when a plan exists.
+          reachable: "bool",
+          // Why no plan exists, in the words that a move_arm failure with
+          // the kind `unreachable` gives; empty when reachable.
+          reason: "string",
+          // The time the move would take (s); 0 when not reachable.
           duration_s: "f64",
         },
       },

@@ -50,11 +50,10 @@
 //   they describe: a consumer uses a pair that agrees with each other and
 //   with the align_mode of the frames it reads, and asks again otherwise.
 //
-// Every response says whether the node knows what is asked. success false
-// with the reason in message is the answer of a camera that has not heard
-// from its simulation yet, of a device without a calibration, and of a
-// colour-only camera asked about a depth stream it does not have; its other
-// fields are zero or empty and mean nothing.
+// A node that does not know what is asked gives an error reply: with
+// `precondition_failed` for a camera that has not heard from its simulation
+// yet, and with `rejected` for a device without a calibration and for a
+// colour-only camera asked about a depth stream it does not have.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -68,8 +67,6 @@
         // publishes.
         name: "get_color_intrinsics",
         response_message_format: {
-          success: "bool",
-          message: "string",
           width: "u32",
           height: "u32",
           // Focal lengths and principal point, pixels.
@@ -88,8 +85,6 @@
         // implementer knows how the two relate.
         name: "get_depth_intrinsics",
         response_message_format: {
-          success: "bool",
-          message: "string",
           width: "u32",
           height: "u32",
           fx: "f64",
@@ -117,8 +112,6 @@
         // optical frame sits in the colour stream's.
         name: "get_depth_to_color_extrinsics",
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The alignment this answer describes, as in get_depth_intrinsics.
           align_mode: "string",
           // The depth optical frame in the colour optical frame: x, y, z

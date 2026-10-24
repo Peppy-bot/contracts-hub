@@ -26,23 +26,17 @@
         // supported, "modes" (["auto", "manual"] or ["manual"]), "unit",
         // "min", "max", "default_mode", "default_value", "mode" and
         // "value" (the current ones; value is the effective reading in
-        // auto mode).
+        // auto mode). A camera that cannot describe itself, because it is
+        // not attached to its device or simulation yet, gives an error
+        // reply with `precondition_failed`.
         name: "get_camera_profile",
         response_message_format: {
-          // False when the camera cannot describe itself (it is not attached
-          // to its device or simulation yet; message says why).
-          success: "bool",
-          message: "string",
           profile_json: "string",
         },
       },
       {
         // Every control back to the device's defaults.
         name: "reset_camera",
-        response_message_format: {
-          success: "bool",
-          message: "string",
-        },
       },
     ],
   },

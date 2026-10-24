@@ -35,26 +35,24 @@
       {
         // Renders the world as seen from `position`, looking at `target`,
         // both world-frame points in metres, with +Z up in the picture. A
-        // position equal to the target is refused, and so is a line of
-        // sight straight along the vertical, which leaves the picture with
-        // no up. The picture leaves out each part of a room of the scene (a
-        // wall, a piece of a fence, a ceiling or a floor) when `position`
-        // stands behind the inner face of that part, as seen from the room.
-        // The inner face of a part is the plane across the direction from
-        // the part into its room, through the point farthest along that
-        // direction of the boxes around the shapes the part is drawn with,
-        // each box aligned with its shape: a post of a wall that juts into
-        // the room puts the wall's inner face at the far side of the post's
-        // box, which can stand past the post's tip. The parts it leaves out
-        // still cast their shadows.
+        // position equal to the target gets an error reply with `rejected`,
+        // and so does a line of sight straight along the vertical, which
+        // leaves the picture with no up. The picture leaves out each part of
+        // a room of the scene (a wall, a piece of a fence, a ceiling or a
+        // floor) when `position` stands behind the inner face of that part,
+        // as seen from the room. The inner face of a part is the plane across
+        // the direction from the part into its room, through the point
+        // farthest along that direction of the boxes around the shapes the
+        // part is drawn with, each box aligned with its shape: a post of a
+        // wall that juts into the room puts the wall's inner face at the far
+        // side of the post's box, which can stand past the post's tip. The
+        // parts it leaves out still cast their shadows.
         // From outside a room or above it, the picture so shows the room's
         // inside; from a position on the room's side of the inner face of
         // every part, it leaves nothing out. The cameras a robot carries
         // see every part. Past the walls and through the doorways and
-        // windows, the picture shows the scene's ground and sky. success
-        // false with the reason in message is the answer of an engine that
-        // renders nothing; its other fields are then zero or empty and mean
-        // nothing.
+        // windows, the picture shows the scene's ground and sky. An engine
+        // that renders nothing gives an error reply with `rejected`.
         name: "render_view",
         request_message_format: {
           // Where the viewpoint is: x, y, z (m).
@@ -63,8 +61,6 @@
           target: { $type: "array", $items: "f64", $length: 3 },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The simulated instant the picture shows.
           timestamp: "time",
           // The pixel format of frame: "rgb8".
@@ -97,9 +93,8 @@
         // its rooms (walls, pieces of fences, ceilings and floors) that
         // render_view leaves out of a picture from that viewpoint. It shows
         // the asset, not the world as it stands. An id the catalogue lacks,
-        // and an entry the catalogue holds no preview for, are refused:
-        // success false with the reason in message, the other fields zero or
-        // empty and meaning nothing.
+        // and an entry the catalogue holds no preview for, get an error
+        // reply with `rejected`.
         name: "preview_asset",
         request_message_format: {
           // The asset, as get_assets_list of scene_manipulation names it:
@@ -109,8 +104,6 @@
           asset_id: "string",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The pixel format of frame: "rgb8".
           encoding: "string",
           width: "u32",
@@ -137,16 +130,16 @@
         // of the scene that is no object within 0.01 m of z = 0, the height
         // of the rooms' floors.
         //
-        // Refused, with success false and the reason in message, the other
-        // fields then zero or empty and meaning nothing: a value that is
-        // not finite, an orientation whose norm is not within 0.001 of 1, a
+        // An error reply with `rejected` answers a value that is not
+        // finite, an orientation whose norm is not within 0.001 of 1, a
         // vertical_fov_deg outside the open range from 0 to 180, a width or
         // a height of 0, a kind other than "rectangle" or "ellipse", a box
         // whose x0 is not below its x1 or whose y0 is not below its y1, a
         // box that does not lie inside the picture, a sim_time_s later than
         // the simulated instant of the rays (a picture of an earlier run of
-        // the implementer), a world the implementer lets no caller inspect,
-        // and a world whose clock has no time yet.
+        // the implementer), and a world the implementer lets no caller
+        // inspect. An error reply with `precondition_failed` answers a world
+        // whose clock has no time yet.
         name: "locate_in_view",
         request_message_format: {
           // The camera that took the picture.
@@ -177,8 +170,6 @@
           },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The simulated instant of the rays, on the implementer's clock.
           timestamp: "time",
           // The simulated time from camera.sim_time_s to the rays (s). A
@@ -271,15 +262,15 @@
         // and stops at the first thing it meets within 50 m, as each ray
         // of locate_in_view does.
         //
-        // Refused, with success false and the reason in message, the other
-        // fields then zero or empty and meaning nothing: a value that is
-        // not finite, an orientation whose norm is not within 0.001 of 1, a
+        // An error reply with `rejected` answers a value that is not
+        // finite, an orientation whose norm is not within 0.001 of 1, a
         // vertical_fov_deg outside the open range from 0 to 180, a width or
         // a height of 0, no point, more than 256 points, a point that does
         // not lie inside the picture, a sim_time_s later than the simulated
         // instant of the rays (a picture of an earlier run of the
-        // implementer), a world the implementer lets no caller inspect, and
-        // a world whose clock has no time yet.
+        // implementer), and a world the implementer lets no caller inspect.
+        // An error reply with `precondition_failed` answers a world whose
+        // clock has no time yet.
         name: "locate_points",
         request_message_format: {
           // The camera that took the picture, as locate_in_view takes it.
@@ -304,8 +295,6 @@
           },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The simulated instant of the rays, on the implementer's clock.
           timestamp: "time",
           // The simulated time from camera.sim_time_s to the rays (s). A

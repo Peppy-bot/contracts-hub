@@ -36,7 +36,8 @@
 //   empty point gives no point.
 // A reference that gives both fields or neither, a point that does not
 // hold 3 numbers, an object id that does not exist, a point that is not
-// finite and a point whose ray meets nothing are refused.
+// finite and a point whose ray meets nothing get an error reply with
+// `rejected`.
 //
 // The definitions, the same as the workspace contract's:
 // - Grasp point. The gripper's grasp point, on the jaw closing axis midway
@@ -81,17 +82,16 @@
 // - An object stands at the centre of its bounding box, and the target an
 //   arm reaches for is that centre.
 //
-// success false with the reason in message is the answer to a request the
-// implementer refuses and of an implementer that cannot read its scene now;
-// its other fields are then empty or zero and mean nothing. A question of
-// describe_workspace, check_objects or find_places is refused for a robot
-// that does not stand in the world, a robot model whose arms or perception
+// A question of describe_workspace, check_objects or find_places gets an
+// error reply: with `resource_unavailable` for a robot that does not stand
+// in the world; with `rejected` for a robot model whose arms or perception
 // camera cannot be measured (a model without arms, an arm that declares no
 // grasp point, two cameras that could each be the perception camera, a
 // perception camera whose field of view a sensor size sets), an object id
 // that does not exist, an object without a bounding box (one with neither
 // colliding geometry nor a soft surface), and a reference that names no
-// face. stand_at says what it refuses.
+// face; and with `precondition_failed` from an implementer that cannot read
+// its scene now. stand_at says what it refuses.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -123,8 +123,6 @@
           },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The robot, as asked.
           robot: "string",
           // The name the perception camera runs under on the robot, or ""
@@ -215,13 +213,11 @@
         request_message_format: {
           // The robot, by the name get_robots_list gives.
           robot: "string",
-          // The objects, by the ids get_objects_list gives. An empty list is
-          // refused.
+          // The objects, by the ids get_objects_list gives. An empty list
+          // gets an error reply with `rejected`.
           object_ids: { $type: "array", $items: "string" },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // As in describe_workspace.
           perception_camera: "string",
           // Whether the robot can work every object.
@@ -309,12 +305,13 @@
         // may be turned about the vertical to fit. An item in the world that
         // stands on the top already keeps its place when that place meets
         // every condition. The same world and the same request always give
-        // the same answer. Besides the refusals of the header, a request is
-        // refused for an asset id that is not an object of the catalogue,
-        // an item that is not one of the two forms below, a near that does
-        // not hold 0 or 2 numbers, an object named twice, the object the
-        // surface belongs to named as an item, an empty items and a margin
-        // that is not a finite number from 0.
+        // the same answer. Besides the error replies of the header, a
+        // request gets an error reply with `rejected` for an asset id that
+        // is not an object of the catalogue, an item that is not one of the
+        // two forms below, a near that does not hold 0 or 2 numbers, an
+        // object named twice, the object the surface belongs to named as an
+        // item, an empty items and a margin that is not a finite number from
+        // 0.
         name: "find_places",
         request_message_format: {
           // The robot, by the name get_robots_list gives.
@@ -348,8 +345,6 @@
           margin: "f64",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The items that have a place, in the request's order.
           places: {
             $type: "array",
@@ -412,13 +407,15 @@
         // two models of one stance and one geometry stand at one place. The
         // robot keeps its joint positions and the targets its limbs last
         // received, as move_robot of scene_manipulation keeps them. The
-        // stand is refused for a robot that does not stand in the world, a
-        // surface that the loaded scene does not declare or whose object no
-        // longer stands, a robot whose base is fixed where it is placed at a
-        // surface whose top has no point along the spot's heading, and a
-        // place that the implementer's placement rules refuse (another robot
-        // too near, or the robot sinking into what stands around it); a
-        // refused stand moves nothing.
+        // stand is refused with `resource_unavailable` for a robot that does
+        // not stand in the world; with `rejected` for a surface that the
+        // loaded scene does not declare, and for a robot whose base is fixed
+        // where it is placed at a surface whose top has no point along the
+        // spot's heading; and with `precondition_failed` for a surface whose
+        // object no longer stands, and for a place that the implementer's
+        // placement rules refuse (another robot too near, or the robot
+        // sinking into what stands around it). A refused stand moves
+        // nothing.
         name: "stand_at",
         goal_service: {
           request_message_format: {
@@ -431,8 +428,6 @@
         },
         result_service: {
           response_message_format: {
-            success: "bool",
-            message: "string",
             // Where the robot's base now stands: for a robot that rests on
             // its own base, the point it settles from.
             robot_position: { $type: "array", $items: "f64", $length: 3 },

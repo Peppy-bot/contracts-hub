@@ -34,10 +34,9 @@
 //   target 0.04 m above the surface. It is workable when its workable
 //   points cover at least 0.03 m^2, each point standing for 0.001 m^2.
 //
-// success false with the reason in message is the answer to a request the
-// implementer refuses, and of an implementer that cannot read its perception
-// camera's geometry now; its other fields are then empty or zero and mean
-// nothing.
+// A request the implementer refuses gets an error reply with `rejected`. An
+// implementer that cannot read its perception camera's geometry now gives
+// an error reply with `precondition_failed`.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -54,12 +53,10 @@
         request_message_format: {
           // Height of the surface above the robot's base point (m). A value
           // that is not a finite number and a height more than 1000 m from
-          // the robot's base point are refused.
+          // the robot's base point get an error reply with `rejected`.
           surface_height: "f64",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The name the perception camera runs under on the robot
           // (camera_mounts names it), or "" for a robot without one.
           perception_camera: "string",
@@ -89,12 +86,10 @@
           // The points, 3 entries each (x, y, z, m) in the robot frame. An
           // empty list, a length that is not a multiple of 3, a value that
           // is not a finite number and a coordinate more than 1000 m from
-          // the robot's base point are refused.
+          // the robot's base point get an error reply with `rejected`.
           positions: { $type: "array", $items: "f64" },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // As in describe_workspace.
           perception_camera: "string",
           // Whether the robot can work every point.

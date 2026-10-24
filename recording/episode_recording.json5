@@ -16,19 +16,24 @@
     services: [
       {
         // Finalize the open session into an immediately loadable dataset and
-        // open a fresh session in place.
+        // open a fresh session in place. The call gets an error reply with
+        // `precondition_failed` when the recorder cannot finish the session
+        // now, such as while an episode records or when the session holds
+        // no episode, and with `attempt_failed` when the finish fails.
         name: "finish_session",
         response_message_format: {
-          // Identifier of the finished session; empty when refused.
+          // Identifier of the finished session.
           session: "string",
-          // Why the session could not finish; absent on success.
-          error: { $type: "string", $optional: true },
         },
       },
       {
-        // Record into a past session again, appending to its dataset.
-        // Refused when the live sources no longer match what the session
-        // recorded.
+        // Record into a past session again, appending to its dataset. The
+        // call gets an error reply with `rejected` for a session the
+        // recorder does not have; with `precondition_failed` when the live
+        // sources no longer match what the session recorded, and when the
+        // recorder cannot change sessions now, such as while an episode
+        // records; and with `attempt_failed` when the resume fails. After an
+        // error reply, the open session stays as it was.
         name: "resume_session",
         request_message_format: {
           // Identifier of the session to resume, exactly as finish_session
@@ -36,20 +41,32 @@
           session: "string",
         },
         response_message_format: {
-          // Identifier of the session now recording; empty when refused.
+          // Identifier of the session now recording.
           session: "string",
-          // Episodes already saved in the resumed dataset; 0 when refused.
+          // Episodes already saved in the resumed dataset.
           episodes: "u64",
-          // Why the session could not resume; absent on success.
-          error: { $type: "string", $optional: true },
         },
       },
     ],
     actions: [
       {
-        // One episode: recording runs from goal acceptance until the goal is
-        // cancelled (ending the episode with a save) or fails, and the frames
-        // land in the open session.
+        // One episode: recording runs from goal acceptance until the caller
+        // cancels the goal or the recorder ends the episode itself, and the
+        // frames land in the open session. The goal never completes. A
+        // cancel by the caller ends the episode with a save, and the goal
+        // ends cancelled with its result. The recorder refuses a goal with
+        // `precondition_failed` when it cannot start an episode now, such as
+        // while another episode records or while a source is not ready.
+        //
+        // When the recorder ends the episode itself, the goal fails, and the
+        // message says why and names the episode when its frames were
+        // saved: with `timeout` at the recorder's maximum episode length,
+        // with `precondition_failed` when the free disk space falls below
+        // the recorder's floor, with `resource_unavailable` when a source
+        // goes silent or stale or the recorder shuts down, and with
+        // `attempt_failed` when it cannot keep its frame rate. A goal whose
+        // episode the recorder cannot write or save fails with
+        // `attempt_failed`, and its frames are dropped.
         name: "record_episode",
         goal_service: {
           request_message_format: {
@@ -77,8 +94,6 @@
             frames_recorded: "u64",
             // True when the frames were dropped instead of saved.
             discarded: "bool",
-            // Why the episode ended; absent for a requested stop.
-            error: { $type: "string", $optional: true },
           },
         },
       },

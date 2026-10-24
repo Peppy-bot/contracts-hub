@@ -32,14 +32,11 @@
     services: [
       {
         // The pose of every camera the robot's design carries, in the robot
-        // frame, at `timestamp`. A robot without cameras answers success
-        // with empty arrays. success false with the reason in message is
-        // the answer of a robot that has not measured its joints yet; its
-        // other fields are then empty and mean nothing.
+        // frame, at `timestamp`. A robot without cameras answers with empty
+        // arrays. A robot that has not measured its joints yet gives an
+        // error reply with `precondition_failed`.
         name: "get_camera_poses",
         response_message_format: {
-          success: "bool",
-          message: "string",
           // When the joints the poses are computed from were measured.
           timestamp: "time",
           // The names the robot's cameras run under (chest, wrist_left),

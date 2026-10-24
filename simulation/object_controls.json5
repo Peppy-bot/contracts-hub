@@ -31,9 +31,9 @@
 // takes effect from the next physics step and the goal completes then: nothing
 // moves, and the heater and what it heats warm or cool from there at the pace
 // of their heat exchange, not at once. A setter validates its whole request
-// before it changes anything: a refused request (unknown object or control, a
-// value not finite or out of bounds) leaves the object as it was and says why
-// in message.
+// before it changes anything: it refuses with `rejected` a goal for an
+// unknown object or control, or with a value not finite or out of bounds,
+// and the object stays as it was.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -44,15 +44,13 @@
     services: [
       {
         // Every spawned object that offers a control, in the implementer's
-        // order, with every control it offers.
+        // order, with every control it offers. A world without adjustable
+        // objects answers an empty list. An implementer that has no controls
+        // to report gives an error reply: with `rejected` when it does not
+        // inspect its scene, and with `precondition_failed` when it is not
+        // ready yet.
         name: "get_object_controls",
         response_message_format: {
-          // False when the implementer has no controls to report (it does
-          // not inspect its scene, or is not ready yet; message says why).
-          // Never a world without adjustable objects, which is success with
-          // an empty list.
-          success: "bool",
-          message: "string",
           objects: {
             $type: "array",
             $items: {
@@ -90,7 +88,8 @@
         // Set one control of one spawned object to value, in the control's
         // unit and within its bounds. The goal completes once the part
         // stands at the new value, or once a physics step has run the part
-        // at the new speed or the heater at the new setting.
+        // at the new speed or the heater at the new setting. It fails with
+        // `attempt_failed` when the change fails.
         name: "set_object_control",
         goal_service: {
           request_message_format: {
@@ -101,13 +100,8 @@
         },
         result_service: {
           response_message_format: {
-            // False when the request was refused or the change failed;
-            // message says why.
-            success: "bool",
-            message: "string",
-            // The control's value after the call: the requested one on
-            // success, the unchanged one when refused, 0 when the object
-            // or the control is unknown.
+            // The control's value when the goal ends: the requested one
+            // when the goal completes.
             current_value: "f64",
           },
         },

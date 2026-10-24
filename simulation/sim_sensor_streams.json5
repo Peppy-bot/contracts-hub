@@ -19,8 +19,8 @@
 // has one entry for each paired sensor of each standing robot, in the order
 // the robots stand. The specification of a sensor is in the array of its
 // kind, matched by robot and name: rgb_cameras for kind "rgb_camera",
-// rgbd_cameras for kind "rgbd_camera". When success is false, the other
-// fields are empty and mean nothing.
+// rgbd_cameras for kind "rgbd_camera". A call that gets an error reply
+// changes nothing.
 //
 // Holds change what a simulation spends on its sensors, not what they show:
 // this contract has no counterpart on a physical robot, whose sensors stream
@@ -38,8 +38,6 @@
         // and health.
         name: "get_state",
         response_message_format: {
-          success: "bool",
-          message: "string",
           // How long a hold lasts from the call that made or renewed it (ms).
           lease_ms: "u32",
           sensors: {
@@ -105,9 +103,10 @@
       {
         // Holds sensors of a robot for holder, or renews that hold, for
         // lease_ms. sensors names some sensors of the robot; empty holds every
-        // sensor it has now and pairs later. Refused, and nothing changes,
-        // when holder is empty, when no robot stands under robot, or when a
-        // name is not a sensor of the robot's rig.
+        // sensor it has now and pairs later. The hold gets an error reply
+        // with `rejected` when holder is empty or a name is not a sensor of
+        // the robot's rig, and with `resource_unavailable` when no robot
+        // stands under robot.
         name: "hold",
         request_message_format: {
           robot: "string",
@@ -115,8 +114,6 @@
           sensors: { $type: "array", $items: "string" },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           lease_ms: "u32",
           sensors: {
             $type: "array",
@@ -162,16 +159,14 @@
       },
       {
         // Ends the hold of holder on the robot. A release with no such hold
-        // succeeds and changes nothing; message says so. Refused when holder
-        // is empty.
+        // changes nothing and answers the state, as every release does. A
+        // release with an empty holder gets an error reply with `rejected`.
         name: "release",
         request_message_format: {
           robot: "string",
           holder: "string",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           lease_ms: "u32",
           sensors: {
             $type: "array",
