@@ -168,6 +168,7 @@
             action_time: "f64",
           },
         },
+        failure_kinds: ["not_found"],
       },
     ],
   },

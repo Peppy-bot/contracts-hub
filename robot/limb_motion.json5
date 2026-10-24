@@ -90,6 +90,7 @@
             action_time: "f64",
           },
         },
+        failure_kinds: ["leader_streaming"],
       },
       {
         name: "move_arm",
@@ -149,6 +150,7 @@
             action_time: "f64",
           },
         },
+        failure_kinds: ["unreachable", "leader_streaming"],
       },
       {
         name: "move_gripper",
@@ -195,6 +197,7 @@
             action_time: "f64",
           },
         },
+        failure_kinds: ["leader_streaming"],
       },
     ],
     services: [
@@ -249,6 +252,7 @@
           // The time the move would take (s); 0 when not reachable.
           duration_s: "f64",
         },
+        failure_kinds: ["leader_streaming"],
       },
     ],
   },

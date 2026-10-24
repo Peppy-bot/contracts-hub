@@ -63,6 +63,7 @@
             orientations: { $type: "array", $items: "f64" },
           },
         },
+        failure_kinds: ["unreachable", "leader_streaming"],
       },
       {
         name: "move_to_home",
@@ -84,6 +85,7 @@
             orientations: { $type: "array", $items: "f64" },
           },
         },
+        failure_kinds: ["unreachable", "leader_streaming"],
       },
     ],
   },
