@@ -165,7 +165,9 @@
             gripper_name: "string",
             // Grasp-point position when the jaws open, robot frame:
             // x, y, z (m). It is where the gripper lets go, not a waypoint
-            // on the way there.
+            // on the way there. The implementer lowers the item to it and,
+            // when the item comes to rest on something on the way, may let
+            // go there instead: final_position says where the jaws opened.
             position: { $type: "array", $items: "f64", $length: 3 },
             // Grasp-point orientation when the jaws open, quaternion
             // [x, y, z, w]. Absent leaves it to the implementer, which is
