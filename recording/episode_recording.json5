@@ -86,12 +86,14 @@
         },
         result_service: {
           response_message_format: {
-            // Saved episode index; -1 when discarded.
+            // Index of the saved episode in the open session.
             episode_index: "i64",
             // Count of frames captured during the goal.
             frames_recorded: "u64",
-            // True when the frames were dropped instead of saved.
-            discarded: "bool",
+            // Frames that the shortest camera video of the saved episode
+            // misses against its state rows; 0 when every video holds every
+            // frame. An episode with missing frames should not be trained on.
+            video_frames_missing: "u64",
           },
         },
       },
