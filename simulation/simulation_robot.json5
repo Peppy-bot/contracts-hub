@@ -70,7 +70,11 @@
         // back does. The engine admits it and hands the robot's stay to the
         // new goal: the robot is never stood twice and never leaves, and
         // the goal that held it ends cancelled, with a reason that says
-        // another goal of the same caller holds the robot now.
+        // another goal of the same caller holds the robot now. The sender
+        // grace of the action is the pair grace time: when the process that
+        // sent the goal is gone, the engine keeps its robot for that time
+        // before the goal receives its cancel, so an instance that comes
+        // back within it registers the robot that still stands.
         name: "attach",
         goal_service: {
           request_message_format: {

@@ -52,21 +52,19 @@
       {
         // One episode: recording runs from goal acceptance until the caller
         // cancels the goal or the recorder ends the episode itself, and the
-        // frames land in the open session. The goal never completes. A
-        // cancel by the caller ends the episode with a save, and the goal
-        // ends cancelled with its result. The recorder refuses a goal with
-        // `precondition_failed` when it cannot start an episode now, such as
-        // while another episode records or while a source is not ready.
+        // frames land in the open session. The goal never completes. The
+        // recorder refuses a goal with `precondition_failed` when it cannot
+        // start an episode now, such as while another episode records or
+        // while a source is not ready.
         //
-        // When the recorder ends the episode itself, the goal fails, and the
-        // message says why and names the episode when its frames were
-        // saved: with `timeout` at the recorder's maximum episode length,
-        // with `precondition_failed` when the free disk space falls below
-        // the recorder's floor, with `resource_unavailable` when a source
-        // goes silent or stale or the recorder shuts down, and with
-        // `attempt_failed` when it cannot keep its frame rate. A goal whose
-        // episode the recorder cannot write or save fails with
-        // `attempt_failed`, and its frames are dropped.
+        // A cancel by the caller ends the episode with a save, and the goal
+        // ends cancelled with its result. The recorder ends the episode
+        // itself, with a save, at its maximum episode length, when the free
+        // disk space falls below its floor, when a source goes silent or
+        // stale, when it cannot keep its frame rate, and when it shuts down:
+        // the goal then ends cancelled with its result, and the reason names
+        // the cause. A goal whose episode the recorder cannot write or save
+        // fails with `attempt_failed`, and its frames are dropped.
         name: "record_episode",
         goal_service: {
           request_message_format: {
