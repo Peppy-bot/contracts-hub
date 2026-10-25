@@ -42,8 +42,6 @@
           value: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -54,8 +52,6 @@
           temperature: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_temperature: "i32",
         },
       },
@@ -65,8 +61,6 @@
           value: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -76,8 +70,6 @@
           value: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -87,8 +79,6 @@
           value: "i32",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },

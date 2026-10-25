@@ -31,13 +31,28 @@
 // +z such as a conveyor's height, to the value that brings its end to the
 // other's height. Things then run from one belt onto the other across an
 // inlet snapped to an outlet when both belts run forward, and across two
-// inlets or two outlets when one of them runs backward. A snap is refused
-// for an object id that names no object, a landmark the object or the
-// asset does not declare, a landmark whose use is neither "inlet" nor
-// "outlet", two ends whose widths (their size across) differ by more than
-// 0.001 m, an end that does not face up, and an end of the placed object
-// that no control brings to the other's height within its range. An
-// implementer that keeps no landmark refuses every snap.
+// inlets or two outlets when one of them runs backward. A goal with a snap
+// is refused with `rejected` for an object id that names no object, a
+// landmark the object or the asset does not declare, a landmark whose use
+// is neither "inlet" nor "outlet", two ends whose widths (their size
+// across) differ by more than 0.001 m, an end that does not face up, and an
+// end of the placed object that no control brings to the other's height
+// within its range. An implementer that keeps no landmark refuses every
+// snap with `rejected`. A snap that needs a control the implementer cannot
+// set where the placed object stands fails with `precondition_failed`, and
+// a snap whose ends the implementer finds apart once it placed the object
+// fails with `attempt_failed`.
+//
+// A goal that this contract refuses with a kind fails with that kind when
+// the implementer finds the cause only once the goal started. An
+// implementer that lets no caller edit or inspect its scene answers each
+// call it does not serve with `rejected`: an error reply to a service, a
+// refusal to a goal.
+//
+// An implementer may keep placement rules, such as how deep a placed thing
+// may sink into what stands around it and how near two robots may stand.
+// A spawn_object, move_object or move_robot whose place the rules refuse
+// fails with `precondition_failed`, and the message says why.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -55,7 +70,8 @@
         // without fields lists the whole catalogue.
         name: "get_assets_list",
         request_message_format: {
-          // "scene" or "object". Another value is refused.
+          // "scene" or "object". Another value gets an error reply with
+          // `rejected`.
           kind: { $type: "string", $optional: true },
           // A category get_asset_categories reports. An unknown one lists
           // nothing.
@@ -65,8 +81,6 @@
           query: { $type: "string", $optional: true },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           assets_json: "string",
         },
       },
@@ -75,8 +89,6 @@
         // holds, so a caller filters get_assets_list before it lists.
         name: "get_asset_categories",
         response_message_format: {
-          success: "bool",
-          message: "string",
           categories: {
             $type: "array",
             $items: {
@@ -100,17 +112,15 @@
         request_message_format: {
           // "spawned" lists the objects a caller spawned, "scene" the
           // objects the loaded scene placed. Absent, or empty, lists both.
-          // Another value is refused. An implementer that tracks no
-          // scene-placed object as an object answers "scene" with an empty
-          // list.
+          // Another value gets an error reply with `rejected`. An
+          // implementer that tracks no scene-placed object as an object
+          // answers "scene" with an empty list.
           source: { $type: "string", $optional: true },
           // A category get_asset_categories reports. Absent, or empty,
           // lists every category.
           category: { $type: "string", $optional: true },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // Capture time of the poses, on the implementer's clock.
           timestamp: "time",
           objects: {
@@ -144,15 +154,14 @@
         // checks its setup and checks an event it asked for: its pose, its
         // landmarks in the world frame and its state, all as of
         // `timestamp`. Each state field is present only for an object whose
-        // asset simulates it. An object_id that names no object is refused.
+        // asset simulates it. An object_id that names no object gets an
+        // error reply with `rejected`.
         name: "get_object",
         request_message_format: {
           // The id get_objects_list gives.
           object_id: "string",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The simulated instant of the pose, the landmarks and the
           // state, on the implementer's clock.
           timestamp: "time",
@@ -328,8 +337,6 @@
         // answers an empty asset_id until a load.
         name: "get_scene",
         response_message_format: {
-          success: "bool",
-          message: "string",
           asset_id: "string",
           // Uniform scale of the scene; 1 = as authored.
           scale: "f64",
@@ -340,8 +347,6 @@
         // lists what it may address and a test counts what the world holds.
         name: "get_robots_list",
         response_message_format: {
-          success: "bool",
-          message: "string",
           robots: {
             $type: "array",
             $items: {
@@ -370,8 +375,11 @@
         // Replace the current scene with the asset named by asset_id, which
         // must be of kind "scene". Spawned objects are removed first. A load
         // that arrives while another one runs may replace it: the replaced
-        // goal then ends as cancelled, and its message names the load that
-        // replaced it.
+        // goal then ends cancelled, with a reason that names the load that
+        // replaced it. The load is refused with `rejected` for an asset_id
+        // that names no scene of the catalogue and for a scale the
+        // implementer does not take, and fails with `attempt_failed` when
+        // the scene does not load.
         name: "load_scene",
         goal_service: {
           request_message_format: {
@@ -411,28 +419,21 @@
             bytes_per_second: "u64",
           },
         },
-        result_service: {
-          response_message_format: {
-            // False when the scene was refused or failed to load; message
-            // says why.
-            success: "bool",
-            message: "string",
-          },
-        },
+        result_service: {},
       },
       {
-        // Remove every spawned object and restore the default scene.
+        // Remove every spawned object and restore the default scene. It
+        // fails with `attempt_failed` when the default scene does not load.
         name: "clear_scene",
         goal_service: {},
-        result_service: {
-          response_message_format: {
-            success: "bool",
-            message: "string",
-          },
-        },
+        result_service: {},
       },
       {
         // Place one instance of an "object" asset and report its new id.
+        // The spawn is refused with `rejected` when the asset is unknown or
+        // the arguments are invalid. It fails with `precondition_failed`
+        // when the placement rules of the header refuse its place, and with
+        // `attempt_failed` when the object does not spawn.
         name: "spawn_object",
         goal_service: {
           request_message_format: {
@@ -443,8 +444,8 @@
             yaw: "f64",
             // When present, the object's orientation in the world frame, a
             // unit quaternion [x, y, z, w], in place of yaw. A quaternion
-            // whose length differs from 1 by more than 0.001 is refused;
-            // inside that, the implementer normalises it.
+            // whose length differs from 1 by more than 0.001 is refused with
+            // `rejected`; inside that, the implementer normalises it.
             orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
             // Uniform scale; 1 = as authored.
             scale: "f64",
@@ -501,18 +502,20 @@
         },
         result_service: {
           response_message_format: {
-            // False when the asset is unknown, the arguments are invalid or
-            // the spawn failed; message says why.
-            success: "bool",
-            message: "string",
-            // The implementer-minted id of the new object; empty on failure.
+            // The implementer-minted id of the new object; empty when the
+            // goal ends cancelled and built nothing.
             object_id: "string",
           },
         },
       },
       {
         // Teleport an object to a new position, zeroing its velocity. It
-        // keeps its orientation unless the goal carries one.
+        // keeps its orientation unless the goal carries one. The move is
+        // refused with `rejected` for an object_id that names no object and
+        // for an orientation that spawn_object refuses. It fails with
+        // `precondition_failed` when the placement rules of the header
+        // refuse the place, and with `attempt_failed` when the object does
+        // not move.
         name: "move_object",
         goal_service: {
           request_message_format: {
@@ -539,32 +542,26 @@
             },
           },
         },
-        result_service: {
-          response_message_format: {
-            success: "bool",
-            message: "string",
-          },
-        },
+        result_service: {},
       },
       {
-        // Delete an object.
+        // Delete an object. An object_id that names no object is refused
+        // with `rejected`.
         name: "remove_object",
         goal_service: {
           request_message_format: {
             object_id: "string",
           },
         },
-        result_service: {
-          response_message_format: {
-            success: "bool",
-            message: "string",
-          },
-        },
+        result_service: {},
       },
       {
         // Push a dynamic object with a constant world-frame force for
         // duration_s seconds. The goal completes once the push is scheduled,
-        // not when it ends.
+        // not when it ends. A push on an object_id that names no object or
+        // an object that cannot move, with a force that is not finite, or
+        // with a duration the implementer does not take, is refused with
+        // `rejected`.
         name: "apply_force",
         goal_service: {
           request_message_format: {
@@ -573,19 +570,19 @@
             duration_s: "f64",
           },
         },
-        result_service: {
-          response_message_format: {
-            success: "bool",
-            message: "string",
-          },
-        },
+        result_service: {},
       },
       {
         // Relocate one robot's base to a new world-frame position and
         // heading, keeping its joint configuration. `robot` is the instance
         // name the engine reports in get_robots_list; an engine hosting
         // several moves that one and leaves the rest standing. A caller that
-        // only translates passes back the yaw get_robots_list reports.
+        // only translates passes back the yaw get_robots_list reports. The
+        // move is refused with `resource_unavailable` for a robot that does
+        // not stand in the world, and with `rejected` for a position or a
+        // yaw the implementer does not take. It fails with
+        // `precondition_failed` when the placement rules of the header
+        // refuse the place.
         name: "move_robot",
         goal_service: {
           request_message_format: {
@@ -596,12 +593,7 @@
             yaw: "f64",
           },
         },
-        result_service: {
-          response_message_format: {
-            success: "bool",
-            message: "string",
-          },
-        },
+        result_service: {},
       },
     ],
   },

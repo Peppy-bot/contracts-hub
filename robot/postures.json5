@@ -9,16 +9,26 @@
 // Distinct from the streamed setpoints on the *_link pairings: these are
 // discrete planned moves with a result.
 //
+// A posture goal is refused with `leader_streaming` while a leader streams
+// a limb of the robot, and with `precondition_failed` while a limb executes
+// another move. A leader is a robot commander, such as a leader arm or the
+// browser panel, or the headset. A posture move fails with `unreachable`
+// when no plan brings an arm to the posture, with `resource_unavailable`
+// when a limb stops answering, and with `attempt_failed` when it cannot go
+// on for another reason. A failed goal gives no result. A cancelled goal,
+// whether its caller or the stop of limb_motion cancelled it, gives the
+// reason of the cancel and its result.
+//
 // Pose rule for the results: a result reports where each arm ended, as
-// limb_state reports it, or no pose and the reason:
+// limb_state reports it, or no pose:
 // - Each pose is the grasp-point pose of an arm in the robot frame. The
 //   header of limb_state defines the grasp point, the robot frame and the
 //   slicing of the arrays.
-// - The implementer measures the pose of every arm when the action ends,
-//   after the moves of all its arms ended, whatever success says.
+// - The implementer measures the pose of every arm when the goal completes
+//   or ends cancelled, after the moves of all its arms ended.
 // - When an arm has no fresh measured pose then, the three arrays are
-//   empty and message says why. For example, the implementer never
-//   measured the joints of that arm, or their last measurement is stale.
+//   empty: the implementer never measured the joints of that arm, or their
+//   last measurement is stale.
 // - After a cancel or a stop, an arm that was still moving can come to
 //   rest away from the reported pose.
 {
@@ -26,6 +36,10 @@
   manifest: {
     name: "postures",
     tag: "v1",
+  },
+  failure_kinds: {
+    unreachable: "No plan to the target",
+    leader_streaming: "A leader streams a limb of the goal",
   },
   interfaces: {
     actions: [
@@ -40,10 +54,6 @@
         },
         result_service: {
           response_message_format: {
-            // False when the move was refused, failed, or cancelled;
-            // message says which.
-            success: "bool",
-            message: "string",
             // The implementer's arm names (e.g. "left_arm") in its fixed
             // order, or none, per the header's pose rule.
             arm_names: { $type: "array", $items: "string" },
@@ -53,6 +63,7 @@
             orientations: { $type: "array", $items: "f64" },
           },
         },
+        failure_kinds: ["unreachable", "leader_streaming"],
       },
       {
         name: "move_to_home",
@@ -65,10 +76,6 @@
         },
         result_service: {
           response_message_format: {
-            // False when the move was refused, failed, or cancelled;
-            // message says which.
-            success: "bool",
-            message: "string",
             // The implementer's arm names (e.g. "left_arm") in its fixed
             // order, or none, per the header's pose rule.
             arm_names: { $type: "array", $items: "string" },
@@ -78,6 +85,7 @@
             orientations: { $type: "array", $items: "f64" },
           },
         },
+        failure_kinds: ["unreachable", "leader_streaming"],
       },
     ],
   },

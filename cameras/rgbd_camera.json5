@@ -83,8 +83,6 @@
           value: "i32",     // microseconds (used when mode = "manual")
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -95,8 +93,6 @@
           temperature: "i32",    // Kelvin (used when mode = "manual")
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_temperature: "i32",
         },
       },
@@ -104,8 +100,6 @@
         name: "set_color_gain",
         request_message_format: { value: "i32" },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -113,8 +107,6 @@
         name: "set_color_brightness",
         request_message_format: { value: "i32" },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },
@@ -122,8 +114,6 @@
         name: "set_color_contrast",
         request_message_format: { value: "i32" },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_value: "i32",
         },
       },

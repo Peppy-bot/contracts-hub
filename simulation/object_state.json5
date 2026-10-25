@@ -80,15 +80,12 @@
         // The latest capture, on demand, in the stream's records and from the
         // same state. Answered before the first streamed snapshot, and once a
         // scene_manipulation goal has completed, the snapshot includes its
-        // edit.
+        // edit. An empty scene answers no objects. An implementer that has
+        // no object state to report gives an error reply: with `rejected`
+        // when it does not inspect its scene, and with `precondition_failed`
+        // when it is not ready yet.
         name: "get_object_states",
         response_message_format: {
-          // False when the implementer has no object state to report (it
-          // does not inspect its scene, or is not ready yet; message says
-          // why). Never an empty scene, which is success with no objects.
-          // timestamp and objects carry nothing then.
-          success: "bool",
-          message: "string",
           // Implementer-side capture time of this snapshot.
           timestamp: "time",
           // One record per spawned object, in the implementer's order.

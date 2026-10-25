@@ -12,6 +12,9 @@
 // and leaves it paused. A robot that runs on wall time cannot move while
 // the simulation is paused: its limbs go silent, and a move in flight fails.
 // Resume before a robot moves.
+//
+// Before the clock has a time, get_clock and set_paused give an error reply
+// with `precondition_failed`.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -24,8 +27,6 @@
         // The simulated time now and whether the simulation is paused.
         name: "get_clock",
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The simulated time now, on the clock the simulation's messages
           // are stamped with.
           now: "time",
@@ -34,14 +35,12 @@
       },
       {
         // Pauses the simulation, or resumes it. Setting the state it is
-        // already in succeeds and changes nothing.
+        // already in gives the response and changes nothing.
         name: "set_paused",
         request_message_format: {
           paused: "bool",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           // The simulated time now.
           now: "time",
           // The state after the call.
@@ -52,23 +51,25 @@
     actions: [
       {
         // Advances a paused simulation by duration_s of simulated time, at
-        // the engine's normal pace, and leaves it paused. The goal ends
-        // when the last physics step of the duration has run.
+        // the engine's normal pace, and leaves it paused. The goal completes
+        // when the last physics step of the duration has run. A step waits
+        // for the step before it to end. The step is refused with
+        // `precondition_failed` while the simulation runs. A resume, or a
+        // reset of the simulation, that comes before the last physics step
+        // of the duration has run ends the step cancelled, with a reason
+        // that names it. A cancelled step gives the reason of the cancel and
+        // its result.
         name: "step",
         goal_service: {
           request_message_format: {
             // How far to advance (s), rounded up to whole physics steps. A
             // duration that is not finite, not above 0, or above 30 is
-            // refused.
+            // refused with `rejected`.
             duration_s: "f64",
           },
         },
         result_service: {
           response_message_format: {
-            // False when the step was refused, which is the answer while
-            // the simulation runs, or cancelled; message says which.
-            success: "bool",
-            message: "string",
             // The simulated time when the goal ended.
             now: "time",
           },

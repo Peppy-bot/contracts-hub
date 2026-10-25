@@ -12,10 +12,10 @@
 // interval; metallic and roughness are the unit-interval parameters of the
 // metallic-roughness model (0 metallic is a dielectric, 1 a conductor; 0
 // roughness a mirror finish, 1 fully diffuse). A setter validates its
-// whole request before it changes anything: a refused request (unknown
-// material, a value out of the unit interval or not finite) leaves the
-// material as it was and says why in message. Every setter answers with
-// the effective values after the call.
+// whole request before it changes anything: it gives an error reply with
+// `rejected` to a request for an unknown material, or with a value out of
+// the unit interval or not finite, and the material stays as it was. The
+// response of a setter gives the effective values after the call.
 //
 // Loading or clearing a scene through scene_manipulation restores the
 // authored materials; reset_materials does the same for what is loaded.
@@ -34,13 +34,11 @@
         // of surfaces sharing it>, "bodies": [<body names>]}) and
         // "properties", an object with "color_rgb", "metallic" and
         // "roughness", each with "unit", "default" and "value" (and "min",
-        // "max" for the scalars).
+        // "max" for the scalars). An engine that has no materials to report,
+        // because no scene is loaded yet, gives an error reply with
+        // `precondition_failed`.
         name: "get_materials",
         response_message_format: {
-          // False when the engine has no materials to report (no scene is
-          // loaded yet; message says why).
-          success: "bool",
-          message: "string",
           materials_json: "string",
         },
       },
@@ -53,8 +51,6 @@
           color: { $type: "array", $items: "f64", $length: 3 },
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_color: { $type: "array", $items: "f64", $length: 3 },
         },
       },
@@ -68,8 +64,6 @@
           roughness: "f64",
         },
         response_message_format: {
-          success: "bool",
-          message: "string",
           current_metallic: "f64",
           current_roughness: "f64",
         },
@@ -77,10 +71,6 @@
       {
         // Every material back to its authored values.
         name: "reset_materials",
-        response_message_format: {
-          success: "bool",
-          message: "string",
-        },
       },
     ],
   },

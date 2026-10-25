@@ -42,12 +42,22 @@
 // caller holds survive looking again.
 //
 // One search at a time, scan and identify alike. A goal that arrives while a
-// search is running is refused and the running search continues untouched.
+// search is running is refused with `precondition_failed`, and the running
+// search continues untouched; a goal that meets another search only once it
+// started fails with `precondition_failed`. A goal is refused with
+// `resource_unavailable` when no perception source is available, and a
+// search that finds its source gone when it looks fails with
+// `resource_unavailable`. A search fails with `timeout` when its upper bound
+// passes before it has an answer, and with `attempt_failed` when it cannot
+// look for another reason. A failed goal gives no result.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "item_perception",
     tag: "v1",
+  },
+  failure_kinds: {
+    not_found: "No item matches the description",
   },
   interfaces: {
     actions: [
@@ -62,13 +72,10 @@
         },
         result_service: {
           response_message_format: {
-            // False when the scan was refused, failed, or was cancelled;
-            // message says which. Refused before scanning when another
-            // search is running or no perception source is available. A
-            // scene with no items is a success with empty arrays. All
-            // arrays are empty when success is false.
-            success: "bool",
-            message: "string",
+            // A scene with no items completes the scan with empty arrays.
+            // A cancelled scan gives the reason of the cancel, and all its
+            // arrays are empty.
+            //
             // One entry per item found, in the implementer's order; the
             // arrays below are index aligned with this one. Identifiers are
             // the ones identify_item and item_manipulation address.
@@ -100,7 +107,7 @@
             image_height: "u32",
             // The capture time of the frame the scan looked at.
             frame_timestamp: "time",
-            // Wall-clock duration of the action (s), whatever the outcome.
+            // Wall-clock duration of the action (s).
             action_time: "f64",
           },
         },
@@ -111,10 +118,11 @@
           request_message_format: {
             // What to look for, in the caller's own words. Empty asks the
             // implementer for the item it judges most prominent among those
-            // it can act on. A description matching nothing is reported as a
-            // failure in the result, not as a refusal. When several items
-            // match, the implementer reports the one it judges best; one
-            // item per result.
+            // it can act on. A search that finds no item matching the
+            // description, or no item at all for an empty description, fails
+            // with `not_found`; it is not refused. When several items match,
+            // the implementer reports the one it judges best; one item per
+            // result.
             description: "string",
             // Upper bound on the search (s); the implementer returns as soon
             // as it has an answer. 0 = the implementer's default.
@@ -123,13 +131,9 @@
         },
         result_service: {
           response_message_format: {
-            // False when the search was refused, found nothing, failed, or
-            // was cancelled; message says which. Refused before searching
-            // when another search is running or no perception source is
-            // available. All other fields except action_time are zero or
-            // empty when success is false.
-            success: "bool",
-            message: "string",
+            // A cancelled search gives the reason of the cancel, and all
+            // its fields except action_time are zero, empty or absent.
+            //
             // Identifier minted for the item that was found, to be passed to
             // item_manipulation's grab_item.
             item_id: "string",
@@ -160,10 +164,11 @@
             image_height: "u32",
             // The capture time of the frame the search looked at.
             frame_timestamp: "time",
-            // Wall-clock duration of the action (s), whatever the outcome.
+            // Wall-clock duration of the action (s).
             action_time: "f64",
           },
         },
+        failure_kinds: ["not_found"],
       },
     ],
   },
