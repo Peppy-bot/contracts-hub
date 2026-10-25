@@ -9,6 +9,11 @@
 // Distinct from the streamed setpoints on the *_link pairings: these are
 // discrete planned moves with a result.
 //
+// move_to_ready and move_to_home have the mark `moves_robot`: each MCP
+// server, `peppy node call` and each lease holder asks the daemon
+// (`fleet.check_move`) whether it may move the robot before it calls one of
+// them.
+//
 // A posture goal is refused with `leader_streaming` while a leader streams
 // a limb of the robot, and with `precondition_failed` while a limb executes
 // another move. A leader is a robot commander, such as a leader arm or the
@@ -64,6 +69,7 @@
           },
         },
         failure_kinds: ["unreachable", "leader_streaming"],
+        marks: ["moves_robot"],
       },
       {
         name: "move_to_home",
@@ -86,6 +92,7 @@
           },
         },
         failure_kinds: ["unreachable", "leader_streaming"],
+        marks: ["moves_robot"],
       },
     ],
   },
