@@ -34,6 +34,9 @@
     name: "simulation_robot",
     tag: "v1",
   },
+  failure_kinds: {
+    busy: "A robot in the way of the goal still joins or leaves the scene; the same goal can succeed once that robot stands or is out",
+  },
   interfaces: {
     services: [
       {
@@ -55,21 +58,28 @@
         // can promise a placement: the one the goal names, or a free spot of
         // its own choosing. Otherwise the engine refuses it: with `rejected`
         // for a model that is not in its catalogue or that it cannot stand,
-        // and for a name or a placement that it does not take; and with
-        // `precondition_failed` for a name that cannot stand beside the
-        // others, for a name whose robot still joins or leaves the scene,
-        // and for a placement it cannot promise. The engine then builds the
-        // robot, places it, sends the feedback below once the robot stands,
-        // and runs the goal for as long as the robot is in the scene. A
-        // robot that the engine cannot stand once it accepted the goal fails
-        // the goal: with `attempt_failed` when the robot's files do not come
-        // or its model does not build, and with `precondition_failed` when
-        // the place it promised is no longer free. An engine that cannot
-        // send that feedback takes the robot out and fails the goal with
-        // `resource_unavailable`. A caller holds
-        // one robot: a second attach naming another robot while its first
-        // stands is refused with `precondition_failed`, and so is one naming
-        // another model for the robot it stands.
+        // and for a name or a placement that it does not take; with `busy`
+        // while a robot in the way of the name still leaves the scene (the
+        // robot of the name, a robot whose name cannot stand beside it, or
+        // another robot of the caller), and while the robot of the name is
+        // the caller's own robot of the same model and still joins; and
+        // with `precondition_failed` for a name that a robot which stays
+        // keeps out, and for a placement it cannot promise. A goal refused
+        // with `busy` can succeed once the robot in its way is out or
+        // stands, so a caller sends it again; any other refusal stays until
+        // someone changes the scene. The engine then builds the robot,
+        // places it, sends the feedback below once the robot stands, and
+        // runs the goal for as long as the robot is in the scene. A robot
+        // that the engine cannot stand once it accepted the goal fails the
+        // goal: with `attempt_failed` when the robot's files do not come or
+        // its model does not build, and with `precondition_failed` when the
+        // place it promised is no longer free. An engine that cannot send
+        // that feedback takes the robot out and fails the goal with
+        // `resource_unavailable`. A caller holds one robot: a second attach
+        // naming another robot while its first stands or joins is refused
+        // with `precondition_failed`, and so is one naming another model
+        // for the robot of the name; while that robot still leaves, both
+        // are refused with `busy`.
         //
         // A caller attaching the robot it already stands is registering
         // that robot again, which is what an instance that died and came
@@ -124,6 +134,7 @@
           },
         },
         result_service: {},
+        failure_kinds: ["busy"],
       },
     ],
   },
