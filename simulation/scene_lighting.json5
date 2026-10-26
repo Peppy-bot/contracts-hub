@@ -1,6 +1,6 @@
 // The physical light sources of a simulated scene, edited while the
 // simulation runs: discover what lights the scene has, read their effective
-// values, set one property of one light, and restore the scene's authored
+// values, set one property of one lamp, and restore the scene's authored
 // lighting. Every value has a physical meaning and a unit, the same on every
 // implementer, so a caller reasons about lux and lumens, never about a
 // renderer's knobs. A change shows up in every view the engine renders,
@@ -9,19 +9,29 @@
 //
 // Light ids are stable for the life of a loaded scene and come from
 // get_lighting, which reports every light with its kind, the properties it
-// supports (a directional light has no position, a point light no cone),
-// each property's unit, bounds, authored default and current value. Kinds:
-// "directional" (a sun-like key light: illuminance in lux, colour,
-// direction), "point" (a lamp: luminous flux in lumens, colour, position),
-// "spot" (a lamp with a cone: flux, colour, position, direction, cone
-// angles) and "environment" (a photographed environment map: a radiance
-// scale and an orientation). Ambient and fill levels are the renderers'
-// approximation of indirect light and are reported, never set. A scene can
-// carry baked indirect light: for each light, the light it sends onto the
-// scene's fixed surfaces after it bounces, computed offline for the
-// light's authored position, direction or orientation. A renderer that
-// shows baked indirect light gives the ambient and fill levels no light
-// while any baked indirect light of the scene is on.
+// supports (a point lamp has no cone), each property's unit and current
+// value, and, for a light a caller can set, its authored default and its
+// bounds. Kinds: "point" (a lamp: luminous flux in lumens, colour,
+// position), "spot" (a lamp with a cone: flux, colour, position, direction,
+// cone angles), "sun" and "moon" (directional lights: illuminance in lux,
+// colour, direction), "sky" (the light of the whole sky: its illuminance on
+// an open horizontal surface) and "environment" (a photographed environment
+// map that gives the reflections of the room it was taken in: a radiance
+// scale and an orientation). The sun, the moon and the sky follow the
+// scene's daylight (scene_daylight): their values change with the date,
+// the hour and the weather, and every setter refuses them.
+//
+// A scene can carry baked light, computed offline for each light at unit
+// strength: for each lamp, the light it sends onto the scene's fixed
+// surfaces after it bounces, for the lamp's authored position and
+// direction; for the sun and the moon, their light after it bounces, for a
+// set of directions across the part of the sky they cross at the scene's
+// place, which a renderer blends for the direction they stand in; for the
+// sky, its light directly and after it bounces, for each zone of the sky,
+// which a renderer weighs by the light of that zone now. The direct light
+// of the lamps, the sun and the moon stays live. A renderer that shows
+// baked light lights the scene's fixed surfaces with it in the place of
+// the environment map's diffuse light.
 //
 // Positions are world-frame metres, Z up; directions are unit vectors in
 // the world frame, pointing the way the light travels; colours are linear
@@ -29,9 +39,10 @@
 // environment orientation is a unit quaternion [x, y, z, w] rotating the
 // map into the world. A setter validates its whole request before it
 // changes anything: it gives an error reply with `rejected` to a request
-// for an unknown light or an unsupported property, or with a value out of
-// bounds or not finite, and the light stays as it was. The response of a
-// setter gives the effective value after the call.
+// for an unknown light, a light that follows the daylight, an unsupported
+// property, or a value out of bounds or not finite, and the light stays as
+// it was. The response of a setter gives the effective value after the
+// call.
 //
 // Loading or clearing a scene through scene_manipulation restores that
 // scene's authored lighting; reset_lighting does the same for the scene
@@ -40,41 +51,41 @@
   peppy_schema: "contract/v1",
   manifest: {
     name: "scene_lighting",
-    tag: "v1",
+    tag: "v2",
   },
   interfaces: {
     services: [
       {
         // Every light of the loaded scene, as a JSON object in
-        // lighting_json: {"scene": "<scene asset id>", "ambient_lux": <n>,
-        // "fill_lux": <n>, "lights": [...]}. Each light carries "id",
-        // "kind", "label", "baked_indirect" and "properties", an object
-        // keyed by property name ("illuminance_lux", "luminous_flux_lm",
-        // "radiance_scale", "color_rgb", "position_m", "direction",
-        // "inner_angle_rad", "outer_angle_rad", "orientation_xyzw"), each
-        // with "unit", "default", "value" and, for scalars, "min" and
-        // "max". "baked_indirect" is "on" while the light's baked indirect
-        // light matches the scene; "none" when the scene has no baked
-        // indirect light for the light; "off_light_moved" while the light's
-        // position, direction or orientation differs from the one its baked
-        // indirect light was computed for (reset_lighting, a reset of the
-        // simulation, or setting it back, turns it on); "off_scene_changed"
-        // after a fixed object of the scene was moved or removed, until
-        // load_scene or a reset of the simulation loads a scene. A light
-        // lists only the properties it supports. An engine that has no
-        // lighting to report, because no scene is loaded yet, gives an error
-        // reply with `precondition_failed`.
+        // lighting_json: {"scene": "<scene asset id>", "lights": [...]}.
+        // Each light carries "id", "kind", "label", "follows_daylight",
+        // "baked_indirect" and "properties", an object keyed by property
+        // name ("illuminance_lux", "luminous_flux_lm", "radiance_scale",
+        // "color_rgb", "position_m", "direction", "inner_angle_rad",
+        // "outer_angle_rad", "orientation_xyzw"), each with "unit" and
+        // "value" and, for a light that does not follow the daylight,
+        // "default" and, for scalars, "min" and "max". "baked_indirect" is
+        // "on" while the light's baked light matches the scene; "none" when
+        // the scene has no baked light for the light (the environment map
+        // never has); "off_light_moved" while a lamp's position or
+        // direction differs from the one its baked light was computed for
+        // (reset_lighting, a reset of the simulation, or setting it back,
+        // turns it on); "off_scene_changed" after a fixed object of the
+        // scene was moved or removed, until load_scene or a reset of the
+        // simulation loads a scene. A light lists only the properties it
+        // supports. An engine that has no lighting to report, because no
+        // scene is loaded yet, gives an error reply with
+        // `precondition_failed`.
         name: "get_lighting",
         response_message_format: {
           lighting_json: "string",
         },
       },
       {
-        // The light's strength: illuminance in lux for a directional light,
-        // luminous flux in lumens for a point or spot lamp, the radiance
-        // scale of an environment map (the map's stored radiance times this
-        // scale is cd/m2). Finite, nonnegative, at most the light's reported
-        // max.
+        // The light's strength: luminous flux in lumens for a point or spot
+        // lamp, the radiance scale of an environment map (the map's stored
+        // radiance times this scale is cd/m2). Finite, nonnegative, at most
+        // the light's reported max.
         name: "set_light_intensity",
         request_message_format: {
           light_id: "string",
@@ -85,8 +96,8 @@
         },
       },
       {
-        // The light's colour, linear RGB in the unit interval. Not
-        // supported by an environment light, whose colour is its map.
+        // A lamp's colour, linear RGB in the unit interval. Not supported by
+        // an environment light, whose colour is its map.
         name: "set_light_color",
         request_message_format: {
           light_id: "string",
@@ -108,9 +119,9 @@
         },
       },
       {
-        // Which way a directional light or a spot lamp shines: a world-frame
-        // vector, normalised by the implementer. A vector with no length
-        // gets an error reply with `rejected`.
+        // Which way a spot lamp shines: a world-frame vector, normalised by
+        // the implementer. A vector with no length gets an error reply with
+        // `rejected`.
         name: "set_light_direction",
         request_message_format: {
           light_id: "string",
@@ -148,7 +159,9 @@
         },
       },
       {
-        // Every light back to the loaded scene's authored values.
+        // Every lamp and the environment map back to the loaded scene's
+        // authored values. The daylight stays: reset_daylight of
+        // scene_daylight restores it.
         name: "reset_lighting",
       },
     ],
