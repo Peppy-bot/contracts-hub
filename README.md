@@ -20,6 +20,18 @@ Create a new `.json5` file under the relevant category:
 }
 ```
 
+## Marks
+
+A mark is a name that a contract gives to a member (`marks: ["<mark>"]` on a topic, a service or an action, after its `failure_kinds`) or to a field of a message format (`{ $type: "string", $marks: ["<mark>"] }`). The side that owns a mark reads it and acts on it. Peppy acts only on the marks that it owns, and keeps each other mark as written for its clients.
+
+Peppy owns one mark, `moves_robot`. It is on each member of a contract that an instance of a robot or a device serves, when the member can move a part of that robot, the gripper included, or change the state of that device, such as `move_to_home` of `postures`. Each MCP server, `peppy node call` and each lease holder asks the daemon (`fleet.check_move`) before each call of a member with this mark. A member that only stops a motion, such as `stop` of `limb_motion`, a member that only reads or checks, and each member of the simulation contracts have no mark.
+
+The mark list, `marks.json5`, names each mark, its owner and its meaning. A client side adds a mark of its own with one entry that names the client side as its owner. The `check-marks` job of the **Tests** workflow refuses a contract with a mark that the list does not name, so a misspelled mark fails the CI and never removes a check without notice. To run the check, with the environment of [Testing the automation](#testing-the-automation):
+
+```sh
+/tmp/contracts-hub-tests/bin/python .github/scripts/check_marks.py
+```
+
 ## Use
 
 This repo is consumed by `peppy repo refresh` alongside node and launcher repositories.

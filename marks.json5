@@ -1,0 +1,26 @@
+// The mark list: each mark that a contract of this repository can give to a
+// member (`marks` on a topic, a service or an action) or to a field of a
+// message format (`$marks` on the field), with its owner and its meaning.
+// The owner is the side that reads the mark and acts on it: peppy, or a
+// client side, such as the workflow side. Peppy acts only on the marks that
+// it owns, and keeps each other mark as written for its clients.
+//
+// The `check-marks` job of the Tests workflow
+// (`.github/scripts/check_marks.py`) refuses a contract with a mark that
+// this list does not name. So a misspelled mark fails the CI, and never
+// removes a check without notice.
+//
+// A client side adds a mark of its own with one entry: the name of the
+// mark, the client side as its owner, and the meaning of the mark in one
+// sentence. A name is words of lowercase ASCII letters and digits that each
+// start with a letter, joined by one `_`, of at most 64 bytes, and the list
+// names each mark once.
+{
+  marks: [
+    {
+      name: "moves_robot",
+      owner: "peppy",
+      meaning: "The member can move a part of the robot whose instance serves it, the gripper included, or change the state of the device whose instance serves it, such as the level of a hob, so each MCP server, `peppy node call` and each lease holder asks the daemon (`fleet.check_move`) before each call of it.",
+    },
+  ],
+}
