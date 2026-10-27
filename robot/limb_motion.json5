@@ -29,9 +29,9 @@
 //
 // move_arm_joints, move_arm and move_gripper have the mark `moves_robot`,
 // and stop and check_arm_move have no mark: each MCP server, `peppy node
-// call` and each lease holder asks the daemon (`fleet.check_move`) whether
-// it may move the robot before it calls a move, so a stop never waits for a
-// lease.
+// call` and each lease holder asks the daemon (`robot_leases.check_move`)
+// whether it may move the robot before it calls a move, so a stop never
+// waits for a lease.
 //
 // Every tolerance a goal carries is a positive number in its unit, and
 // every duration and timeout a number of seconds from 0 to 60: an arm move
