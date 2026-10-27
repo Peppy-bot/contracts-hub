@@ -33,7 +33,8 @@
 //
 // Loading or clearing a scene through scene_manipulation restores that
 // scene's authored daylight; reset_daylight does the same for the scene
-// that is loaded.
+// that is loaded, and a build of simulation_world starts from the authored
+// daylight of its scene and sets the world's own daylight over it.
 {
   peppy_schema: "contract/v1",
   manifest: {
