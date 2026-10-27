@@ -31,9 +31,9 @@
 // gives the effective value after the call. Before a scene is loaded, every
 // service gives an error reply with `precondition_failed`.
 //
-// Loading or clearing a scene through scene_manipulation, or a reset of the
-// simulation, restores that scene's authored daylight; reset_daylight does
-// the same for the scene that is loaded.
+// Loading or clearing a scene through scene_manipulation restores that
+// scene's authored daylight; reset_daylight does the same for the scene
+// that is loaded.
 {
   peppy_schema: "contract/v1",
   manifest: {

@@ -46,7 +46,8 @@
 //
 // Loading or clearing a scene through scene_manipulation restores that
 // scene's authored lighting; reset_lighting does the same for the scene
-// that is loaded.
+// that is loaded, and a build of simulation_world starts from the authored
+// lighting of its scene and sets the world's own lighting over it.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -69,11 +70,15 @@
         // the scene has no baked light for the light (the environment map
         // never has); "off_light_moved" while a lamp's position or
         // direction differs from the one its baked light was computed for
-        // (reset_lighting, a reset of the simulation, or setting it back,
-        // turns it on); "off_scene_changed" after a fixed object of the
-        // scene was moved or removed, until load_scene or a reset of the
-        // simulation loads a scene. A light lists only the properties it
-        // supports. An engine that has no lighting to report, because no
+        // (reset_lighting or setting it back turns it on, and so does a
+        // build of simulation_world whose world moves and removes none of
+        // the objects that the baked light covers and does not move the
+        // lamp); "off_scene_changed", whatever the lighting, after an object
+        // of the scene that the baked light covers was moved or removed,
+        // until load_scene loads a scene or a build of simulation_world
+        // builds a world that moves and removes none of those objects. A
+        // light lists only the properties it supports. An engine that has
+        // no lighting to report, because no
         // scene is loaded yet, gives an error reply with
         // `precondition_failed`.
         name: "get_lighting",
