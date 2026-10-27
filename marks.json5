@@ -22,5 +22,20 @@
       owner: "peppy",
       meaning: "The member can move a part of the robot whose instance serves it, the gripper included, or change the state of the device whose instance serves it, such as the level of a hob, so each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) before each call of it.",
     },
+    {
+      name: "robot_frame",
+      owner: "workflow",
+      meaning: "The field holds a position or a pose in the robot frame of the robot whose instance serves the member, so the workflow director takes its value only from a `$ref` to a field with this mark of a call or an observation of the same role, never from a literal of a workflow.",
+    },
+    {
+      name: "item_id",
+      owner: "workflow",
+      meaning: "The field holds an item id, valid only on the node instance that gives it, so the workflow director takes its value only from a `$ref` to a field with this mark of a call or an observation on the same instance.",
+    },
+    {
+      name: "reaches_for_item",
+      owner: "workflow",
+      meaning: "The member reaches for an item, so the workflow director refuses a workflow whose lane calls it without a `kind: \"reach\"` assumption whose check reads an observation of its role.",
+    },
   ],
 }

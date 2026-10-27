@@ -58,6 +58,15 @@
 // flag, and beside it the opening of each gripper as the implementer last
 // measured it: an item that slips out of the jaws after grab_item succeeded
 // leaves the flag set and the opening near 0.
+//
+// The fields that hold an item identifier have the mark `item_id`, and the
+// positions and orientations in the robot frame the mark `robot_frame`
+// (marks.json5). The workflow side reads them: a workflow passes the value of
+// such a field only from a field with the same mark of a result or an
+// observation, an item identifier of the same node instance and a position
+// or an orientation of the same role, never as a literal.
+// grab_item also has the mark `reaches_for_item`: a workflow that calls it
+// first checks that the robot reaches its work zone.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -83,15 +92,15 @@
             // caller that already knows where to reach needs no identify_item
             // first. An identifier the implementer no longer recognises is
             // refused in the result.
-            item_id: "string",
+            item_id: { $type: "string", $marks: ["item_id"] },
             // Grasp-point position, robot frame: x, y, z (m). Read only when
             // item_id is empty; a goal that names an item_id sends zeros here.
-            position: { $type: "array", $items: "f64", $length: 3 },
+            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
             // Grasp-point orientation, quaternion [x, y, z, w]. Read only
             // when item_id is empty. Absent asks the implementer to approach
             // the position however it judges best, the same freedom it has
             // when the goal names an item_id instead.
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"] },
             // Maximum effort the gripper may exert closing on the item
             // (magnitude, in the gripper's effort unit). 0 = no preference;
             // the implementer's configured ceiling applies.
@@ -119,12 +128,12 @@
             // goal's identifier, or names one the implementer minted for an
             // item the goal addressed by pose, so the held item is always
             // addressable afterwards.
-            item_id: "string",
+            item_id: { $type: "string", $marks: ["item_id"] },
             // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
         },
-        marks: ["moves_robot"],
+        marks: ["moves_robot", "reaches_for_item"],
       },
       {
         name: "drop_item",
@@ -154,7 +163,7 @@
             gripper_name: "string",
             // Identifier of the item that was released, as grab_item
             // reported it.
-            item_id: "string",
+            item_id: { $type: "string", $marks: ["item_id"] },
             // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
@@ -176,12 +185,12 @@
             // on the way there. The implementer lowers the item to it and,
             // when the item comes to rest on something on the way, may let
             // go there instead: final_position says where the jaws opened.
-            position: { $type: "array", $items: "f64", $length: 3 },
+            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
             // Grasp-point orientation when the jaws open, quaternion
             // [x, y, z, w]. Absent leaves it to the implementer, which is
             // what a caller means when it cares where the item ends up and
             // not which way it faces.
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"] },
           },
         },
         result_service: {
@@ -200,10 +209,10 @@
             gripper_name: "string",
             // Identifier of the item that was placed, as grab_item reported
             // it.
-            item_id: "string",
+            item_id: { $type: "string", $marks: ["item_id"] },
             // Measured grasp-point position when the jaws opened, robot
             // frame: x, y, z (m).
-            final_position: { $type: "array", $items: "f64", $length: 3 },
+            final_position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
             // Wall-clock duration of the action (s), whatever the outcome.
             action_time: "f64",
           },
@@ -257,7 +266,7 @@
           holding: { $type: "array", $items: "bool" },
           // Identifier of the item that gripper holds, addressable by
           // drop_item and place_item. Empty where holding is false.
-          held_item_ids: { $type: "array", $items: "string" },
+          held_item_ids: { $type: "array", $items: "string", $marks: ["item_id"] },
           // Measured opening fraction of that gripper (0 = closed, 1 = fully
           // open), as the implementer last measured it: what the jaws do now,
           // whatever the held flag says. Empty, not one entry per gripper,

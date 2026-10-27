@@ -36,6 +36,11 @@
 //   last measurement is stale.
 // - After a cancel or a stop, an arm that was still moving can come to
 //   rest away from the reported pose.
+//
+// The positions and orientations in the robot frame have the mark
+// `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a
+// position or an orientation only from a field with this mark of a result or
+// an observation of the same role, never as a literal.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -63,9 +68,9 @@
             // order, or none, per the header's pose rule.
             arm_names: { $type: "array", $items: "string" },
             // Measured grasp-point positions (m), per the header's pose rule.
-            positions: { $type: "array", $items: "f64" },
+            positions: { $type: "array", $items: "f64", $marks: ["robot_frame"] },
             // Measured grasp-point orientations, per the header's pose rule.
-            orientations: { $type: "array", $items: "f64" },
+            orientations: { $type: "array", $items: "f64", $marks: ["robot_frame"] },
           },
         },
         failure_kinds: ["unreachable", "leader_streaming"],
@@ -86,9 +91,9 @@
             // order, or none, per the header's pose rule.
             arm_names: { $type: "array", $items: "string" },
             // Measured grasp-point positions (m), per the header's pose rule.
-            positions: { $type: "array", $items: "f64" },
+            positions: { $type: "array", $items: "f64", $marks: ["robot_frame"] },
             // Measured grasp-point orientations, per the header's pose rule.
-            orientations: { $type: "array", $items: "f64" },
+            orientations: { $type: "array", $items: "f64", $marks: ["robot_frame"] },
           },
         },
         failure_kinds: ["unreachable", "leader_streaming"],

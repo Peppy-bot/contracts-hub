@@ -50,6 +50,13 @@
 // `resource_unavailable`. A search fails with `timeout` when its upper bound
 // passes before it has an answer, and with `attempt_failed` when it cannot
 // look for another reason. A failed goal gives no result.
+//
+// The fields that hold an item identifier have the mark `item_id`, and the
+// positions and orientations in the robot frame the mark `robot_frame`
+// (marks.json5). The workflow side reads them: a workflow passes the value of
+// such a field only from a field with the same mark of a result or an
+// observation, an item identifier of the same node instance and a position
+// or an orientation of the same role, never as a literal.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -79,7 +86,7 @@
             // One entry per item found, in the implementer's order; the
             // arrays below are index aligned with this one. Identifiers are
             // the ones identify_item and item_manipulation address.
-            item_ids: { $type: "array", $items: "string" },
+            item_ids: { $type: "array", $items: "string", $marks: ["item_id"] },
             // What the implementer recognised each item as, in whatever
             // vocabulary it uses; empty where it has no name for the item.
             // Labels may repeat: two items of one kind get one label each
@@ -88,7 +95,7 @@
             labels: { $type: "array", $items: "string" },
             // Item positions, robot frame: 3 entries (x, y, z, m) per item,
             // in item_ids order.
-            positions: { $type: "array", $items: "f64" },
+            positions: { $type: "array", $items: "f64", $marks: ["robot_frame"] },
             // How sure the implementer is of each identification, 0 to 1.
             // 0 where the implementer reports no confidence of its own.
             confidences: { $type: "array", $items: "f64" },
@@ -136,18 +143,18 @@
             //
             // Identifier minted for the item that was found, to be passed to
             // item_manipulation's grab_item.
-            item_id: "string",
+            item_id: { $type: "string", $marks: ["item_id"] },
             // What the implementer recognised the item as, in whatever
             // vocabulary it uses. Empty when it has no name for the item.
             label: "string",
             // Item position, robot frame: x, y, z (m).
-            position: { $type: "array", $items: "f64", $length: 3 },
+            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
             // Item orientation, quaternion [x, y, z, w]. Absent when the
             // implementer located the item without resolving how it is
             // turned. A caller that passes item_id to grab_item leaves the
             // approach to the implementer; one that grasps by pose supplies
             // its own.
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"] },
             // How sure the implementer is of this identification, 0 to 1.
             // 0 when the implementer reports no confidence of its own.
             confidence: "f64",

@@ -37,6 +37,11 @@
 // A request the implementer refuses gets an error reply with `rejected`. An
 // implementer that cannot read its perception camera's geometry now gives
 // an error reply with `precondition_failed`.
+//
+// The positions in the robot frame have the mark `robot_frame`
+// (marks.json5). The workflow side reads it: a workflow passes a position only
+// from a field with this mark of a result or an observation of the same role,
+// never as a literal.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -87,7 +92,7 @@
           // empty list, a length that is not a multiple of 3, a value that
           // is not a finite number and a coordinate more than 1000 m from
           // the robot's base point get an error reply with `rejected`.
-          positions: { $type: "array", $items: "f64" },
+          positions: { $type: "array", $items: "f64", $marks: ["robot_frame"] },
         },
         response_message_format: {
           // As in describe_workspace.
@@ -100,7 +105,7 @@
             $items: {
               $type: "object",
               // The point, as asked.
-              position: { $type: "array", $items: "f64", $length: 3 },
+              position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
               // Whether the robot can work it.
               workable: "bool",
               // Whether an arm reaches it.
