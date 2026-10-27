@@ -44,9 +44,11 @@
 // it was. The response of a setter gives the effective value after the
 // call.
 //
-// Loading or clearing a scene through scene_manipulation restores that
-// scene's authored lighting; reset_lighting does the same for the scene
-// that is loaded, and a build of simulation_world starts from the authored
+// Loading or clearing a scene through scene_manipulation that changes the
+// loaded scene or its scale restores the authored lighting of the scene it
+// loads; one that loads the same scene at the same scale again keeps the
+// lighting as it is. reset_lighting restores the authored lighting of the
+// loaded scene, and a build of simulation_world starts from the authored
 // lighting of its scene and sets the world's own lighting over it.
 {
   peppy_schema: "contract/v1",

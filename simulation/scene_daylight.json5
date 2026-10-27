@@ -31,9 +31,11 @@
 // gives the effective value after the call. Before a scene is loaded, every
 // service gives an error reply with `precondition_failed`.
 //
-// Loading or clearing a scene through scene_manipulation restores that
-// scene's authored daylight; reset_daylight does the same for the scene
-// that is loaded, and a build of simulation_world starts from the authored
+// Loading or clearing a scene through scene_manipulation that changes the
+// loaded scene or its scale restores the authored daylight of the scene it
+// loads; one that loads the same scene at the same scale again keeps the
+// daylight as it is. reset_daylight restores the authored daylight of the
+// loaded scene, and a build of simulation_world starts from the authored
 // daylight of its scene and sets the world's own daylight over it.
 {
   peppy_schema: "contract/v1",
@@ -66,8 +68,10 @@
         },
       },
       {
-        // The local date and hour. An empty date keeps the current date.
-        // The clock runs on from the new hour at its rate.
+        // The local date, the hour or both. An empty date keeps the current
+        // date and an empty time the current hour; a request with both
+        // empty is rejected. The clock runs on from the new moment at its
+        // rate.
         name: "set_daylight_time",
         request_message_format: {
           date: "string",
