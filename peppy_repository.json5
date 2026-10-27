@@ -161,14 +161,14 @@
         path: "simulation/simulation_clock.json5"
       }
     },
-    simulation_reset: {
-      v1: {
-        path: "simulation/simulation_reset.json5"
-      }
-    },
     simulation_robot: {
       v1: {
         path: "simulation/simulation_robot.json5"
+      }
+    },
+    simulation_world: {
+      v1: {
+        path: "simulation/simulation_world.json5"
       }
     },
     workspace: {

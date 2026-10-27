@@ -1,0 +1,176 @@
+// The worlds of a simulation: the record of its setup, the build of a world
+// in one step, and the judges that check ground truth in it. It is for the
+// applier of worlds, which rebuilds the world of a past conversation, and
+// for an evaluation that scores a built world; no model of a chat calls it.
+//
+// The setup record is the last value of each setup call the simulation took
+// (scene_manipulation, object_controls, scene_lighting, scene_materials and
+// scene_workspace): the scene and its scale, the scene objects moved,
+// removed or with a control set, the objects spawned, the lighting, the
+// materials, the named locations and the stand of each robot with a body.
+// It holds call values, never physics: the clock, apply_force, looks,
+// listings, robot motions and camera settings do not change it. A world
+// document (world/v1) is that record with the join of each robot, which
+// the stack listing gives.
+//
+// The apply id names the world that is live. It changes at each start_apply
+// and at each start of the simulation, so two equal apply ids name one
+// apply of one world, and a client that holds an apply id knows whether the
+// world it applied is still the one that stands.
+//
+// Members carry documents as JSON5 text: the setup record, a world/v1, the
+// list of judges and the list of verdicts, each in the form the simulation
+// documents of the simulation side define.
+//
+// A simulation that lets no caller edit or inspect its world answers each
+// member with `rejected`: an error reply to a service, a refusal to the
+// build.
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "simulation_world",
+    tag: "v1",
+  },
+  interfaces: {
+    services: [
+      {
+        // The setup record and the apply id of the live world, and the
+        // catalogue release the simulation runs: the digest of the release,
+        // or "local" for a simulation with a local catalogue directory,
+        // whose world documents say "local" too. A simulation that cannot
+        // write its setup record as JSON5 gives an error reply with
+        // `attempt_failed`.
+        name: "get",
+        request_message_format: {
+          // True for the setup the simulation started with: the opening
+          // scene, nothing set up, and the stand of each robot with a body
+          // where it first joined. False for the live setup.
+          start: "bool",
+        },
+        response_message_format: {
+          // The setup record, as JSON5 text.
+          setup_record: "string",
+          // With start, the robots with a body that joined the simulation,
+          // each where it first joined: a JSON5 object from robot name to
+          // { position, yaw }. Otherwise an empty object.
+          first_stands: "string",
+          apply_id: "string",
+          catalogue: "string",
+        },
+      },
+      {
+        // The applier announces an apply and the robots of its world. The
+        // apply id changes, so a failed apply never keeps the old one.
+        name: "start_apply",
+        request_message_format: {
+          // The names of the robots of the world, as the stack names them.
+          robots: { $type: "array", $items: "string" },
+        },
+        response_message_format: {
+          apply_id: "string",
+        },
+      },
+      {
+        // The verdicts of judges in the live world: for each judge, whether
+        // it holds and why, in the order of the judges. A list that does not
+        // parse, and a judge that names an object, a landmark, a region, a
+        // location or a control the world does not hold, or an item kind
+        // that no asset of the catalogue carries, get an error reply with
+        // `rejected` that names it, as does a reachable judge whose robot or
+        // target the simulation cannot measure (a robot model whose arms it
+        // cannot measure, an object with no bounding box), and a judge that
+        // names a robot that does not stand in the simulation one with
+        // `resource_unavailable`; no verdict is given. An item kind that
+        // assets of the catalogue carry and no standing object has counts 0.
+        // A simulation that cannot read its world now gives an error reply
+        // with `precondition_failed`, and one that cannot write the verdicts
+        // as JSON5 one with `attempt_failed`.
+        name: "judge",
+        request_message_format: {
+          // A JSON5 list of judges.
+          judges: "string",
+        },
+        response_message_format: {
+          // A JSON5 list of { holds, why }, one for each judge.
+          verdicts: "string",
+        },
+      },
+    ],
+    actions: [
+      {
+        // Builds a concrete world in one step, with the clock paused: the
+        // scene at its scale, each scene object moved, removed or with a
+        // control set, each object at its pose with its controls, a height
+        // control before what stands on its object and a support before what
+        // it carries, the lighting and the materials, which start from the
+        // values of the scene and take the world's own lighting and
+        // materials entries on top, each camera from the defaults of its
+        // device, each robot with a body at its stand, and each location
+        // named. The objects then settle for 2 s of simulated time, and the
+        // clock runs. A step of simulation_clock in progress ends cancelled,
+        // with a reason that names the build. Before any change, the build
+        // is refused, naming the field: with `rejected` for a world the
+        // simulation cannot build as written, which is a document that does
+        // not parse or extends a base, a catalogue release other than the
+        // simulation's, a scene that load_scene of scene_manipulation
+        // refuses at the world's scale, an object that spawn_object refuses
+        // (an asset the catalogue does not hold, and a pose, a scale, a
+        // physics or a mass the simulation does not take, an object without
+        // a mass when the catalogue gives its asset none among them), an
+        // object that names no physics (the catalogue gives no asset one), a
+        // scene object that is not a placement of the scene, a landmark that
+        // the asset of its object does not declare, a location of an object
+        // the world does not hold, a stand or a location at a surface the
+        // scene does not declare or whose object the world removes, and a
+        // named pose or a named region the catalogue does not hold; and with
+        // `resource_unavailable` for a robot that does not stand in the
+        // simulation. A refused build changes nothing, and so does a build
+        // that fails with `attempt_failed` because the files of the world do
+        // not come. A build fails after its first change with
+        // `precondition_failed` when the world as it stands refuses a step,
+        // as when the implementer's placement rules refuse a placement or
+        // another caller runs or steps the clock, and with `attempt_failed`
+        // for any other cause the simulation cannot build, such as a control
+        // that its object lacks or a light or a material that the scene
+        // lacks; get then reports the setup record as the steps left it. A
+        // failed build puts the clock back as it was before the build, and
+        // each robot it moved but did not stand back where it stood; a robot
+        // it cannot put back stays where the build left it, and the failure
+        // names it. A build ends each load_scene and spawn_object of
+        // scene_manipulation admitted before it that has not handed its
+        // command to the simulation, cancelled with a reason that names the
+        // build. It takes the place of a load: a load_scene or a later build
+        // that arrives while it fetches its files or waits for an earlier
+        // load to be built ends it cancelled, with a reason that names what
+        // replaced it. Once it builds, it holds back every load and spawn
+        // until it is built. The feedback is that of load_scene of
+        // scene_manipulation, over the files of the scene and the objects.
+        name: "build",
+        goal_service: {
+          request_message_format: {
+            // A concrete world/v1 document, as JSON5 text.
+            world: "string",
+          },
+        },
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            bytes_fetched: "u64",
+            files_ready: "u64",
+            building: "bool",
+            bytes_ready: "u64",
+            bytes_total: "u64",
+            bytes_per_second: "u64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // The setup record of the built world, as JSON5 text; empty for
+            // a build that ends cancelled.
+            setup_record: "string",
+          },
+        },
+      },
+    ],
+  },
+}

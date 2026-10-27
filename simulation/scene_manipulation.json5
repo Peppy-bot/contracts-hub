@@ -6,17 +6,23 @@
 //
 // Asset ids come from get_assets_list and carry their kind as a prefix
 // ("scene/<id>" or "object/<id>"). Object ids are minted by the implementer
-// on spawn, and by the implementer that places the objects of a loaded
-// scene as objects of the same set. get_objects_list reports what stands in
-// the scene and where, and get_object reports one object at one instant,
-// its landmarks in the world frame and its state, for a caller that sets
-// the world up, checks its setup and checks an event it asked for; the
-// engine's object_state contract reports the same objects with their
-// velocities, as a stream, for evaluation. Robot names come from
-// get_robots_list. Positions are world-frame x, y, z in meters, headings are
-// a yaw in radians about the world's +z, orientations are unit quaternions
-// [x, y, z, w] in the world frame, forces are world-frame newtons, masses
-// are kilograms.
+// on spawn, and by the implementer that places the objects of a loaded scene
+// as objects of the same set. Each object also has a name. A spawned object
+// has the name spawn_object gave it, until the object is removed. An object
+// the loaded scene placed, a scene object, has the placement id the scene
+// authors, such as "mantel_clock_01", which each load of that scene gives it
+// again, where its object id is new. A name is lowercase letters, digits and
+// "_". No two objects share a name, and each placement id of the loaded
+// scene stays taken, also after its scene object is removed.
+// get_objects_list reports what stands in the scene and where, and
+// get_object reports one object at one instant, its landmarks in the world
+// frame and its state, for a caller that sets the world up, checks its setup
+// and checks an event it asked for; the engine's object_state contract
+// reports the same objects with their velocities, as a stream, for
+// evaluation. Robot names come from get_robots_list. Positions are
+// world-frame x, y, z in meters, headings are a yaw in radians about the
+// world's +z, orientations are unit quaternions [x, y, z, w] in the world
+// frame, forces are world-frame newtons, masses are kilograms.
 //
 // A snap, which spawn_object and move_object take, places an object so
 // that one of its belt ends continues a belt end of another object. Each
@@ -129,6 +135,9 @@
               $type: "object",
               // The id move_object, remove_object and apply_force take.
               object_id: "string",
+              // The name of the header: the name spawn_object gave it, or the
+              // placement id of an object the loaded scene placed.
+              name: "string",
               // The "object/<id>" asset the object is an instance of.
               asset_id: "string",
               // The asset's category, as get_asset_categories reports it.
@@ -166,6 +175,8 @@
           // state, on the implementer's clock.
           timestamp: "time",
           object_id: "string",
+          // The name of the header, as get_objects_list gives it.
+          name: "string",
           // The "object/<id>" asset the object is an instance of.
           asset_id: "string",
           // Where the object's origin stands: x, y, z (m), as
@@ -376,7 +387,9 @@
         // must be of kind "scene". Spawned objects are removed first. A load
         // that arrives while another one runs may replace it: the replaced
         // goal then ends cancelled, with a reason that names the load that
-        // replaced it. The load is refused with `rejected` for an asset_id
+        // replaced it. A build of simulation_world that comes before the load
+        // has handed its command over ends it cancelled the same way, naming
+        // the build. The load is refused with `rejected` for an asset_id
         // that names no scene of the catalogue and for a scale the
         // implementer does not take, and fails with `attempt_failed` when
         // the scene does not load.
@@ -429,11 +442,14 @@
         result_service: {},
       },
       {
-        // Place one instance of an "object" asset and report its new id.
-        // The spawn is refused with `rejected` when the asset is unknown or
-        // the arguments are invalid. It fails with `precondition_failed`
-        // when the placement rules of the header refuse its place, and with
-        // `attempt_failed` when the object does not spawn.
+        // Place one instance of an "object" asset and report its new id and
+        // its name. The spawn is refused with `rejected` when the asset is
+        // unknown or the arguments are invalid. It fails with
+        // `precondition_failed` when the placement rules of the header
+        // refuse its place, and with `attempt_failed` when the object does
+        // not spawn. A build of simulation_world that comes before the spawn
+        // has handed its command over ends it cancelled, with a reason that
+        // names the build, and it spawns nothing.
         name: "spawn_object",
         goal_service: {
           request_message_format: {
@@ -454,6 +470,20 @@
             physics: "string",
             // Mass (kg) of a dynamic object; ignored otherwise.
             mass: "f64",
+            // The object's name, of the form the header gives and free by
+            // its rules: a name of another form, one that an object holds,
+            // and a placement id of the loaded scene are refused with
+            // `rejected`, and a name that another spawn takes while this one
+            // fetches its files fails it with `rejected`. Absent or empty,
+            // the implementer names the object from its asset, such as
+            // "crate" or "crate_2".
+            name: { $type: "string", $optional: true },
+            // The feeder that spawns the object, by a name of the form the
+            // header gives, for a spawn that is not setup: the simulation
+            // keeps such a spawn out of its setup record (simulation_world).
+            // A feeder of another form is refused with `rejected`. Absent or
+            // empty for a spawn of the setup.
+            feeder: { $type: "string", $optional: true },
             // When present, the object stands where the snap of the header
             // places it, and position, yaw and orientation are not read.
             snap_to: {
@@ -505,6 +535,10 @@
             // The implementer-minted id of the new object; empty when the
             // goal ends cancelled and built nothing.
             object_id: "string",
+            // The object's name: the one the request gave, or the one the
+            // implementer gave it; empty when the goal ends cancelled and
+            // built nothing.
+            name: "string",
           },
         },
       },
