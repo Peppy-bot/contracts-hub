@@ -19,6 +19,24 @@
 // apply of one world, and a client that holds an apply id knows whether the
 // world it applied is still the one that stands.
 //
+// The setup claim (claim) gives the setup to one client at a time. While it
+// lasts, only the holder makes setup calls: each call of
+// scene_manipulation, object_controls, scene_lighting, scene_materials,
+// scene_daylight and scene_workspace that changes the setup record,
+// apply_force and move_robot, set_paused and step of simulation_clock, and
+// start_apply and build here. The simulation refuses those of every other
+// client with `precondition_failed`, naming the claim and its holder. A
+// spawn by a feeder goes through, and so do reads, views, camera settings
+// and sensor holds. The pause of the viewer and the hand teleoperation of
+// the simulation's page carry no client: while the claim lasts, the
+// simulation refuses each pause and each daylight edit from the viewer, and
+// each drive of the hand teleoperation on a robot that the holder has not
+// named with allow_hand_teleop. It stands a joining robot (attach of
+// simulation_robot) only when the last start_apply of the claim named it,
+// and refuses each other attach with `precondition_failed`, naming the
+// claim; a robot that leaves goes through, and so does a standing robot that
+// registers again.
+//
 // Members carry documents as JSON5 text: the setup record, a world/v1, the
 // list of judges and the list of verdicts, each in the form the simulation
 // documents of the simulation side define.
@@ -61,7 +79,11 @@
       },
       {
         // The applier announces an apply and the robots of its world. The
-        // apply id changes, so a failed apply never keeps the old one.
+        // apply id changes, so a failed apply never keeps the old one. While
+        // a claim lasts, only the holder calls it, and its robots are the
+        // robots that a join may stand until the next start_apply or the end
+        // of the claim; another sender gets `precondition_failed`, naming the
+        // claim.
         name: "start_apply",
         request_message_format: {
           // The names of the robots of the world, as the stack names them.
@@ -94,6 +116,22 @@
         response_message_format: {
           // A JSON5 list of { holds, why }, one for each judge.
           verdicts: "string",
+        },
+      },
+      {
+        // The robots that the hand teleoperation may drive while the claim
+        // lasts; each call replaces the set. A claim starts with none, and
+        // the set ends with the claim; without a claim the hand
+        // teleoperation drives any robot. Refused with
+        // `precondition_failed` for a sender that does not hold the claim,
+        // naming the claim, and with `rejected` for a name that is not a
+        // robot name.
+        name: "allow_hand_teleop",
+        request_message_format: {
+          robots: { $type: "array", $items: "string" },
+        },
+        response_message_format: {
+          robots: { $type: "array", $items: "string" },
         },
       },
     ],
@@ -149,6 +187,8 @@
         // names what replaced it. Once it builds, it holds back every load
         // and spawn until it is built. The feedback is that of load_scene of
         // scene_manipulation, over the files of the scene and the objects.
+        // While a claim lasts, a sender other than the holder is refused
+        // with `precondition_failed`, naming the claim.
         name: "build",
         goal_service: {
           request_message_format: {
@@ -172,6 +212,36 @@
             // The setup record of the built world, as JSON5 text; empty for
             // a build that ends cancelled.
             setup_record: "string",
+          },
+        },
+      },
+      {
+        // The setup claim, under a name that each refusal gives to other
+        // clients. Accepted when no client holds the claim, and when its
+        // sender holds it already, which hands the claim to this goal: the
+        // goal before ends cancelled, saying that a later claim of the same
+        // client holds it now. Refused with `precondition_failed`, naming the
+        // claim and its holder, and with `rejected` for an empty name. The
+        // feedback gives what the claim stands: once when the goal holds the
+        // claim, with no robot in either list, and again after each
+        // start_apply and each allow_hand_teleop of the holder. The goal
+        // never completes: the claim ends when its holder cancels it or is
+        // gone, and the goal ends cancelled for that reason.
+        name: "claim",
+        goal_service: {
+          request_message_format: {
+            name: "string",
+          },
+        },
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            // The robots of the last start_apply of the claim: the ones a
+            // join stands.
+            apply_robots: { $type: "array", $items: "string" },
+            // The robots of the last allow_hand_teleop of the claim: the
+            // ones the hand teleoperation drives.
+            hand_teleop_robots: { $type: "array", $items: "string" },
           },
         },
       },

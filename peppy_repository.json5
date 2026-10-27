@@ -190,6 +190,11 @@
       v1: {
         path: "robot/workspace.json5"
       }
+    },
+    world_applier: {
+      v1: {
+        path: "simulation/world_applier.json5"
+      }
     }
   }
 }
