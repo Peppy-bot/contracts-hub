@@ -8,13 +8,15 @@
 // `moves_robot`: the applier asks the daemon (robot_leases.check_move)
 // before each move it sends.
 //
-// An apply has four steps.
+// An apply has five steps.
 // 1. Check: the world parses and is concrete; its catalogue release is the
 //    simulation's and holds what it names; each location names an object, a
-//    surface, a named pose or a named region of the world; the robot_membership
-//    scope of the applier allows each join, of a simulated option. The
-//    applier then takes the setup claim (claim of simulation_world) and the
-//    lease of each simulated robot of the stack, and calls start_apply.
+//    surface, a named pose or a named region of the world, under a name of
+//    `locations` of workflow/v1 (the name a workflow declares it by); the
+//    robot_membership scope of the applier allows each join, of a simulated
+//    option. The applier then takes the setup claim (claim of
+//    simulation_world) and the lease of each simulated robot of the stack,
+//    and calls start_apply.
 // 2. Stack: each simulated robot that the world does not name, names with
 //    another join, or whose software stopped leaves the stack; the missing
 //    ones join in name order, each leased to the applier. A join under the
@@ -25,8 +27,21 @@
 //    implements postures goes home. A refused goal goes again after a short
 //    wait, up to three tries; then the step fails and names the robot.
 // 4. Setup: build of simulation_world.
+// 5. Locations: each robot of the world that implements locations:v1 learns
+//    the locations of the world (teach), each as the world frame holds it:
+//    a landmark at the centre of the landmark of its object (get_object of
+//    scene_manipulation), a surface as the rectangle of it the robot can
+//    work, as describe_workspace of scene_workspace measures it for the
+//    robot; a surface that the robot cannot work, which describe_workspace
+//    answers with workable false, is left out of its teach. A robot that
+//    implements no locations:v1 learns none, and the applier measures
+//    nothing for it.
 //
-// Only step 1 refuses, before any robot moves, and nothing changes: a world
+// After a restart, apply and run are refused with precondition_failed and the
+// message "the applier settles the leases of its earlier life; call again in
+// a moment" until the applier has aborted each run of the director that holds
+// a lease it gave and released each lease it still holds. Apart from that,
+// only step 1 refuses, before any robot moves, and nothing changes: a world
 // that does not hold is refused with world_refused; the setup claim held for
 // another apply or run with claimed, naming that call, its started_by and its
 // run; a robot that another client leases with leased, naming the holder and
@@ -114,7 +129,7 @@
         failure_kinds: ["world_refused"],
       },
       {
-        // The four steps. started_by labels the apply in the setup claim, as
+        // The five steps. started_by labels the apply in the setup claim, as
         // the refusal of another call names it; blank, it is refused with
         // rejected. The feedback names each step
         // as it starts and passes on the log lines of each join and removal
@@ -130,7 +145,7 @@
         feedback_topic: {
           qos_profile: "standard",
           message_format: {
-            step: { $type: "string", $enum: ["check", "stack", "robots", "setup"] },
+            step: { $type: "string", $enum: ["check", "stack", "robots", "setup", "locations"] },
             message: "string",
           },
         },
@@ -143,7 +158,8 @@
         // Runs a run/v1 document in a world with run of workflow_director,
         // until the run ends or suspends. The applier takes the claim and the
         // leases as step 1 does. With a world, it applies it; without one, it
-        // runs the clock and calls no start_apply. It holds the sensors of
+        // teaches the locations of the live world (step 5 of an apply), runs
+        // the clock and calls no start_apply. It holds the sensors of
         // each robot it leases, under its own instance as the holder, offers
         // its leases to the director, and once offer returns calls run with
         // started_by and, as caller_data, the name, revision and apply id of
@@ -183,7 +199,7 @@
           qos_profile: "reliable",
           message_format: {
             apply_id: "string",
-            step: { $type: "string", $enum: ["check", "stack", "robots", "setup", "run"] },
+            step: { $type: "string", $enum: ["check", "stack", "robots", "setup", "locations", "run"] },
             message: "string",
             run: "string",
             director: "string",

@@ -71,6 +71,11 @@
         path: "robot/limb_state.json5"
       }
     },
+    locations: {
+      v1: {
+        path: "robot/locations.json5"
+      }
+    },
     motor_health: {
       v1: {
         path: "robot/motor_health.json5"

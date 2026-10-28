@@ -8,18 +8,24 @@
 // directory, each path relative to it, so `peppy node call
 // workflow_director_inst run --file bundle=@<dir>` sends one.
 //
-// The director checks a workflow against the contracts of the fleet
-// listing, binds each role to a robot of the listing, takes the leases of
-// the bound robots, each under the name `run <id>` of its run, compares
-// the lock of a bundle, checks the assumptions, then runs the
-// initialization of each role and its lane. A run calls only
-// the members of the allowed contracts of the director. No member here has
-// the mark `moves_robot`: the director asks the daemon
-// (robot_leases.check_move) before each call of a member with that mark,
-// under its own leases. A read of an observation ends with the bound of the
-// step that reads it. A check outside a step (an assumption, each check of a
-// resume, success and minimum) has a bound of 30 s on the run clock, and a
-// read in it that leader_streaming refuses goes again every second.
+// The director checks a workflow against the contracts of the fleet listing.
+// A run reads a fresh fleet listing, refuses a halted stack, binds each role
+// to a robot of the listing, checks the workflow against the contracts of
+// those robots, compares the lock of a bundle, takes the leases of the bound
+// robots, each under the name `run <id>` of its run, lists the locations of
+// the skills of each role and refuses a run that names a location a skill of
+// its role does not know (locations:v1, which the director calls whatever the
+// allowed contracts), checks the assumptions, then runs the initialization of
+// each role and its lane. A run calls only the members of the allowed
+// contracts of the director. No member here has the mark `moves_robot`: the
+// director asks the daemon (robot_leases.check_move) before each call of a
+// member with that mark, under its own leases. A read of an observation ends
+// with the bound of the step that reads it. A read of a topic before its
+// first message waits for it, up to the max_age_s of the observation past
+// the start of the run, and is stale after. A check outside a step (an
+// assumption, each check of a resume, success and minimum) has a bound of
+// 30 s on the run clock, and a read in it that leader_streaming refuses goes
+// again every second.
 //
 // A caller that offers leases to the director (robot_leases.offer) before it
 // calls run lends them to that run: the run takes the leases of the robots
@@ -57,7 +63,8 @@
 // condition_failed (a fail_when is true), bound_reached (a loop hit its
 // bound first), invariant_violated (an invariant is false), breaker_open (a
 // repeat_until reached the max_failures of its breaker), stale_observation
-// (a topic read is older than its max_age_s), stopped (another client
+// (a topic read is older than its max_age_s, or the topic has given no
+// message in its max_age_s since the run started), stopped (another client
 // stopped the goal), anomaly (the anomaly monitor gives an anomaly), alert
 // (a bound physical robot raised an alert:v1 alert of severity 2 or 3, or an
 // alert set of its nodes went stale), signal_unreachable (every lane that can
@@ -72,9 +79,9 @@
 // of the run does not admit, with precondition_failed.
 //
 // The mcp_exposure/v1 document workflow_controls:v1 of mcp-hub selects
-// every member but replay, which reads a journal for a program, and the
-// topic run_events, whose events the progress of run, resume and abort
-// gives.
+// every member but replay, which reads a journal for a program, locations,
+// which teaches the skills of a robot, and the topic run_events, whose
+// events the progress of run, resume and abort gives.
 {
   peppy_schema: "contract/v1",
   manifest: {
@@ -143,8 +150,9 @@
         // robot name of the listing, it also checks the binding. Each error
         // names its step as `<role>.<id>` or its field by its path; a
         // workflow that does not parse gives one error with an empty `at`.
-        // Before the first fleet listing, refused with resource_unavailable,
-        // as robots is.
+        // Refused with rejected for roles that do not parse or that name
+        // "auto", and before the first fleet listing with
+        // resource_unavailable, as robots is.
         name: "check",
         request_message_format: {
           workflow: "string",
@@ -230,6 +238,64 @@
       },
     ],
     actions: [
+      {
+        // Teaches or lists the locations of the skills of `robot`: each
+        // instance of the robot that implements locations:v1, as the fleet
+        // listing names them. With teach, the director teaches each of them
+        // the locations given, each as teach of locations:v1 takes it, and
+        // gives the locations each knows after; without, it gives the
+        // locations each knows. A teach on a robot with a lease is refused
+        // with precondition_failed, naming the holder and the name of the
+        // lease, so no teach changes the locations of a robot of a run or of
+        // an apply; a teach holds the robot while it runs, under a lease
+        // named `locations`, and no run of the director binds the robot until
+        // the teach ends. Refused with rejected for a robot the listing does
+        // not hold, with resource_unavailable before the first fleet listing
+        // and for a robot with no instance of locations:v1, and with the kind
+        // of a refusal of a skill, naming the instance.
+        name: "locations",
+        goal_service: {
+          request_message_format: {
+            robot: "string",
+            teach: {
+              $type: "array",
+              $optional: true,
+              $items: {
+                $type: "object",
+                name: "string",
+                kind: { $type: "string", $enum: ["pose", "landmark", "surface", "region"] },
+                position: { $type: "array", $items: "f64", $length: 3 },
+                orientation: { $type: "array", $items: "f64", $length: 4 },
+                size: { $type: "array", $items: "f64", $length: 3 },
+              },
+            },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            // One entry per instance of the robot that implements
+            // locations:v1, each with the locations it knows.
+            skills: {
+              $type: "array",
+              $items: {
+                $type: "object",
+                instance: "string",
+                locations: {
+                  $type: "array",
+                  $items: {
+                    $type: "object",
+                    name: "string",
+                    kind: { $type: "string", $enum: ["pose", "landmark", "surface", "region"] },
+                    position: { $type: "array", $items: "f64", $length: 3 },
+                    orientation: { $type: "array", $items: "f64", $length: 4 },
+                    size: { $type: "array", $items: "f64", $length: 3 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       {
         // Runs a workflow, given as workflow or in a bundle, by a run/v1
         // document or by roles (a JSON5 object from roles to robot names;
@@ -336,8 +402,8 @@
     ],
     topics: [
       {
-        // Every event of every run, as the progress of run and resume gives
-        // the events of its run.
+        // Every event of every run, as the progress of run, resume and abort
+        // gives the events of its run.
         name: "run_events",
         qos_profile: "reliable",
         message_format: {

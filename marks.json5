@@ -37,5 +37,10 @@
       owner: "workflow",
       meaning: "The member reaches for an item, so the workflow director refuses a workflow whose lane calls it without a `kind: \"reach\"` assumption whose check reads an observation of its role.",
     },
+    {
+      name: "location",
+      owner: "workflow",
+      meaning: "The field is a string that receives the name of a location that the node knows through locations:v1, so the workflow director takes its value only from a `{ $location }` of a location the workflow declares, never from a literal and never from a `$ref`, and the node that serves the member implements locations:v1.",
+    },
   ],
 }
