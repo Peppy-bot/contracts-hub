@@ -4,14 +4,15 @@
 // for an evaluation that scores a built world; no model of a chat calls it.
 //
 // The setup record is the last value of each setup call the simulation took
-// (scene_manipulation, object_controls, scene_lighting, scene_materials and
-// scene_workspace): the scene and its scale, the scene objects moved,
-// removed or with a control set, the objects spawned, the lighting, the
-// materials, the named locations and the stand of each robot with a body.
-// It holds call values, never physics: the clock, apply_force, looks,
-// listings, robot motions and camera settings do not change it. A world
-// document (world/v1) is that record with the join of each robot, which
-// the stack listing gives.
+// (scene_manipulation, object_controls, scene_lighting, scene_materials,
+// scene_daylight and scene_workspace): the scene and its scale, the scene
+// objects moved, removed or with a control set, the objects spawned, the
+// lighting, the materials, the daylight, the named locations and the stand of
+// each robot with a body. It holds call values, never physics: the clock,
+// apply_force, looks, listings, robot motions and camera settings do not
+// change it, and the daylight's hour is the one set_daylight_time set,
+// whatever the daylight's clock ran since. A world document (world/v1) is
+// that record with the join of each robot, which the stack listing gives.
 //
 // The apply id names the world that is live. It changes at each start_apply
 // and at each start of the simulation, so two equal apply ids name one
@@ -102,48 +103,51 @@
         // scene at its scale, each scene object moved, removed or with a
         // control set, each object at its pose with its controls, a height
         // control before what stands on its object and a support before what
-        // it carries, the lighting and the materials, which start from the
-        // values of the scene and take the world's own lighting and
-        // materials entries on top, each camera from the defaults of its
-        // device, each robot with a body at its stand, and each location
-        // named. The objects then settle for 2 s of simulated time, and the
-        // clock runs. A step of simulation_clock in progress ends cancelled,
-        // with a reason that names the build. Before any change, the build
-        // is refused, naming the field: with `rejected` for a world the
-        // simulation cannot build as written, which is a document that does
-        // not parse or extends a base, a catalogue release other than the
-        // simulation's, a scene that load_scene of scene_manipulation
-        // refuses at the world's scale, an object that spawn_object refuses
-        // (an asset the catalogue does not hold, and a pose, a scale, a
-        // physics or a mass the simulation does not take, an object without
-        // a mass when the catalogue gives its asset none among them), an
-        // object that names no physics (the catalogue gives no asset one), a
-        // scene object that is not a placement of the scene, a landmark that
-        // the asset of its object does not declare, a location of an object
-        // the world does not hold, a stand or a location at a surface the
-        // scene does not declare or whose object the world removes, and a
-        // named pose or a named region the catalogue does not hold; and with
-        // `resource_unavailable` for a robot that does not stand in the
-        // simulation. A refused build changes nothing, and so does a build
-        // that fails with `attempt_failed` because the files of the world do
-        // not come. A build fails after its first change with
-        // `precondition_failed` when the world as it stands refuses a step,
-        // as when the implementer's placement rules refuse a placement or
-        // another caller runs or steps the clock, and with `attempt_failed`
-        // for any other cause the simulation cannot build, such as a control
-        // that its object lacks or a light or a material that the scene
-        // lacks; get then reports the setup record as the steps left it. A
-        // failed build puts the clock back as it was before the build, and
-        // each robot it moved but did not stand back where it stood; a robot
-        // it cannot put back stays where the build left it, and the failure
-        // names it. A build ends each load_scene and spawn_object of
-        // scene_manipulation admitted before it that has not handed its
-        // command to the simulation, cancelled with a reason that names the
-        // build. It takes the place of a load: a load_scene or a later build
-        // that arrives while it fetches its files or waits for an earlier
-        // load to be built ends it cancelled, with a reason that names what
-        // replaced it. Once it builds, it holds back every load and spawn
-        // until it is built. The feedback is that of load_scene of
+        // it carries, the lighting, the materials and the daylight, which
+        // start from the values of the scene and take the world's own
+        // lighting and materials entries and its daylight on top, the
+        // daylight's clock running from the build, each camera from the
+        // defaults of its device, each robot with a body at its stand, and
+        // each location named. The objects then settle for 2 s of simulated
+        // time, and the clock runs. A step of simulation_clock in progress
+        // ends cancelled, with a reason that names the build. Before any
+        // change, the build is refused, naming the field: with `rejected` for
+        // a world the simulation cannot build as written, which is a document
+        // that does not parse or extends a base, a catalogue release other
+        // than the simulation's, a scene that load_scene of
+        // scene_manipulation refuses at the world's scale, an object that
+        // spawn_object refuses (an asset the catalogue does not hold, and a
+        // pose, a scale, a physics or a mass the simulation does not take, an
+        // object without a mass when the catalogue gives its asset none among
+        // them), an object that names no physics (the catalogue gives no
+        // asset one), a scene object that is not a placement of the scene, a
+        // landmark that the asset of its object does not declare, a location
+        // of an object the world does not hold, a stand or a location at a
+        // surface the scene does not declare or whose object the world
+        // removes, a named pose or a named region the catalogue does not
+        // hold, and a daylight that scene_daylight refuses (a date, an hour,
+        // a rate or a weather its setters refuse, or any daylight for a scene
+        // that has none); and with `resource_unavailable` for a robot that
+        // does not stand in the simulation. A refused build changes nothing,
+        // and so does a build that fails with `attempt_failed` because the
+        // files of the world do not come. A build fails after its first
+        // change with `precondition_failed` when the world as it stands
+        // refuses a step, as when the implementer's placement rules refuse a
+        // placement or another caller runs or steps the clock, and with
+        // `attempt_failed` for any other cause the simulation cannot build,
+        // such as a control that its object lacks or a light or a material
+        // that the scene lacks; get then reports the setup record as the
+        // steps left it. A failed build puts the clock back as it was before
+        // the build, and each robot it moved but did not stand back where it
+        // stood; a robot it cannot put back stays where the build left it,
+        // and the failure names it. A build ends each load_scene and
+        // spawn_object of scene_manipulation admitted before it that has not
+        // handed its command to the simulation, cancelled with a reason that
+        // names the build. It takes the place of a load: a load_scene or a
+        // later build that arrives while it fetches its files or waits for an
+        // earlier load to be built ends it cancelled, with a reason that
+        // names what replaced it. Once it builds, it holds back every load
+        // and spawn until it is built. The feedback is that of load_scene of
         // scene_manipulation, over the files of the scene and the objects.
         name: "build",
         goal_service: {

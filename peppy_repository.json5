@@ -116,8 +116,13 @@
         path: "robot/robot_ready.json5"
       }
     },
-    scene_lighting: {
+    scene_daylight: {
       v1: {
+        path: "simulation/scene_daylight.json5"
+      }
+    },
+    scene_lighting: {
+      v2: {
         path: "simulation/scene_lighting.json5"
       }
     },
