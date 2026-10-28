@@ -20,7 +20,7 @@
     {
       name: "moves_robot",
       owner: "peppy",
-      meaning: "The member can move a part of the robot whose instance serves it, the gripper included, or change the state of the device whose instance serves it, such as the level of a hob, so each MCP server, `peppy node call` and each lease holder asks the daemon (`fleet.check_move`) before each call of it.",
+      meaning: "The member can move a part of the robot whose instance serves it, the gripper included, or change the state of the device whose instance serves it, such as the level of a hob, so each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) before each call of it.",
     },
   ],
 }

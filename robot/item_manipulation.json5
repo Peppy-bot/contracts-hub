@@ -36,11 +36,11 @@
 // current_action in get_state, and abort against an idle robot succeeds and
 // reports that no sequence was running.
 //
-// grab_item, drop_item and place_item have the mark `moves_robot`, and
-// abort and get_state have no mark: each MCP server, `peppy node call` and
-// each lease holder asks the daemon (`fleet.check_move`) whether it may move
-// the robot before it calls one of the three, so an abort never waits for a
-// lease.
+// grab_item, drop_item and place_item have the mark `moves_robot`, and abort
+// and get_state have no mark: each MCP server, `peppy node call` and each
+// lease holder asks the daemon (`robot_leases.check_move`) whether it may
+// move the robot before it calls one of the three, so an abort never waits
+// for a lease.
 //
 // An item identifier comes from item_perception's identify_item, or is minted
 // here when grab_item takes an item addressed by pose, and names that one
