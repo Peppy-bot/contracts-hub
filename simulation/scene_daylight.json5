@@ -1,78 +1,32 @@
-// The daylight of a simulated scene: the place on Earth the scene stands at,
-// its local date and hour, the rate its clock runs at, and its weather. The
-// sun, the moon and the sky follow them and light the scene: scene_lighting
-// reports them as the lights "sun", "moon" and "sky", and every view the
-// engine renders shows them, the robot's cameras included. A change never
-// recompiles the scene and never touches physics: rain wets what the sky
-// reaches, and nothing grows slippery.
-//
-// The place is the scene's own (latitude, longitude, the fixed offset of its
-// clock from UTC, and where true north points in the world frame); the
-// engine computes from it and from the date and the hour where the sun and
-// the moon stand, the moon's phase, and the times they rise and set, as on
-// Earth. The hour advances with simulated time times the clock rate: at 1
-// the sun moves as it does outside, at 0 it holds still, at 3600 an hour
-// passes in a second. While the simulation is paused the hour stands still,
-// and a step of the simulation advances it with the step. The date rolls
-// over at midnight.
-//
-// The weather is a cloud cover and a rain rate. Clouds dim the sun and the
-// moon where they cross their light, soften their shadows and change the
-// light of the sky; they drift with the clock. Rain falls only from a cloudy
-// sky, wets what the sky reaches and lowers the visibility.
-//
-// Angles are degrees. An azimuth is measured from true north toward east,
-// an elevation from the horizon, both as an observer at the scene sees the
-// body (refraction included). A date is "YYYY-MM-DD" (Gregorian, 1900 to
-// 2100) and an hour "HH:MM" or "HH:MM:SS", local to the scene's place. A
-// setter validates its whole request before it changes anything: it gives
-// an error reply with `rejected` to a value out of bounds, not finite or
-// malformed, and the daylight stays as it was. The response of a setter
-// gives the effective value after the call. Before a scene is loaded, every
-// service gives an error reply with `precondition_failed`.
-//
-// Loading or clearing a scene through scene_manipulation that changes the
-// loaded scene or its scale restores the authored daylight of the scene it
-// loads; one that loads the same scene at the same scale again keeps the
-// daylight as it is. reset_daylight restores the authored daylight of the
-// loaded scene, and a build of simulation_world starts from the authored
-// daylight of its scene and sets the world's own daylight over it.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "scene_daylight",
     tag: "v1",
+    description: [
+      "The daylight of a simulated scene: the place on Earth the scene stands at, its local date and hour, the rate its clock runs at, and its weather.",
+      "The sun, the moon and the sky follow them and light the scene: scene_lighting reports them as the lights \"sun\", \"moon\" and \"sky\", and every view the engine renders shows them, the robot's cameras included. A change never recompiles the scene and never touches physics: rain wets what the sky reaches, and nothing grows slippery.",
+      "The place is the scene's own (latitude, longitude, the fixed offset of its clock from UTC, and where true north points in the world frame); the engine computes from it and from the date and the hour where the sun and the moon stand, the moon's phase, and the times they rise and set, as on Earth. The hour advances with simulated time times the clock rate: at 1 the sun moves as it does outside, at 0 it holds still, at 3600 an hour passes in a second. While the simulation is paused the hour stands still, and a step of the simulation advances it with the step. The date rolls over at midnight.",
+      "The weather is a cloud cover and a rain rate. Clouds dim the sun and the moon where they cross their light, soften their shadows and change the light of the sky; they drift with the clock. Rain falls only from a cloudy sky, wets what the sky reaches and lowers the visibility.",
+      "Angles are degrees. An azimuth is measured from true north toward east, an elevation from the horizon, both as an observer at the scene sees the body (refraction included). A date is \"YYYY-MM-DD\" (Gregorian, 1900 to 2100) and an hour \"HH:MM\" or \"HH:MM:SS\", local to the scene's place. A setter validates its whole request before it changes anything: it gives an error reply with `rejected` to a value out of bounds, not finite or malformed, and the daylight stays as it was. The response of a setter gives the effective value after the call. Before a scene is loaded, every service gives an error reply with `precondition_failed`.",
+      "Loading or clearing a scene through scene_manipulation that changes the loaded scene or its scale restores the authored daylight of the scene it loads; one that loads the same scene at the same scale again keeps the daylight as it is. reset_daylight restores the authored daylight of the loaded scene, and a build of simulation_world starts from the authored daylight of its scene and sets the world's own daylight over it.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // The daylight of the loaded scene now, as a JSON object in
-        // daylight_json: {"scene": "<scene asset id>", "place":
-        // {"latitude_deg", "longitude_deg", "utc_offset_h", "north_deg"},
-        // "date", "time", "rate", "weather": {"cloud_cover", "rain_mm_h"},
-        // "sun": {...}, "moon": {...}, "sky": {"illuminance_lux"},
-        // "defaults": {"date", "time", "rate", "weather"}}. north_deg is
-        // where true north points in the world frame, counterclockwise from
-        // +X seen from above. "sun" holds "azimuth_deg", "elevation_deg",
-        // "illuminance_lux" (the direct light on a surface that faces it,
-        // after the atmosphere and the clouds; 0 below the horizon), "rise"
-        // and "set" (the local hours it rises and sets on the date, null
-        // when it does not). "moon" holds the same and "phase_angle_deg"
-        // (the angle at the moon between the sun and the observer: 0 full,
-        // 180 new), "illuminated_fraction" (0 to 1) and "waxing". "sky"
-        // gives the illuminance of the sky alone on an open horizontal
-        // surface.
         name: "get_daylight",
+        description: "Give the daylight of the loaded scene now, as a JSON object in daylight_json.",
         response_message_format: {
-          daylight_json: "string",
+          daylight_json: {
+            $type: "string",
+            $description: "The daylight as a JSON object: {\"scene\": \"<scene asset id>\", \"place\": {\"latitude_deg\", \"longitude_deg\", \"utc_offset_h\", \"north_deg\"}, \"date\", \"time\", \"rate\", \"weather\": {\"cloud_cover\", \"rain_mm_h\"}, \"sun\": {...}, \"moon\": {...}, \"sky\": {\"illuminance_lux\"}, \"defaults\": {\"date\", \"time\", \"rate\", \"weather\"}}. north_deg is where true north points in the world frame, counterclockwise from +X seen from above. \"sun\" holds \"azimuth_deg\", \"elevation_deg\", \"illuminance_lux\" (the direct light on a surface that faces it, after the atmosphere and the clouds; 0 below the horizon), \"rise\" and \"set\" (the local hours it rises and sets on the date, null when it does not). \"moon\" holds the same and \"phase_angle_deg\" (the angle at the moon between the sun and the observer: 0 full, 180 new), \"illuminated_fraction\" (0 to 1) and \"waxing\". \"sky\" gives the illuminance of the sky alone on an open horizontal surface.",
+          },
         },
       },
       {
-        // The local date, the hour or both. An empty date keeps the current
-        // date and an empty time the current hour; a request with both
-        // empty is rejected. The clock runs on from the new moment at its
-        // rate.
         name: "set_daylight_time",
+        description: "Set the local date, the hour or both. An empty date keeps the current date and an empty time the current hour; a request with both empty is rejected. The clock runs on from the new moment at its rate.",
         request_message_format: {
           date: "string",
           time: "string",
@@ -83,9 +37,8 @@
         },
       },
       {
-        // The clock rate: daylight seconds per simulated second, from 0
-        // (the hour holds) to 3600.
         name: "set_daylight_rate",
+        description: "Set the clock rate: daylight seconds per simulated second, from 0 (the hour holds) to 3600.",
         request_message_format: {
           rate: "f64",
         },
@@ -94,12 +47,8 @@
         },
       },
       {
-        // The weather. cloud_cover is the fraction of the sky the clouds
-        // cover, from 0 (clear) to 1 (overcast). rain_mm_h is the rain
-        // rate, from 0 (dry) to 50: light rain is under 2.5 mm/h, heavy
-        // rain above 7.6. Rain needs a cloud cover of at least 0.5: a
-        // request for rain under a clearer sky is rejected.
         name: "set_weather",
+        description: "Set the weather. cloud_cover is the fraction of the sky the clouds cover, from 0 (clear) to 1 (overcast). rain_mm_h is the rain rate, from 0 (dry) to 50: light rain is under 2.5 mm/h, heavy rain above 7.6. Rain needs a cloud cover of at least 0.5: a request for rain under a clearer sky is rejected.",
         request_message_format: {
           cloud_cover: "f64",
           rain_mm_h: "f64",
@@ -110,9 +59,8 @@
         },
       },
       {
-        // The date, the hour, the clock rate and the weather back to the
-        // loaded scene's authored values.
         name: "reset_daylight",
+        description: "Put the date, the hour, the clock rate and the weather back to the loaded scene's authored values.",
       },
     ],
   },

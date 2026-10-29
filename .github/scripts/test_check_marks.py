@@ -30,26 +30,32 @@ MARK_LIST = """
 """
 
 ARM = """
-// An arm.
 {
   peppy_schema: "contract/v1",
-  manifest: { name: "arm", tag: "v1" },
+  manifest: { name: "arm", tag: "v1", description: ["An arm."] },
   interfaces: {
     topics: [
-      { name: "state", qos_profile: "sensor_data", message_format: { x: "f64" } },
+      {
+        name: "state",
+        description: "The state of the arm.",
+        qos_profile: "sensor_data",
+        message_format: { x: { $type: "f64", $description: "The position of the arm (m)." } },
+      },
     ],
     services: [
       {
         name: "stop",
+        description: "Stop the arm.",
         request_message_format: { reason: "string" },
       },
     ],
     actions: [
       {
         name: "move",
+        description: "Move the arm to an item.",
         goal_service: {
           request_message_format: {
-            item_id: { $type: "string", $marks: ["item_id"] },
+            item_id: { $type: "string", $description: "The item to move to.", $marks: ["item_id"] },
           },
         },
         result_service: { response_message_format: { done: "bool" } },
@@ -68,7 +74,7 @@ def mark_entry(name="moves_robot", owner="peppy", meaning="The member moves the 
 def contract(interfaces):
     return {
         "peppy_schema": "contract/v1",
-        "manifest": {"name": "arm", "tag": "v1"},
+        "manifest": {"name": "arm", "tag": "v1", "description": ["An arm."]},
         "interfaces": interfaces,
     }
 
@@ -287,6 +293,52 @@ class ContractMarkSitesTest(unittest.TestCase):
                 ("action", "goal_service.response_message_format.value", ["goal_response"]),
                 ("action", "feedback_topic.message_format.value", ["feedback"]),
                 ("action", "result_service.response_message_format.value", ["result"]),
+            ],
+        )
+
+    def test_descriptions_are_not_marks_and_hide_no_mark(self):
+        # `description` on a member and `$description` on a field are text:
+        # neither is a field or a mark site, and a field named `description`
+        # is a field like any other.
+        sites = self.sites(
+            {
+                "services": [
+                    {
+                        "name": "check",
+                        "description": "Check the items.",
+                        "request_message_format": {
+                            "item_id": {
+                                "$type": "string",
+                                "$description": "The item to check.",
+                                "$marks": ["item_id"],
+                            },
+                            "description": {"$type": "string", "$marks": ["item_words"]},
+                        },
+                        "response_message_format": {
+                            "results": {
+                                "$type": "array",
+                                "$description": "One entry per item.",
+                                "$items": {
+                                    "$type": "object",
+                                    "$description": "The result of one item.",
+                                    "arm": {
+                                        "$type": "string",
+                                        "$description": "The arm that reaches the item.",
+                                        "$marks": ["arm_name"],
+                                    },
+                                },
+                            },
+                        },
+                    }
+                ]
+            }
+        )
+        self.assertEqual(
+            sites,
+            [
+                ("service", "check", "request_message_format.item_id", ["item_id"]),
+                ("service", "check", "request_message_format.description", ["item_words"]),
+                ("service", "check", "response_message_format.results[].arm", ["arm_name"]),
             ],
         )
 

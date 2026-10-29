@@ -1,381 +1,204 @@
-// Editing the world of a simulation engine while it runs: listing the assets
-// the engine can place, loading a scene, spawning, moving, pushing and
-// removing objects, and relocating a robot. Any engine that keeps a scene
-// graph can implement it; a commander only needs the contract, not the
-// engine.
-//
-// Asset ids come from get_assets_list and carry their kind as a prefix
-// ("scene/<id>" or "object/<id>"). Object ids are minted by the implementer
-// on spawn, and by the implementer that places the objects of a loaded scene
-// as objects of the same set. Each object also has a name. A spawned object
-// has the name spawn_object gave it, until the object is removed. An object
-// the loaded scene placed, a scene object, has the placement id the scene
-// authors, such as "mantel_clock_01", which each load of that scene gives it
-// again, where its object id is new. A name is lowercase letters, digits and
-// "_". No two objects share a name, and each placement id of the loaded
-// scene stays taken, also after its scene object is removed.
-// get_objects_list reports what stands in the scene and where, and
-// get_object reports one object at one instant, its landmarks in the world
-// frame and its state, for a caller that sets the world up, checks its setup
-// and checks an event it asked for; the engine's object_state contract
-// reports the same objects with their velocities, as a stream, for
-// evaluation. Robot names come from get_robots_list. Positions are
-// world-frame x, y, z in meters, headings are a yaw in radians about the
-// world's +z, orientations are unit quaternions [x, y, z, w] in the world
-// frame, forces are world-frame newtons, masses are kilograms.
-//
-// A snap, which spawn_object and move_object take, places an object so
-// that one of its belt ends continues a belt end of another object. Each
-// end is a landmark of use "inlet" or "outlet" (get_object lists an
-// object's landmarks, get_assets_list an asset's) whose outer edge, on its
-// axis behind an inlet's centre and ahead of an outlet's, is where its belt
-// ends. The two edges meet, centred on each other, the two belts running
-// away from the joint on either side of it, and the two belt tops level:
-// the placed object stands upright, turned about the world's +z, its
-// origin at the height of the other object's origin, and the implementer
-// sets the control that raises the body of its end, a displacement along
-// +z such as a conveyor's height, to the value that brings its end to the
-// other's height. Things then run from one belt onto the other across an
-// inlet snapped to an outlet when both belts run forward, and across two
-// inlets or two outlets when one of them runs backward. A goal with a snap
-// is refused with `rejected` for an object id that names no object, a
-// landmark the object or the asset does not declare, a landmark whose use
-// is neither "inlet" nor "outlet", two ends whose widths (their size
-// across) differ by more than 0.001 m, an end that does not face up, and an
-// end of the placed object that no control brings to the other's height
-// within its range. An implementer that keeps no landmark refuses every
-// snap with `rejected`. A snap that needs a control the implementer cannot
-// set where the placed object stands fails with `precondition_failed`, and
-// a snap whose ends the implementer finds apart once it placed the object
-// fails with `attempt_failed`.
-//
-// A goal that this contract refuses with a kind fails with that kind when
-// the implementer finds the cause only once the goal started. An
-// implementer that lets no caller edit or inspect its scene answers each
-// call it does not serve with `rejected`: an error reply to a service, a
-// refusal to a goal.
-//
-// An implementer may keep placement rules, such as how deep a placed thing
-// may sink into what stands around it and how near two robots may stand.
-// A spawn_object, move_object or move_robot whose place the rules refuse
-// fails with `precondition_failed`, and the message says why.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "scene_manipulation",
     tag: "v1",
+    description: [
+      "Editing the world of a simulation engine while it runs: listing the assets the engine can place, loading a scene, spawning, moving, pushing and removing objects, and relocating a robot. Any engine that keeps a scene graph can implement it; a commander only needs the contract, not the engine.",
+      "Asset ids come from get_assets_list and carry their kind as a prefix (\"scene/<id>\" or \"object/<id>\"). Object ids are minted by the implementer on spawn, and by the implementer that places the objects of a loaded scene as objects of the same set. Each object also has a name. A spawned object has the name spawn_object gave it, until the object is removed. An object the loaded scene placed, a scene object, has the placement id the scene authors, such as \"mantel_clock_01\", which each load of that scene gives it again, where its object id is new. A name is lowercase letters, digits and \"_\". No two objects share a name, and each placement id of the loaded scene stays taken, also after its scene object is removed. get_objects_list reports what stands in the scene and where, and get_object reports one object at one instant, its landmarks in the world frame and its state, for a caller that sets the world up, checks its setup and checks an event it asked for; the engine's object_state contract reports the same objects with their velocities, as a stream, for evaluation. Robot names come from get_robots_list. Positions are world-frame x, y, z in meters, headings are a yaw in radians about the world's +z, orientations are unit quaternions [x, y, z, w] in the world frame, forces are world-frame newtons, masses are kilograms.",
+      "A snap, which spawn_object and move_object take, places an object so that one of its belt ends continues a belt end of another object. Each end is a landmark of use \"inlet\" or \"outlet\" (get_object lists an object's landmarks, get_assets_list an asset's) whose outer edge, on its axis behind an inlet's centre and ahead of an outlet's, is where its belt ends. The two edges meet, centred on each other, the two belts running away from the joint on either side of it, and the two belt tops level: the placed object stands upright, turned about the world's +z, its origin at the height of the other object's origin, and the implementer sets the control that raises the body of its end, a displacement along +z such as a conveyor's height, to the value that brings its end to the other's height. Things then run from one belt onto the other across an inlet snapped to an outlet when both belts run forward, and across two inlets or two outlets when one of them runs backward. A goal with a snap is refused with `rejected` for an object id that names no object, a landmark the object or the asset does not declare, a landmark whose use is neither \"inlet\" nor \"outlet\", two ends whose widths (their size across) differ by more than 0.001 m, an end that does not face up, and an end of the placed object that no control brings to the other's height within its range. An implementer that keeps no landmark refuses every snap with `rejected`. A snap that needs a control the implementer cannot set where the placed object stands fails with `precondition_failed`, and a snap whose ends the implementer finds apart once it placed the object fails with `attempt_failed`.",
+      "A goal that this contract refuses with a kind fails with that kind when the implementer finds the cause only once the goal started. An implementer that lets no caller edit or inspect its scene answers each call it does not serve with `rejected`: an error reply to a service, a refusal to a goal.",
+      "An implementer may keep placement rules, such as how deep a placed thing may sink into what stands around it and how near two robots may stand. A spawn_object, move_object or move_robot whose place the rules refuse fails with `precondition_failed`, and the message says why.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // The catalogue of placeable assets, as a JSON array in assets_json.
-        // Every entry carries at least asset_id, display_name, description,
-        // kind ("scene" or "object") and category; implementers may add
-        // engine-specific fields. Each request field narrows the list; a
-        // field that is absent, or sent empty, narrows nothing, so a request
-        // without fields lists the whole catalogue.
         name: "get_assets_list",
+        description: "Give the catalogue of placeable assets, as a JSON array in assets_json. Each request field narrows the list; a field that is absent, or sent empty, narrows nothing, so a request without fields lists the whole catalogue.",
         request_message_format: {
-          // "scene" or "object". Another value gets an error reply with
-          // `rejected`.
-          kind: { $type: "string", $optional: true },
-          // A category get_asset_categories reports. An unknown one lists
-          // nothing.
-          category: { $type: "string", $optional: true },
-          // Text an entry's asset_id, display_name or description must
-          // contain, compared without regard to case.
-          query: { $type: "string", $optional: true },
+          kind: { $type: "string", $optional: true, $description: "\"scene\" or \"object\". Another value gets an error reply with `rejected`." },
+          category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. An unknown one lists nothing." },
+          query: { $type: "string", $optional: true, $description: "Text an entry's asset_id, display_name or description must contain, compared without regard to case." },
         },
         response_message_format: {
-          assets_json: "string",
+          assets_json: {
+            $type: "string",
+            $description: "The catalogue as a JSON array. Every entry carries at least asset_id, display_name, description, kind (\"scene\" or \"object\") and category; implementers may add engine-specific fields.",
+          },
         },
       },
       {
-        // The categories of the catalogue and how many assets each one
-        // holds, so a caller filters get_assets_list before it lists.
         name: "get_asset_categories",
+        description: "Give the categories of the catalogue and how many assets each one holds, so a caller filters get_assets_list before it lists.",
         response_message_format: {
           categories: {
             $type: "array",
             $items: {
               $type: "object",
-              // "scene" or "object".
-              kind: "string",
+              kind: { $type: "string", $description: "\"scene\" or \"object\"." },
               category: "string",
-              // Assets of this kind in this category.
-              count: "u32",
+              count: { $type: "u32", $description: "Assets of this kind in this category." },
             },
           },
         },
       },
       {
-        // What stands in the scene and where, for a caller that sets the
-        // world up and checks its setup: every object the implementer
-        // tracks, spawned by a caller or placed by the loaded scene, with
-        // its pose as of `timestamp`. A dynamic object can move after that
-        // instant. The order is the implementer's object order.
         name: "get_objects_list",
+        description: "Give what stands in the scene and where, for a caller that sets the world up and checks its setup: every object the implementer tracks, spawned by a caller or placed by the loaded scene, with its pose as of `timestamp`. A dynamic object can move after that instant. The order is the implementer's object order.",
         request_message_format: {
-          // "spawned" lists the objects a caller spawned, "scene" the
-          // objects the loaded scene placed. Absent, or empty, lists both.
-          // Another value gets an error reply with `rejected`. An
-          // implementer that tracks no scene-placed object as an object
-          // answers "scene" with an empty list.
-          source: { $type: "string", $optional: true },
-          // A category get_asset_categories reports. Absent, or empty,
-          // lists every category.
-          category: { $type: "string", $optional: true },
+          source: { $type: "string", $optional: true, $description: "\"spawned\" lists the objects a caller spawned, \"scene\" the objects the loaded scene placed. Absent, or empty, lists both. Another value gets an error reply with `rejected`. An implementer that tracks no scene-placed object as an object answers \"scene\" with an empty list." },
+          category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. Absent, or empty, lists every category." },
         },
         response_message_format: {
-          // Capture time of the poses, on the implementer's clock.
-          timestamp: "time",
+          timestamp: { $type: "time", $description: "Capture time of the poses, on the implementer's clock." },
           objects: {
             $type: "array",
             $items: {
               $type: "object",
-              // The id move_object, remove_object and apply_force take.
-              object_id: "string",
-              // The name of the header: the name spawn_object gave it, or the
-              // placement id of an object the loaded scene placed.
-              name: "string",
-              // The "object/<id>" asset the object is an instance of.
-              asset_id: "string",
-              // The asset's category, as get_asset_categories reports it.
-              category: "string",
-              // "spawned" or "scene".
-              source: "string",
-              // "dynamic", "static" or "none", as spawn_object takes it.
-              physics: "string",
-              // Mass (kg).
-              mass: "f64",
-              // Uniform scale; 1 = as authored.
-              scale: "f64",
-              // Where the object's origin stands: x, y, z (m).
-              position: { $type: "array", $items: "f64", $length: 3 },
-              // How the object is turned: a unit quaternion [x, y, z, w].
-              orientation: { $type: "array", $items: "f64", $length: 4 },
+              object_id: { $type: "string", $description: "The id move_object, remove_object and apply_force take." },
+              name: { $type: "string", $description: "The object's name, as the contract description defines it: the name spawn_object gave it, or the placement id of an object the loaded scene placed." },
+              asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of." },
+              category: { $type: "string", $description: "The asset's category, as get_asset_categories reports it." },
+              source: { $type: "string", $description: "\"spawned\" or \"scene\"." },
+              physics: { $type: "string", $description: "\"dynamic\", \"static\" or \"none\", as spawn_object takes it." },
+              mass: { $type: "f64", $description: "Mass (kg)." },
+              scale: { $type: "f64", $description: "Uniform scale; 1 = as authored." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "Where the object's origin stands: x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "How the object is turned: a unit quaternion [x, y, z, w]." },
             },
           },
         },
       },
       {
-        // One object at one instant, for a caller that sets the world up,
-        // checks its setup and checks an event it asked for: its pose, its
-        // landmarks in the world frame and its state, all as of
-        // `timestamp`. Each state field is present only for an object whose
-        // asset simulates it. An object_id that names no object gets an
-        // error reply with `rejected`.
         name: "get_object",
+        description: "Give one object at one instant, for a caller that sets the world up, checks its setup and checks an event it asked for: its pose, its landmarks in the world frame and its state, all as of `timestamp`. Each state field is present only for an object whose asset simulates it. An object_id that names no object gets an error reply with `rejected`.",
         request_message_format: {
-          // The id get_objects_list gives.
-          object_id: "string",
+          object_id: { $type: "string", $description: "The id get_objects_list gives." },
         },
         response_message_format: {
-          // The simulated instant of the pose, the landmarks and the
-          // state, on the implementer's clock.
-          timestamp: "time",
+          timestamp: { $type: "time", $description: "The simulated instant of the pose, the landmarks and the state, on the implementer's clock." },
           object_id: "string",
-          // The name of the header, as get_objects_list gives it.
-          name: "string",
-          // The "object/<id>" asset the object is an instance of.
-          asset_id: "string",
-          // Where the object's origin stands: x, y, z (m), as
-          // get_objects_list gives it.
-          position: { $type: "array", $items: "f64", $length: 3 },
-          // How the object is turned: a unit quaternion [x, y, z, w].
-          orientation: { $type: "array", $items: "f64", $length: 4 },
-          // Uniform scale; 1 = as authored.
-          scale: "f64",
-          // The working parts of the object that its asset declares, in
-          // the world frame: each at the pose its body has now and sized by
-          // the scale. Empty for an asset that declares none.
+          name: { $type: "string", $description: "The object's name, as get_objects_list gives it." },
+          asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of." },
+          position: { $type: "array", $items: "f64", $length: 3, $description: "Where the object's origin stands: x, y, z (m), as get_objects_list gives it." },
+          orientation: { $type: "array", $items: "f64", $length: 4, $description: "How the object is turned: a unit quaternion [x, y, z, w]." },
+          scale: { $type: "f64", $description: "Uniform scale; 1 = as authored." },
           landmarks: {
             $type: "array",
+            $description: "The working parts of the object that its asset declares, in the world frame: each at the pose its body has now and sized by the scale. Empty for an asset that declares none.",
             $items: {
               $type: "object",
-              // Unique in the asset, such as "base" or "zone_front_left".
-              name: "string",
-              // "base" (the face the object rests on), "support" (a face
-              // that things rest on or in, such as the inside bottom of a
-              // pan or a cooker zone), "opening" (the mouth of a
-              // container), "grip" (a handle), "inlet" or "outlet" (where a
-              // belt takes or gives things) or "tip" (the end of a spout or
-              // a tool).
-              use: "string",
-              // "point", "disc", "rectangle" or "bar".
-              shape: "string",
-              // The body of the object the landmark is fixed to; "root"
-              // for the object's root body.
-              body: "string",
-              // Its centre: x, y, z (m).
-              centre: { $type: "array", $items: "f64", $length: 3 },
-              // The unit vector it faces out of the object along: down for
-              // a base, up for a support, out of the mouth for an opening,
-              // the side a hand comes from for a grip, up from the belt for
-              // an inlet or an outlet, the way a tip points.
-              normal: { $type: "array", $items: "f64", $length: 3 },
-              // A unit vector at a right angle to normal, along which the
-              // first side of size lies: the first side of a rectangle, the
-              // length of a bar, the direction of travel at an inlet or an
-              // outlet; any such vector for a disc or a point.
-              axis: { $type: "array", $items: "f64", $length: 3 },
-              // Along axis, then across it (m): a disc's diameter twice, a
-              // bar's length and thickness, [0, 0] for a point.
-              size: { $type: "array", $items: "f64", $length: 2 },
+              name: { $type: "string", $description: "Unique in the asset, such as \"base\" or \"zone_front_left\"." },
+              use: { $type: "string", $description: "\"base\" (the face the object rests on), \"support\" (a face that things rest on or in, such as the inside bottom of a pan or a cooker zone), \"opening\" (the mouth of a container), \"grip\" (a handle), \"inlet\" or \"outlet\" (where a belt takes or gives things) or \"tip\" (the end of a spout or a tool)." },
+              shape: { $type: "string", $description: "\"point\", \"disc\", \"rectangle\" or \"bar\"." },
+              body: { $type: "string", $description: "The body of the object the landmark is fixed to; \"root\" for the object's root body." },
+              centre: { $type: "array", $items: "f64", $length: 3, $description: "Its centre: x, y, z (m)." },
+              normal: { $type: "array", $items: "f64", $length: 3, $description: "The unit vector it faces out of the object along: down for a base, up for a support, out of the mouth for an opening, the side a hand comes from for a grip, up from the belt for an inlet or an outlet, the way a tip points." },
+              axis: { $type: "array", $items: "f64", $length: 3, $description: "A unit vector at a right angle to normal, along which the first side of size lies: the first side of a rectangle, the length of a bar, the direction of travel at an inlet or an outlet; any such vector for a disc or a point." },
+              size: { $type: "array", $items: "f64", $length: 2, $description: "Along axis, then across it (m): a disc's diameter twice, a bar's length and thickness, [0, 0] for a point." },
             },
           },
-          // The world-frame box of every colliding geometry of the object
-          // now: its body, its loose pieces and its contents. Its lowest
-          // x, y, z and its highest x, y, z (m). Absent for an object with
-          // no colliding geometry.
           bounds: {
             $type: "object",
             $optional: true,
+            $description: "The world-frame box of every colliding geometry of the object now: its body, its loose pieces and its contents. Its lowest x, y, z and its highest x, y, z (m). Absent for an object with no colliding geometry.",
             min: { $type: "array", $items: "f64", $length: 3 },
             max: { $type: "array", $items: "f64", $length: 3 },
           },
-          // For an asset with pieces that break off: how many have broken
-          // off, of how many. The object is broken when pieces_off is above
-          // 0.
           breakage: {
             $type: "object",
             $optional: true,
+            $description: "For an asset with pieces that break off: how many have broken off, of how many. The object is broken when pieces_off is above 0.",
             pieces_off: "u32",
             pieces_total: "u32",
           },
-          // For an asset that holds a liquid: one entry for each phase of
-          // the liquid.
           contents: {
             $type: "array",
             $optional: true,
+            $description: "For an asset that holds a liquid: one entry for each phase of the liquid.",
             $items: {
               $type: "object",
-              // The phase's id, such as "yolk".
-              phase: "string",
-              // Its mass now (kg). It drops as water boils off.
-              mass: "f64",
-              // The share of that mass inside the shell, 0 to 1; 0 for an
-              // object without a shell.
-              in_shell: "f64",
-              // The centre of that mass: x, y, z (m).
-              centre: { $type: "array", $items: "f64", $length: 3 },
-              // The radius around the centre, in the horizontal plane,
-              // that holds 95 % of that mass (m).
-              spread: "f64",
-              // What the phase rests on: the object itself while its shell
-              // holds most of the phase, else what a ray straight down from
-              // the centre meets first past the whole object, named as
-              // scene_view's locate_in_view names a thing.
+              phase: { $type: "string", $description: "The phase's id, such as \"yolk\"." },
+              mass: { $type: "f64", $description: "Its mass now (kg). It drops as water boils off." },
+              in_shell: { $type: "f64", $description: "The share of that mass inside the shell, 0 to 1; 0 for an object without a shell." },
+              centre: { $type: "array", $items: "f64", $length: 3, $description: "The centre of that mass: x, y, z (m)." },
+              spread: { $type: "f64", $description: "The radius around the centre, in the horizontal plane, that holds 95 % of that mass (m)." },
               below: {
                 $type: "object",
-                // "object", "robot", "floor" or "backdrop"; "" when the ray
-                // meets nothing.
-                kind: "string",
-                // For an object: its object_id and its "object/<id>" asset.
-                object_id: "string",
-                asset_id: "string",
-                // For a robot: its name, and the part the ray meets, an arm
-                // or a gripper under the name the robot's limbs answer to,
-                // or "body" for the rest of the robot.
-                robot: "string",
-                part: "string",
-                // For "backdrop": the name the scene gives the piece.
-                name: "string",
+                $description: "What the phase rests on: the object itself while its shell holds most of the phase, else what a ray straight down from the centre meets first past the whole object, named as scene_view's locate_in_view names a thing.",
+                kind: { $type: "string", $description: "\"object\", \"robot\", \"floor\" or \"backdrop\"; \"\" when the ray meets nothing." },
+                object_id: { $type: "string", $description: "For an object: its object_id." },
+                asset_id: { $type: "string", $description: "For an object: its \"object/<id>\" asset." },
+                robot: { $type: "string", $description: "For a robot: its name." },
+                part: { $type: "string", $description: "For a robot: the part the ray meets, an arm or a gripper under the name the robot's limbs answer to, or \"body\" for the rest of the robot." },
+                name: { $type: "string", $description: "For \"backdrop\": the name the scene gives the piece." },
               },
-              // How far the phase has set and browned, each a mean over its
-              // mass, 0 to 1.
-              set: "f64",
-              browned: "f64",
-              // Its temperature, the mean over its mass (degrees C).
-              temperature_c: "f64",
+              set: { $type: "f64", $description: "How far the phase has set, a mean over its mass, 0 to 1." },
+              browned: { $type: "f64", $description: "How far the phase has browned, a mean over its mass, 0 to 1." },
+              temperature_c: { $type: "f64", $description: "Its temperature, the mean over its mass (degrees C)." },
             },
           },
-          // For each phase of the contents that a membrane holds, such as
-          // a yolk: whether the membrane is whole.
           membranes: {
             $type: "array",
             $optional: true,
+            $description: "For each phase of the contents that a membrane holds, such as a yolk: whether the membrane is whole.",
             $items: {
               $type: "object",
               phase: "string",
               whole: "bool",
             },
           },
-          // For an asset with a part that crushes, one entry for each such
-          // part.
           crush: {
             $type: "array",
             $optional: true,
+            $description: "For an asset with a part that crushes, one entry for each such part.",
             $items: {
               $type: "object",
-              // The body that crushes.
-              body: "string",
-              // True once its load passed the load that crushes it. What
-              // is crushed stays crushed.
-              crushed: "bool",
-              // How far its rest point moved from where it started: metres
-              // along a slide, radians about a hinge.
-              crushed_by: "f64",
+              body: { $type: "string", $description: "The body that crushes." },
+              crushed: { $type: "bool", $description: "True once its load passed the load that crushes it. What is crushed stays crushed." },
+              crushed_by: { $type: "f64", $description: "How far its rest point moved from where it started: metres along a slide, radians about a hinge." },
             },
           },
-          // For an object that takes and gives heat: its temperature now.
           heat: {
             $type: "object",
             $optional: true,
-            // Degrees C.
-            temperature_c: "f64",
+            $description: "For an object that takes and gives heat: its temperature now.",
+            temperature_c: { $type: "f64", $description: "Degrees C." },
           },
-          // For an object with heaters, one entry for each heater: the
-          // temperature of what it heats directly, the glass of an
-          // induction zone or the air of an oven.
           heaters: {
             $type: "array",
             $optional: true,
+            $description: "For an object with heaters, one entry for each heater: the temperature of what it heats directly, the glass of an induction zone or the air of an oven.",
             $items: {
               $type: "object",
-              // The heater's name, such as "zone_front_left" or "oven".
-              name: "string",
-              // Degrees C.
-              temperature_c: "f64",
+              name: { $type: "string", $description: "The heater's name, such as \"zone_front_left\" or \"oven\"." },
+              temperature_c: { $type: "f64", $description: "Degrees C." },
             },
           },
         },
       },
       {
-        // The scene that is loaded now: the "scene/<id>" asset load_scene
-        // took, or the implementer's default scene after clear_scene, and
-        // the scale it stands at. An implementer that opens on no scene
-        // answers an empty asset_id until a load.
         name: "get_scene",
+        description: "Give the scene that is loaded now: the \"scene/<id>\" asset load_scene took, or the implementer's default scene after clear_scene, and the scale it stands at. An implementer that opens on no scene answers an empty asset_id until a load.",
         response_message_format: {
           asset_id: "string",
-          // Uniform scale of the scene; 1 = as authored.
-          scale: "f64",
+          scale: { $type: "f64", $description: "Uniform scale of the scene; 1 = as authored." },
         },
       },
       {
-        // The robots standing in the world, one entry each, so a commander
-        // lists what it may address and a test counts what the world holds.
         name: "get_robots_list",
+        description: "Give the robots standing in the world, one entry each, so a commander lists what it may address and a test counts what the world holds.",
         response_message_format: {
           robots: {
             $type: "array",
             $items: {
               $type: "object",
-              // The instance name that addresses this robot, which is what
-              // move_robot takes.
-              robot: "string",
-              // The id of the engine's robot catalogue it stands as.
-              model: "string",
-              // Where its base stands: x, y, z in metres.
-              position: { $type: "array", $items: "f64", $length: 3 },
-              // Which way the base faces: rotation about the world's +z in
-              // radians.
-              yaw: "f64",
-              // True for a robot that joined over simulation_robot, false
-              // for a robot the world stands itself, which leaves only with
-              // the simulation.
-              attached: "bool",
+              robot: { $type: "string", $description: "The instance name that addresses this robot, which is what move_robot takes." },
+              model: { $type: "string", $description: "The id of the engine's robot catalogue it stands as." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "Where its base stands: x, y, z in metres." },
+              yaw: { $type: "f64", $description: "Which way the base faces: rotation about the world's +z in radians." },
+              attached: { $type: "bool", $description: "True for a robot that joined over simulation_robot, false for a robot the world stands itself, which leaves only with the simulation." },
             },
           },
         },
@@ -383,205 +206,98 @@
     ],
     actions: [
       {
-        // Replace the current scene with the asset named by asset_id, which
-        // must be of kind "scene". Spawned objects are removed first. A load
-        // that arrives while another one runs may replace it: the replaced
-        // goal then ends cancelled, with a reason that names the load that
-        // replaced it. A build of simulation_world that comes before the load
-        // has handed its command over ends it cancelled the same way, naming
-        // the build. The load is refused with `rejected` for an asset_id
-        // that names no scene of the catalogue and for a scale the
-        // implementer does not take, and fails with `attempt_failed` when
-        // the scene does not load.
         name: "load_scene",
+        description: "Replace the current scene with the asset named by asset_id, which must be of kind \"scene\". Spawned objects are removed first. A load that arrives while another one runs may replace it: the replaced goal then ends cancelled, with a reason that names the load that replaced it. A build of simulation_world that comes before the load has handed its command over ends it cancelled the same way, naming the build. The load is refused with `rejected` for an asset_id that names no scene of the catalogue and for a scale the implementer does not take, and fails with `attempt_failed` when the scene does not load. The feedback gives one message when the goal is accepted, then one whenever a field of the feedback changes, a few changes of a short period in one message, and none while nothing changes: silence means the goal makes no progress. The stream ends with the goal. The result is empty.",
         goal_service: {
           request_message_format: {
             asset_id: "string",
-            // Uniform scale applied to the scene; 1 = as authored.
-            scale: "f64",
+            scale: { $type: "f64", $description: "Uniform scale applied to the scene; 1 = as authored." },
           },
         },
-        // One message when the goal is accepted, then one whenever a field
-        // below changes, a few changes of a short period in one message,
-        // and none while nothing changes: silence means the goal makes no
-        // progress. The stream ends with the goal.
         feedback_topic: {
           qos_profile: "standard",
           message_format: {
-            // Bytes of the scene's asset files received so far; 0 for an
-            // engine that fetches nothing.
-            bytes_fetched: "u64",
-            // Files of the scene that are ready: found in the engine's
-            // cache or received whole.
-            files_ready: "u64",
-            // True once every file is ready and the engine builds the
-            // scene.
-            building: "bool",
-            // Bytes of the scene's asset files that are in the engine's
-            // cache: each file found there or received whole, and the bytes
-            // received so far of each file in transfer, each byte counted
-            // once. bytes_ready of bytes_total is the share of the fetch
-            // that is done.
-            bytes_ready: "u64",
-            // Bytes of every asset file the scene needs, as the catalogue
-            // records them; 0 for an engine that fetches nothing.
-            bytes_total: "u64",
-            // Bytes received per second over the last two seconds, the
-            // rate of bytes_fetched; 0 once nothing arrived for two
-            // seconds, and once the engine builds the scene.
-            bytes_per_second: "u64",
+            bytes_fetched: { $type: "u64", $description: "Bytes of the scene's asset files received so far; 0 for an engine that fetches nothing." },
+            files_ready: { $type: "u64", $description: "Files of the scene that are ready: found in the engine's cache or received whole." },
+            building: { $type: "bool", $description: "True once every file is ready and the engine builds the scene." },
+            bytes_ready: { $type: "u64", $description: "Bytes of the scene's asset files that are in the engine's cache: each file found there or received whole, and the bytes received so far of each file in transfer, each byte counted once. bytes_ready of bytes_total is the share of the fetch that is done." },
+            bytes_total: { $type: "u64", $description: "Bytes of every asset file the scene needs, as the catalogue records them; 0 for an engine that fetches nothing." },
+            bytes_per_second: { $type: "u64", $description: "Bytes received per second over the last two seconds, the rate of bytes_fetched; 0 once nothing arrived for two seconds, and once the engine builds the scene." },
           },
         },
         result_service: {},
       },
       {
-        // Remove every spawned object and restore the default scene. It
-        // fails with `attempt_failed` when the default scene does not load.
         name: "clear_scene",
+        description: "Remove every spawned object and restore the default scene. It fails with `attempt_failed` when the default scene does not load. The action gives no feedback and an empty result.",
         goal_service: {},
         result_service: {},
       },
       {
-        // Place one instance of an "object" asset and report its new id and
-        // its name. The spawn is refused with `rejected` when the asset is
-        // unknown or the arguments are invalid. It fails with
-        // `precondition_failed` when the placement rules of the header
-        // refuse its place, and with `attempt_failed` when the object does
-        // not spawn. A build of simulation_world that comes before the spawn
-        // has handed its command over ends it cancelled, with a reason that
-        // names the build, and it spawns nothing.
         name: "spawn_object",
+        description: "Place one instance of an \"object\" asset and report its new id and its name. The spawn is refused with `rejected` when the asset is unknown or the arguments are invalid. It fails with `precondition_failed` when the placement rules that the contract description names refuse its place, and with `attempt_failed` when the object does not spawn. A build of simulation_world that comes before the spawn has handed its command over ends it cancelled, with a reason that names the build, and it spawns nothing. The feedback gives one message when the goal is accepted, then one whenever a field of the feedback changes, a few changes of a short period in one message, and none while nothing changes: silence means the goal makes no progress. The stream ends with the goal. The result gives the id and the name of the new object.",
         goal_service: {
           request_message_format: {
             asset_id: "string",
             position: { $type: "array", $items: "f64", $length: 3 },
-            // Rotation about the world's +z in radians; 0 = as authored.
-            // Ignored when orientation is present.
-            yaw: "f64",
-            // When present, the object's orientation in the world frame, a
-            // unit quaternion [x, y, z, w], in place of yaw. A quaternion
-            // whose length differs from 1 by more than 0.001 is refused with
-            // `rejected`; inside that, the implementer normalises it.
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
-            // Uniform scale; 1 = as authored.
-            scale: "f64",
-            // "dynamic" (simulated, falls and collides), "static" (collides,
-            // never moves) or "none" (visual only).
-            physics: "string",
-            // Mass (kg) of a dynamic object; ignored otherwise.
-            mass: "f64",
-            // The object's name, of the form the header gives and free by
-            // its rules: a name of another form, one that an object holds,
-            // and a placement id of the loaded scene are refused with
-            // `rejected`, and a name that another spawn takes while this one
-            // fetches its files fails it with `rejected`. Absent or empty,
-            // the implementer names the object from its asset, such as
-            // "crate" or "crate_2".
-            name: { $type: "string", $optional: true },
-            // The feeder that spawns the object, by a name of the form the
-            // header gives, for a spawn that is not setup: the simulation
-            // keeps such a spawn out of its setup record (simulation_world).
-            // A feeder of another form is refused with `rejected`. Absent or
-            // empty for a spawn of the setup.
-            feeder: { $type: "string", $optional: true },
-            // When present, the object stands where the snap of the header
-            // places it, and position, yaw and orientation are not read.
+            yaw: { $type: "f64", $description: "Rotation about the world's +z in radians; 0 = as authored. Ignored when orientation is present." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "When present, the object's orientation in the world frame, a unit quaternion [x, y, z, w], in place of yaw. A quaternion whose length differs from 1 by more than 0.001 is refused with `rejected`; inside that, the implementer normalises it." },
+            scale: { $type: "f64", $description: "Uniform scale; 1 = as authored." },
+            physics: { $type: "string", $description: "\"dynamic\" (simulated, falls and collides), \"static\" (collides, never moves) or \"none\" (visual only)." },
+            mass: { $type: "f64", $description: "Mass (kg) of a dynamic object; ignored otherwise." },
+            name: { $type: "string", $optional: true, $description: "The object's name, of the form the contract description gives and free by its rules: a name of another form, one that an object holds, and a placement id of the loaded scene are refused with `rejected`, and a name that another spawn takes while this one fetches its files fails it with `rejected`. Absent or empty, the implementer names the object from its asset, such as \"crate\" or \"crate_2\"." },
+            feeder: { $type: "string", $optional: true, $description: "The feeder that spawns the object, by a name of the form the contract description gives, for a spawn that is not setup: the simulation keeps such a spawn out of its setup record (simulation_world). A feeder of another form is refused with `rejected`. Absent or empty for a spawn of the setup." },
             snap_to: {
               $type: "object",
               $optional: true,
-              // The object whose belt end this one continues: an id
-              // get_objects_list gives.
-              object_id: "string",
-              // That object's landmark at its belt end, by name.
-              landmark: "string",
-              // The landmark of the asset that meets it, by name.
-              own_landmark: "string",
+              $description: "When present, the object stands where the snap that the contract description defines places it, and position, yaw and orientation are not read.",
+              object_id: { $type: "string", $description: "The object whose belt end this one continues: an id get_objects_list gives." },
+              landmark: { $type: "string", $description: "That object's landmark at its belt end, by name." },
+              own_landmark: { $type: "string", $description: "The landmark of the asset that meets it, by name." },
             },
           },
         },
-        // One message when the goal is accepted, then one whenever a field
-        // below changes, a few changes of a short period in one message,
-        // and none while nothing changes: silence means the goal makes no
-        // progress. The stream ends with the goal.
         feedback_topic: {
           qos_profile: "standard",
           message_format: {
-            // Bytes of the object's asset files received so far; 0 for an
-            // engine that fetches nothing.
-            bytes_fetched: "u64",
-            // Files of the object that are ready: found in the engine's
-            // cache or received whole.
-            files_ready: "u64",
-            // True once every file is ready and the engine builds the
-            // object.
-            building: "bool",
-            // Bytes of the object's asset files that are in the engine's
-            // cache: each file found there or received whole, and the bytes
-            // received so far of each file in transfer, each byte counted
-            // once. bytes_ready of bytes_total is the share of the fetch
-            // that is done.
-            bytes_ready: "u64",
-            // Bytes of every asset file the object needs, as the catalogue
-            // records them; 0 for an engine that fetches nothing.
-            bytes_total: "u64",
-            // Bytes received per second over the last two seconds, the
-            // rate of bytes_fetched; 0 once nothing arrived for two
-            // seconds, and once the engine builds the object.
-            bytes_per_second: "u64",
+            bytes_fetched: { $type: "u64", $description: "Bytes of the object's asset files received so far; 0 for an engine that fetches nothing." },
+            files_ready: { $type: "u64", $description: "Files of the object that are ready: found in the engine's cache or received whole." },
+            building: { $type: "bool", $description: "True once every file is ready and the engine builds the object." },
+            bytes_ready: { $type: "u64", $description: "Bytes of the object's asset files that are in the engine's cache: each file found there or received whole, and the bytes received so far of each file in transfer, each byte counted once. bytes_ready of bytes_total is the share of the fetch that is done." },
+            bytes_total: { $type: "u64", $description: "Bytes of every asset file the object needs, as the catalogue records them; 0 for an engine that fetches nothing." },
+            bytes_per_second: { $type: "u64", $description: "Bytes received per second over the last two seconds, the rate of bytes_fetched; 0 once nothing arrived for two seconds, and once the engine builds the object." },
           },
         },
         result_service: {
           response_message_format: {
-            // The implementer-minted id of the new object; empty when the
-            // goal ends cancelled and built nothing.
-            object_id: "string",
-            // The object's name: the one the request gave, or the one the
-            // implementer gave it; empty when the goal ends cancelled and
-            // built nothing.
-            name: "string",
+            object_id: { $type: "string", $description: "The implementer-minted id of the new object; empty when the goal ends cancelled and built nothing." },
+            name: { $type: "string", $description: "The object's name: the one the request gave, or the one the implementer gave it; empty when the goal ends cancelled and built nothing." },
           },
         },
       },
       {
-        // Teleport an object to a new position, zeroing its velocity. It
-        // keeps its orientation unless the goal carries one. The move is
-        // refused with `rejected` for an object_id that names no object and
-        // for an orientation that spawn_object refuses. It fails with
-        // `precondition_failed` when the placement rules of the header
-        // refuse the place, and with `attempt_failed` when the object does
-        // not move.
         name: "move_object",
+        description: "Teleport an object to a new position, zeroing its velocity. It keeps its orientation unless the goal carries one. The move is refused with `rejected` for an object_id that names no object and for an orientation that spawn_object refuses. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place, and with `attempt_failed` when the object does not move. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             object_id: "string",
             position: { $type: "array", $items: "f64", $length: 3 },
-            // When present, the object's new orientation in the world
-            // frame, a unit quaternion [x, y, z, w], validated as
-            // spawn_object validates it. Absent keeps the orientation the
-            // object has.
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true },
-            // When present, the object moves where the snap of the header
-            // places it, and position and orientation are not read. An
-            // object never snaps to itself.
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "When present, the object's new orientation in the world frame, a unit quaternion [x, y, z, w], validated as spawn_object validates it. Absent keeps the orientation the object has." },
             snap_to: {
               $type: "object",
               $optional: true,
-              // The object whose belt end this one continues: an id
-              // get_objects_list gives.
-              object_id: "string",
-              // That object's landmark at its belt end, by name.
-              landmark: "string",
-              // The landmark of the moved object that meets it, by name.
-              own_landmark: "string",
+              $description: "When present, the object moves where the snap that the contract description defines places it, and position and orientation are not read. An object never snaps to itself.",
+              object_id: { $type: "string", $description: "The object whose belt end this one continues: an id get_objects_list gives." },
+              landmark: { $type: "string", $description: "That object's landmark at its belt end, by name." },
+              own_landmark: { $type: "string", $description: "The landmark of the moved object that meets it, by name." },
             },
           },
         },
         result_service: {},
       },
       {
-        // Delete an object. An object_id that names no object is refused
-        // with `rejected`.
         name: "remove_object",
+        description: "Delete an object. An object_id that names no object is refused with `rejected`. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             object_id: "string",
@@ -590,13 +306,8 @@
         result_service: {},
       },
       {
-        // Push a dynamic object with a constant world-frame force for
-        // duration_s seconds. The goal completes once the push is scheduled,
-        // not when it ends. A push on an object_id that names no object or
-        // an object that cannot move, with a force that is not finite, or
-        // with a duration the implementer does not take, is refused with
-        // `rejected`.
         name: "apply_force",
+        description: "Push a dynamic object with a constant world-frame force for duration_s seconds. The goal completes once the push is scheduled, not when it ends. A push on an object_id that names no object or an object that cannot move, with a force that is not finite, or with a duration the implementer does not take, is refused with `rejected`. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             object_id: "string",
@@ -607,24 +318,13 @@
         result_service: {},
       },
       {
-        // Relocate one robot's base to a new world-frame position and
-        // heading, keeping its joint configuration. `robot` is the instance
-        // name the engine reports in get_robots_list; an engine hosting
-        // several moves that one and leaves the rest standing. A caller that
-        // only translates passes back the yaw get_robots_list reports. The
-        // move is refused with `resource_unavailable` for a robot that does
-        // not stand in the world, and with `rejected` for a position or a
-        // yaw the implementer does not take. It fails with
-        // `precondition_failed` when the placement rules of the header
-        // refuse the place.
         name: "move_robot",
+        description: "Relocate one robot's base to a new world-frame position and heading, keeping its joint configuration. `robot` is the instance name the engine reports in get_robots_list; an engine hosting several moves that one and leaves the rest standing. A caller that only translates passes back the yaw get_robots_list reports. The move is refused with `resource_unavailable` for a robot that does not stand in the world, and with `rejected` for a position or a yaw the implementer does not take. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             robot: "string",
             position: { $type: "array", $items: "f64", $length: 3 },
-            // Which way the base faces once moved: rotation about the
-            // world's +z in radians.
-            yaw: "f64",
+            yaw: { $type: "f64", $description: "Which way the base faces once moved: rotation about the world's +z in radians." },
           },
         },
         result_service: {},

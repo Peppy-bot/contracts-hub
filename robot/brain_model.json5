@@ -1,84 +1,50 @@
-// Which model a brain runs for each of its roles, the models it can run, and
-// the way to change one while the brain runs. A role is a part of the
-// brain's work that a model does: "perception" finds and names items
-// (item_perception), "manipulation" moves them (item_manipulation). A brain
-// lists every role it has, and that set is fixed for the brain's life. A
-// role's model may be "none": the brain then refuses that role's goals with
-// `precondition_failed`, and the message names the missing model.
-//
-// Model names are the brain's own names for the models it can run, the same
-// in every member of this contract. They are opaque: callers compare them and
-// pass them back, and read nothing into their text.
-//
-// Each role has one active model. A goal uses the model of its own role
-// alone: scan_items and identify_item the perception model, grab_item,
-// drop_item and place_item the manipulation model. A switch never changes
-// the model of a goal that runs.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "brain_model",
     tag: "v1",
+    description: [
+      "Which model a brain runs for each of its roles, the models it can run, and the way to change one while the brain runs.",
+      "A role is a part of the brain's work that a model does: \"perception\" finds and names items (item_perception), \"manipulation\" moves them (item_manipulation). A brain lists every role it has, and that set is fixed for the brain's life. A role's model may be \"none\": the brain then refuses that role's goals with `precondition_failed`, and the message names the missing model.",
+      "Model names are the brain's own names for the models it can run, the same in every member of this contract. They are opaque: callers compare them and pass them back, and read nothing into their text.",
+      "Each role has one active model. A goal uses the model of its own role alone: scan_items and identify_item the perception model, grab_item, drop_item and place_item the manipulation model. A switch never changes the model of a goal that runs.",
+    ],
   },
   interfaces: {
     actions: [
       {
-        // The switch is refused with `rejected` when the brain runs no model
-        // for the role, and when the model is not one list_models gives for
-        // the role. It is refused with `precondition_failed` while a goal of
-        // that role runs (scan_items or identify_item for perception;
-        // grab_item, drop_item or place_item for manipulation; the message
-        // names it), and while another switch_model for the role runs; a
-        // switch that meets such a goal or switch only once it started fails
-        // with `precondition_failed`. It fails with `resource_unavailable`
-        // when the brain cannot reach the model, and with `attempt_failed`
-        // when the model cannot serve the role. A refused, failed or cancelled switch leaves the role with
-        // the model it had. A cancelled switch gives the reason of the
-        // cancel, and its role and model are empty.
         name: "switch_model",
+        description: "Make model the active model of role while the brain runs. The action gives no feedback. The result gives the role and the model now active for it. The switch is refused with `rejected` when the brain runs no model for the role, and when the model is not one list_models gives for the role. It is refused with `precondition_failed` while a goal of that role runs (scan_items or identify_item for perception; grab_item, drop_item or place_item for manipulation; the message names it), and while another switch_model for the role runs; a switch that meets such a goal or switch only once it started fails with `precondition_failed`. It fails with `resource_unavailable` when the brain cannot reach the model, and with `attempt_failed` when the model cannot serve the role. A refused, failed or cancelled switch leaves the role with the model it had. A cancelled switch gives the reason of the cancel, and its role and model are empty.",
         goal_service: {
           request_message_format: {
-            // The role whose model changes, as get_model names it.
-            role: "string",
-            // The model to make active for that role, one of the names
-            // list_models gives for that role.
-            model: "string",
+            role: { $type: "string", $description: "The role whose model changes, as get_model names it." },
+            model: { $type: "string", $description: "The model to make active for that role, one of the names list_models gives for that role." },
           },
         },
         result_service: {
           response_message_format: {
-            // The role, as the goal named it.
-            role: "string",
-            // The model now active for the role.
-            model: "string",
-            // Wall-clock duration of the action (s).
-            action_time: "f64",
+            role: { $type: "string", $description: "The role, as the goal named it." },
+            model: { $type: "string", $description: "The model now active for the role." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
           },
         },
       },
     ],
     services: [
       {
-        // The active model of each role the brain has.
         name: "get_model",
+        description: "Give the active model of each role the brain has.",
         response_message_format: {
-          // One entry per role, in a stable order. The array below is
-          // index aligned with this one.
-          roles: { $type: "array", $items: "string" },
-          // The active model of that role.
-          models: { $type: "array", $items: "string" },
+          roles: { $type: "array", $items: "string", $description: "One entry per role, in a stable order. models is index aligned with this array." },
+          models: { $type: "array", $items: "string", $description: "The active model of that role." },
         },
       },
       {
-        // Every model switch_model accepts, per role.
         name: "list_models",
+        description: "Give every model switch_model accepts, per role.",
         response_message_format: {
-          // One entry per model a role accepts, grouped by role in
-          // get_model's order: a role repeats once per model. The array
-          // below is index aligned with this one.
-          roles: { $type: "array", $items: "string" },
-          // A model that role accepts, its active model among them.
-          models: { $type: "array", $items: "string" },
+          roles: { $type: "array", $items: "string", $description: "One entry per model a role accepts, grouped by role in get_model's order: a role repeats once per model. models is index aligned with this array." },
+          models: { $type: "array", $items: "string", $description: "A model that role accepts, its active model among them." },
         },
       },
     ],
