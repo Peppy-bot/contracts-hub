@@ -15,8 +15,9 @@
 // robots, each under the name `run <id>` of its run, lists the locations of
 // the skills of each role and refuses a run that names a location a skill of
 // its role does not know (locations:v1, which the director calls whatever the
-// allowed contracts), checks the assumptions, then runs the initialization of
-// each role and its lane. A run calls only the members of the allowed
+// allowed contracts), refuses a run whose bound physical robot has an
+// alert:v1 alert of severity 2 or 3, checks the assumptions, then runs the
+// initialization of each role and its lane. A run calls only the members of the allowed
 // contracts of the director. No member here has the mark `moves_robot`: the
 // director asks the daemon (robot_leases.check_move) before each call of a
 // member with that mark, under its own leases. A read of an observation ends
@@ -340,12 +341,13 @@
       },
       {
         // Resumes a suspended run: it closes the open lease of each robot of
-        // the suspended lanes, checks the done_when of each cancelled or
-        // failed call, the invariant of each enclosing step and the reach
-        // checks of the roles, then goes on until the run ends or suspends.
-        // A refused resume fails with run_suspended after a run_suspends
-        // event whose suspension names the false check, and opens those
-        // leases again.
+        // the suspended lanes, refuses while an alert:v1 alert of severity 2
+        // or 3 stands on one of those robots, checks the done_when of each
+        // cancelled or failed call, the invariant of each enclosing step and
+        // the reach checks of the roles, then goes on until the run ends or
+        // suspends. A refused resume fails with run_suspended after a
+        // run_suspends event whose suspension names the alert or the false
+        // check, and opens those leases again.
         name: "resume",
         goal_service: {
           request_message_format: { run: "string" },
