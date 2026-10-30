@@ -16,6 +16,7 @@
       "The implementer measures the pose of every arm when the goal completes or ends cancelled, after the moves of all its arms ended.",
       "When an arm has no fresh measured pose then, the three arrays are empty: the implementer never measured the joints of that arm, or their last measurement is stale.",
       "After a cancel or a stop, an arm that was still moving can come to rest away from the reported pose.",
+      "The positions and orientations in the robot frame have the mark `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a position or an orientation only from a field with this mark of a result or an observation of the same role, never as a literal.",
     ],
   },
   failure_kinds: {
@@ -35,8 +36,8 @@
         result_service: {
           response_message_format: {
             arm_names: { $type: "array", $items: "string", $description: "The implementer's arm names (e.g. \"left_arm\") in its fixed order, or none, per the pose rule of this contract." },
-            positions: { $type: "array", $items: "f64", $description: "Measured grasp-point positions (m), per the pose rule of this contract." },
-            orientations: { $type: "array", $items: "f64", $description: "Measured grasp-point orientations, per the pose rule of this contract." },
+            positions: { $type: "array", $items: "f64", $marks: ["robot_frame"], $description: "Measured grasp-point positions (m), per the pose rule of this contract." },
+            orientations: { $type: "array", $items: "f64", $marks: ["robot_frame"], $description: "Measured grasp-point orientations, per the pose rule of this contract." },
           },
         },
         failure_kinds: ["unreachable", "leader_streaming"],
@@ -53,8 +54,8 @@
         result_service: {
           response_message_format: {
             arm_names: { $type: "array", $items: "string", $description: "The implementer's arm names (e.g. \"left_arm\") in its fixed order, or none, per the pose rule of this contract." },
-            positions: { $type: "array", $items: "f64", $description: "Measured grasp-point positions (m), per the pose rule of this contract." },
-            orientations: { $type: "array", $items: "f64", $description: "Measured grasp-point orientations, per the pose rule of this contract." },
+            positions: { $type: "array", $items: "f64", $marks: ["robot_frame"], $description: "Measured grasp-point positions (m), per the pose rule of this contract." },
+            orientations: { $type: "array", $items: "f64", $marks: ["robot_frame"], $description: "Measured grasp-point orientations, per the pose rule of this contract." },
           },
         },
         failure_kinds: ["unreachable", "leader_streaming"],

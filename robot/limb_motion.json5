@@ -12,6 +12,7 @@
       "move_arm_joints, move_arm and move_gripper have the mark `moves_robot`, and stop and check_arm_move have no mark: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls a move, so a stop never waits for a lease.",
       "Every tolerance a goal carries is a positive number in its unit, and every duration and timeout a number of seconds from 0 to 60: an arm move with a timeout of 0 fails at its planned end unless the arm already stands within tolerance. A goal that names other values is refused with `rejected`.",
       "A move goal is refused with `leader_streaming` while a leader streams its limb, and with `precondition_failed` while the limb executes another move. A leader is a robot commander, such as a leader arm or the browser panel, or the headset. An arm move that does not settle by its timeout fails with `timeout`, and the message says how far the arm still stands from the target and how long after the planned end. A move fails with `resource_unavailable` when its limb stops answering, and with `attempt_failed` when it cannot go on for another reason. A cancelled goal gives the reason of the cancel and its result, measured when the move ended. A failed goal gives no result.",
+      "The positions and orientations in the robot frame have the mark `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a position or an orientation only from a field with this mark of a result or an observation of the same role, never as a literal.",
     ],
   },
   failure_kinds: {
@@ -47,8 +48,8 @@
         goal_service: {
           request_message_format: {
             arm_name: { $type: "string", $description: "Which arm, named from the implementer's fixed set of limb names (e.g. \"left_arm\"). An unknown name is refused with `rejected`." },
-            position: { $type: "array", $items: "f64", $length: 3, $description: "Target grasp-point position, robot frame: x, y, z (m)." },
-            orientation: { $type: "array", $items: "f64", $length: 4, $description: "Target grasp-point orientation, quaternion [x, y, z, w]." },
+            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Target grasp-point position, robot frame: x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"], $description: "Target grasp-point orientation, quaternion [x, y, z, w]." },
             duration_s: { $type: "f64", $description: "Requested trajectory duration (s), up to 60; floored at the implementer's velocity-limit duration. 0 = fastest." },
             plan_position_tolerance_m: { $type: "f64", $description: "Position slack (m): the Euclidean distance between the commanded and planned grasp-point positions." },
             plan_orientation_tolerance_rad: { $type: "f64", $description: "Orientation slack (rad): the geodesic angle between the commanded and planned orientations, q and -q naming one rotation." },
@@ -59,8 +60,8 @@
         },
         result_service: {
           response_message_format: {
-            final_position: { $type: "array", $items: "f64", $length: 3, $description: "Measured grasp-point position when the action ended: x, y, z (m)." },
-            final_orientation: { $type: "array", $items: "f64", $length: 4, $description: "Measured grasp-point orientation, quaternion [x, y, z, w]." },
+            final_position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Measured grasp-point position when the action ended: x, y, z (m)." },
+            final_orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"], $description: "Measured grasp-point orientation, quaternion [x, y, z, w]." },
             action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
           },
         },
@@ -105,8 +106,8 @@
         description: "Tell whether a move_arm goal with these fields has a plan from where the arm is commanded now, without moving it. The request holds the fields of the move_arm goal that decide whether it has a plan, with the same meaning. It checks what move_arm checks before it moves, and no more: it does not check collisions with the robot itself or with what stands around it. A request that move_arm would refuse gets an error reply with the kind of that refusal: `rejected` for an unknown arm or a field that move_arm does not take, `precondition_failed` while the arm executes a move, which the check does not disturb, and `leader_streaming` while a leader streams the arm.",
         request_message_format: {
           arm_name: "string",
-          position: { $type: "array", $items: "f64", $length: 3 },
-          orientation: { $type: "array", $items: "f64", $length: 4 },
+          position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
+          orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"] },
           duration_s: "f64",
           plan_position_tolerance_m: "f64",
           plan_orientation_tolerance_rad: "f64",

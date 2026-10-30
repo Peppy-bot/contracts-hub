@@ -15,6 +15,7 @@
       "Workable. Reachable and in view; reachable alone for a robot without a perception camera, or for one that has no camera geometry for it.",
       "A surface is measured on a grid of points 0.0 to 1.0 m ahead of the robot every 0.02 m and 0.30 m to either side every 0.05 m, each at a target 0.04 m above the surface. It is workable when its workable points cover at least 0.03 m^2, each point standing for 0.001 m^2.",
       "A request the implementer refuses gets an error reply with `rejected`. An implementer that cannot read its perception camera's geometry gives an error reply with `precondition_failed`.",
+      "The positions in the robot frame have the mark `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a position only from a field with this mark of a result or an observation of the same role, never as a literal.",
     ],
   },
   interfaces: {
@@ -38,7 +39,7 @@
         name: "check_positions",
         description: "Tell whether the robot can work each of the given points: whether an arm reaches it and the perception camera sees it.",
         request_message_format: {
-          positions: { $type: "array", $items: "f64", $description: "The points, 3 entries each (x, y, z, m) in the robot frame. An empty list, a length that is not a multiple of 3, a value that is not a finite number and a coordinate more than 1000 m from the robot's base point get an error reply with `rejected`." },
+          positions: { $type: "array", $items: "f64", $marks: ["robot_frame"], $description: "The points, 3 entries each (x, y, z, m) in the robot frame. An empty list, a length that is not a multiple of 3, a value that is not a finite number and a coordinate more than 1000 m from the robot's base point get an error reply with `rejected`." },
         },
         response_message_format: {
           perception_camera: { $type: "string", $description: "As in describe_workspace." },
@@ -48,7 +49,7 @@
             $description: "One entry per point, in the request's order.",
             $items: {
               $type: "object",
-              position: { $type: "array", $items: "f64", $length: 3, $description: "The point, as asked." },
+              position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "The point, as asked." },
               workable: { $type: "bool", $description: "Whether the robot can work it." },
               reachable: { $type: "bool", $description: "Whether an arm reaches it." },
               arm: { $type: "string", $description: "The arm that reaches it, by the name limb_motion addresses it under; \"\" when none does." },

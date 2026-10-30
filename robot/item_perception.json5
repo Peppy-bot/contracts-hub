@@ -12,6 +12,7 @@
       "A position says where and is always reported. An orientation says how and is optional where it appears: absent means the implementer never resolved it, which is the honest answer for a symmetric item and for a detector that reports position alone, so a caller can tell a resolved orientation from one that was merely filled in. A scan reports positions alone; a caller that needs how an item is turned asks identify_item for it, or hands the item to grab_item and leaves the approach to the implementer.",
       "An item identifier names that one item for as long as the implementer can still account for it; item_manipulation refuses one the implementer no longer recognises. Identifiers are opaque: callers compare them and pass them back, and read nothing into their text. Both actions mint from one set: an identifier from either is valid wherever an item_id is taken, and a later scan or search that recognises an item it already reported keeps that item's identifier rather than minting another, so the handles a caller holds survive looking again.",
       "One search at a time, scan and identify alike. A goal that arrives while a search is running is refused with `precondition_failed`, and the running search continues untouched; a goal that meets another search only once it started fails with `precondition_failed`. A goal is refused with `resource_unavailable` when no perception source is available, and a search that finds its source gone when it looks fails with `resource_unavailable`. A search fails with `timeout` when its upper bound passes before it has an answer, and with `attempt_failed` when it cannot look for another reason. A failed goal gives no result.",
+      "The fields that hold an item identifier have the mark `item_id`, and the positions and orientations in the robot frame the mark `robot_frame` (marks.json5). The workflow side reads them: a workflow passes the value of such a field only from a field with the same mark of a result or an observation, an item identifier of the same node instance and a position or an orientation of the same role, never as a literal.",
     ],
   },
   failure_kinds: {
@@ -29,9 +30,9 @@
         },
         result_service: {
           response_message_format: {
-            item_ids: { $type: "array", $items: "string", $description: "One entry per item found, in the implementer's order; labels, positions, confidences and regions are index aligned with this array. Identifiers are the ones identify_item and item_manipulation address." },
+            item_ids: { $type: "array", $items: "string", $marks: ["item_id"], $description: "One entry per item found, in the implementer's order; labels, positions, confidences and regions are index aligned with this array. Identifiers are the ones identify_item and item_manipulation address." },
             labels: { $type: "array", $items: "string", $description: "What the implementer recognised each item as, in whatever vocabulary it uses; empty where it has no name for the item. Labels may repeat: two items of one kind get one label each and distinct identifiers, and callers tell them apart by position." },
-            positions: { $type: "array", $items: "f64", $description: "Item positions, robot frame: 3 entries (x, y, z, m) per item, in item_ids order." },
+            positions: { $type: "array", $items: "f64", $marks: ["robot_frame"], $description: "Item positions, robot frame: 3 entries (x, y, z, m) per item, in item_ids order." },
             confidences: { $type: "array", $items: "f64", $description: "How sure the implementer is of each identification, 0 to 1. 0 where the implementer reports no confidence of its own." },
             regions: { $type: "array", $items: "f64", $description: "Where each item is in the picture: 4 entries (x0, y0, x1, y1, pixels) per item, in item_ids order, the corners of the region that holds the item. Four zeros for an item this scan did not see and reports from an earlier look. Empty when the implementer has no picture." },
             camera: { $type: "string", $description: "The name the camera the regions belong to runs under; empty when the implementer has no picture." },
@@ -53,10 +54,10 @@
         },
         result_service: {
           response_message_format: {
-            item_id: { $type: "string", $description: "Identifier minted for the item that was found, to be passed to item_manipulation's grab_item." },
+            item_id: { $type: "string", $marks: ["item_id"], $description: "Identifier minted for the item that was found, to be passed to item_manipulation's grab_item." },
             label: { $type: "string", $description: "What the implementer recognised the item as, in whatever vocabulary it uses. Empty when it has no name for the item." },
-            position: { $type: "array", $items: "f64", $length: 3, $description: "Item position, robot frame: x, y, z (m)." },
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "Item orientation, quaternion [x, y, z, w]. Absent when the implementer located the item without resolving how it is turned. A caller that passes item_id to grab_item leaves the approach to the implementer; one that grasps by pose supplies its own." },
+            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Item position, robot frame: x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"], $description: "Item orientation, quaternion [x, y, z, w]. Absent when the implementer located the item without resolving how it is turned. A caller that passes item_id to grab_item leaves the approach to the implementer; one that grasps by pose supplies its own." },
             confidence: { $type: "f64", $description: "How sure the implementer is of this identification, 0 to 1. 0 when the implementer reports no confidence of its own." },
             region: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "Where the item is in the picture: x0, y0, x1, y1 (pixels), the corners of the region that holds it. Absent when the implementer has no picture." },
             camera: { $type: "string", $description: "The name the camera the region belongs to runs under; empty when the implementer has no picture." },
