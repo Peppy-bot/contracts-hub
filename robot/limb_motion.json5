@@ -1,59 +1,18 @@
-// Discrete, planned moves of one limb of a multi-arm manipulator: a
-// joint-space arm move, a Cartesian arm move, and a gripper move, each
-// addressed by a limb name from the implementer's fixed set of names.
-// Each goal is planned and executed by the implementer and returns a result; they are distinct from the streamed
-// setpoints on the joint_link / gripper_link / pose_link pairings.
-//
-// Every Cartesian pose, commanded or reported, is the gripper's grasp point,
-// in the robot frame, position in meters and orientation as a unit
-// quaternion [x, y, z, w]. On a gripper whose jaws close symmetrically, it
-// is on the jaw closing axis midway between the pads. The SO-101 gripper
-// has one moving jaw, so the midpoint of its pads moves with the opening.
-// Thus, the SO-101 takes and reports a fixed point near its jaws.
-//
-// The robot frame is fixed to the robot's base: its origin is the point
-// the base stands on, +X points the way the robot faces, +Y to its left
-// and +Z up. It moves with the robot, and it is not a frame of the room or
-// of a simulated world.
-//
-// Every move settles from the planned end of its motion on, and its
-// caller's settle_timeout_s bounds how long that may take. An arm move
-// completes as soon as the arm stands within the tolerance the caller
-// names, and fails if it does not by the timeout. A gripper move completes
-// as soon as the jaws stand still, on the target or stopped short of it by
-// what they hold, and at the timeout it completes wherever they stand: a
-// grasp is expected to stop short, so a gripper move never fails on its
-// settle. Any move ends early when its caller cancels it or the stop
-// service ends every move in flight, whoever started them. check_arm_move
-// asks whether a Cartesian move has a plan, and moves nothing.
-//
-// move_arm_joints, move_arm and move_gripper have the mark `moves_robot`,
-// and stop and check_arm_move have no mark: each MCP server, `peppy node
-// call` and each lease holder asks the daemon (`robot_leases.check_move`)
-// whether it may move the robot before it calls a move, so a stop never
-// waits for a lease.
-//
-// Every tolerance a goal carries is a positive number in its unit, and
-// every duration and timeout a number of seconds from 0 to 60: an arm move
-// with a timeout of 0 fails at its planned end unless the arm already
-// stands within tolerance. A goal that names other values is refused with
-// `rejected`.
-//
-// A move goal is refused with `leader_streaming` while a leader streams
-// its limb, and with `precondition_failed` while the limb executes another
-// move. A leader is a robot commander, such as a leader arm or the browser
-// panel, or the headset. An arm move that does not settle by its timeout
-// fails with `timeout`, and the message says how far the arm still stands
-// from the target and how long after the planned end. A move fails with
-// `resource_unavailable` when its limb stops answering, and with
-// `attempt_failed` when it cannot go on for another reason. A cancelled
-// goal gives the reason of the cancel and its result, measured when the
-// move ended. A failed goal gives no result.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "limb_motion",
     tag: "v1",
+    description: [
+      "Discrete, planned moves of one limb of a multi-arm manipulator: a joint-space arm move, a Cartesian arm move, and a gripper move, each addressed by a limb name from the implementer's fixed set of names.",
+      "Each goal is planned and executed by the implementer and returns a result; they are distinct from the streamed setpoints on the joint_link / gripper_link / pose_link pairings.",
+      "Every Cartesian pose, commanded or reported, is the gripper's grasp point, in the robot frame, position in meters and orientation as a unit quaternion [x, y, z, w]. On a gripper whose jaws close symmetrically, it is on the jaw closing axis midway between the pads. The SO-101 gripper has one moving jaw, so the midpoint of its pads moves with the opening. Thus, the SO-101 takes and reports a fixed point near its jaws.",
+      "The robot frame is fixed to the robot's base: its origin is the point the base stands on, +X points the way the robot faces, +Y to its left and +Z up. It moves with the robot, and it is not a frame of the room or of a simulated world.",
+      "Every move settles from the planned end of its motion on, and its caller's settle_timeout_s bounds how long that may take. An arm move completes as soon as the arm stands within the tolerance the caller names, and fails if it does not by the timeout. A gripper move completes as soon as the jaws stand still, on the target or stopped short of it by what they hold, and at the timeout it completes wherever they stand: a grasp is expected to stop short, so a gripper move never fails on its settle. Any move ends early when its caller cancels it or the stop service ends every move in flight, whoever started them. check_arm_move asks whether a Cartesian move has a plan, and moves nothing.",
+      "move_arm_joints, move_arm and move_gripper have the mark `moves_robot`, and stop and check_arm_move have no mark: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls a move, so a stop never waits for a lease.",
+      "Every tolerance a goal carries is a positive number in its unit, and every duration and timeout a number of seconds from 0 to 60: an arm move with a timeout of 0 fails at its planned end unless the arm already stands within tolerance. A goal that names other values is refused with `rejected`.",
+      "A move goal is refused with `leader_streaming` while a leader streams its limb, and with `precondition_failed` while the limb executes another move. A leader is a robot commander, such as a leader arm or the browser panel, or the headset. An arm move that does not settle by its timeout fails with `timeout`, and the message says how far the arm still stands from the target and how long after the planned end. A move fails with `resource_unavailable` when its limb stops answering, and with `attempt_failed` when it cannot go on for another reason. A cancelled goal gives the reason of the cancel and its result, measured when the move ended. A failed goal gives no result.",
+    ],
   },
   failure_kinds: {
     unreachable: "No plan to the target",
@@ -63,37 +22,20 @@
     actions: [
       {
         name: "move_arm_joints",
+        description: "Move one arm to a joint configuration, on a trajectory that the implementer plans, and wait until each measured joint settles within its tolerance of its target. The action gives no feedback. The result gives the measured joint positions when the action ended.",
         goal_service: {
           request_message_format: {
-            // Which arm, named from the implementer's fixed set of limb
-            // names (e.g. "left_arm"). An unknown name is refused with
-            // `rejected`.
-            arm_name: "string",
-            // Target joint positions (rad), one per joint of the arm in its
-            // fixed joint order.
-            joint_positions: { $type: "array", $items: "f64" },
-            // Requested trajectory duration (s), up to 60; floored at the
-            // implementer's velocity-limit duration. 0 = fastest.
-            duration_s: "f64",
-            // The move completes once, at or after the planned end of the
-            // trajectory, each measured joint stands within its tolerance
-            // (rad) of its target: one value per joint of the arm, in its
-            // fixed joint order.
-            settle_tolerances_rad: { $type: "array", $items: "f64" },
-            // How long (s) after the planned end the joints may still stand
-            // outside their tolerances before the move fails. The arm then
-            // holds where it stands either way: on the target, or where the
-            // implementer's collision guard held it short.
-            settle_timeout_s: "f64",
+            arm_name: { $type: "string", $description: "Which arm, named from the implementer's fixed set of limb names (e.g. \"left_arm\"). An unknown name is refused with `rejected`." },
+            joint_positions: { $type: "array", $items: "f64", $description: "Target joint positions (rad), one per joint of the arm in its fixed joint order." },
+            duration_s: { $type: "f64", $description: "Requested trajectory duration (s), up to 60; floored at the implementer's velocity-limit duration. 0 = fastest." },
+            settle_tolerances_rad: { $type: "array", $items: "f64", $description: "The move completes once, at or after the planned end of the trajectory, each measured joint stands within its tolerance (rad) of its target: one value per joint of the arm, in its fixed joint order." },
+            settle_timeout_s: { $type: "f64", $description: "How long (s) after the planned end the joints may still stand outside their tolerances before the move fails. The arm then holds where it stands either way: on the target, or where the implementer's collision guard held it short." },
           },
         },
         result_service: {
           response_message_format: {
-            // Measured joint positions (rad) when the action ended, one per
-            // joint of the arm in its fixed joint order.
-            final_joint_positions: { $type: "array", $items: "f64" },
-            // Wall-clock duration of the action (s).
-            action_time: "f64",
+            final_joint_positions: { $type: "array", $items: "f64", $description: "Measured joint positions (rad) when the action ended, one per joint of the arm in its fixed joint order." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
           },
         },
         failure_kinds: ["leader_streaming"],
@@ -101,60 +43,25 @@
       },
       {
         name: "move_arm",
+        description: "Move the grasp point of one arm to a pose in the robot frame, on a trajectory that the implementer plans, and wait until the measured grasp point settles at the pose. Not every arm can meet a position and an orientation at once. An arm with fewer than six actuated joints cannot generally do both, and even a redundant one runs out of postures near its limits. So rather than let the implementer decide how close is close enough, the caller names the slack it will accept and the goal is planned within it. A goal that no solution reaches inside both plan tolerances fails with `unreachable` rather than being quietly approximated. The plan tolerances bound the plan, not the path taken to it. The move completes once, at or after the planned end of the trajectory, the measured grasp point stands within both settle tolerances of the commanded pose. Each settle tolerance must be at least the plan tolerance of its axis, since the plan may sit that far from the commanded pose. The action gives no feedback. The result gives the measured grasp-point pose when the action ended.",
         goal_service: {
           request_message_format: {
-            // Which arm, named from the implementer's fixed set of limb
-            // names (e.g. "left_arm"). An unknown name is refused with
-            // `rejected`.
-            arm_name: "string",
-            // Target grasp-point position, robot frame: x, y, z (m).
-            position: { $type: "array", $items: "f64", $length: 3 },
-            // Target grasp-point orientation, quaternion [x, y, z, w].
-            orientation: { $type: "array", $items: "f64", $length: 4 },
-            // Requested trajectory duration (s), up to 60; floored at the
-            // implementer's velocity-limit duration. 0 = fastest.
-            duration_s: "f64",
-            // Not every arm can meet a position and an orientation at once. An
-            // arm with fewer than six actuated joints cannot generally do both,
-            // and even a redundant one runs out of postures near its limits. So
-            // rather than let the implementer decide how close is close enough,
-            // the caller names the slack it will accept and the goal is planned
-            // within it. A goal that no solution reaches inside both tolerances
-            // fails with `unreachable` rather than being quietly approximated.
-            //
-            // They bound the plan, not the path taken to it. Where the arm
-            // finally stops is judged by the settle tolerances below.
-            //
-            // Position slack (m): the Euclidean distance between the
-            // commanded and planned grasp-point positions.
-            plan_position_tolerance_m: "f64",
-            // Orientation slack (rad): the geodesic angle between the
-            // commanded and planned orientations, q and -q naming one
-            // rotation.
-            plan_orientation_tolerance_rad: "f64",
-            // The move completes once, at or after the planned end of the
-            // trajectory, the measured grasp point stands within both of these
-            // of the commanded pose: the position (m) as the Euclidean
-            // distance, the orientation (rad) as the geodesic angle. Each must
-            // be at least the plan tolerance of its axis, since the plan may
-            // sit that far from the commanded pose.
-            settle_position_tolerance_m: "f64",
-            settle_orientation_tolerance_rad: "f64",
-            // How long (s) after the planned end the grasp point may still
-            // stand outside the settle tolerances before the move fails. The
-            // arm then holds where it stands either way: on the target, or
-            // where the implementer's collision guard held it short.
-            settle_timeout_s: "f64",
+            arm_name: { $type: "string", $description: "Which arm, named from the implementer's fixed set of limb names (e.g. \"left_arm\"). An unknown name is refused with `rejected`." },
+            position: { $type: "array", $items: "f64", $length: 3, $description: "Target grasp-point position, robot frame: x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $description: "Target grasp-point orientation, quaternion [x, y, z, w]." },
+            duration_s: { $type: "f64", $description: "Requested trajectory duration (s), up to 60; floored at the implementer's velocity-limit duration. 0 = fastest." },
+            plan_position_tolerance_m: { $type: "f64", $description: "Position slack (m): the Euclidean distance between the commanded and planned grasp-point positions." },
+            plan_orientation_tolerance_rad: { $type: "f64", $description: "Orientation slack (rad): the geodesic angle between the commanded and planned orientations, q and -q naming one rotation." },
+            settle_position_tolerance_m: { $type: "f64", $description: "Position settle tolerance (m): the Euclidean distance between the measured and commanded grasp-point positions. At least plan_position_tolerance_m." },
+            settle_orientation_tolerance_rad: { $type: "f64", $description: "Orientation settle tolerance (rad): the geodesic angle between the measured and commanded orientations. At least plan_orientation_tolerance_rad." },
+            settle_timeout_s: { $type: "f64", $description: "How long (s) after the planned end the grasp point may still stand outside the settle tolerances before the move fails. The arm then holds where it stands either way: on the target, or where the implementer's collision guard held it short." },
           },
         },
         result_service: {
           response_message_format: {
-            // Measured grasp-point position when the action ended: x, y, z (m).
-            final_position: { $type: "array", $items: "f64", $length: 3 },
-            // Measured grasp-point orientation, quaternion [x, y, z, w].
-            final_orientation: { $type: "array", $items: "f64", $length: 4 },
-            // Wall-clock duration of the action (s).
-            action_time: "f64",
+            final_position: { $type: "array", $items: "f64", $length: 3, $description: "Measured grasp-point position when the action ended: x, y, z (m)." },
+            final_orientation: { $type: "array", $items: "f64", $length: 4, $description: "Measured grasp-point orientation, quaternion [x, y, z, w]." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
           },
         },
         failure_kinds: ["unreachable", "leader_streaming"],
@@ -162,47 +69,20 @@
       },
       {
         name: "move_gripper",
+        description: "Drive one gripper to an opening and wait until its jaws stand still. From the planned end of the commanded travel on, the move completes as soon as the measured opening has stood still: every opening the gripper reported over 0.25 s lies within 0.01 of full jaw travel of the others. Jaws an object or the effort cap stops short of the target stand still there, and complete the move too. settle_timeout_s after the planned end the move completes wherever the jaws stand. The action gives no feedback. The result tells whether the jaws stood still before the timeout, and gives the measured opening when the move ended.",
         goal_service: {
           request_message_format: {
-            // Which gripper, named from the implementer's fixed set of
-            // gripper names (e.g. "left_gripper"). An unknown name is
-            // refused with `rejected`.
-            gripper_name: "string",
-            // Target opening as a fraction of full jaw travel: 0 = closed,
-            // 1 = fully open.
-            opening: "f64",
-            // Maximum effort toward the target (magnitude, in the gripper's
-            // effort unit). 0 = no preference; the implementer's configured
-            // ceiling applies.
-            max_effort: "f64",
-            // The longest (s) the move waits for the jaws to stand still,
-            // from the planned end of the commanded travel on: the tick the
-            // commanded opening, ramping to the target at the implementer's
-            // opening rate, comes to rest on the target or where the
-            // implementer's collision guard holds it.
-            settle_timeout_s: "f64",
+            gripper_name: { $type: "string", $description: "Which gripper, named from the implementer's fixed set of gripper names (e.g. \"left_gripper\"). An unknown name is refused with `rejected`." },
+            opening: { $type: "f64", $description: "Target opening as a fraction of full jaw travel: 0 = closed, 1 = fully open." },
+            max_effort: { $type: "f64", $description: "Maximum effort toward the target (magnitude, in the gripper's effort unit). 0 = no preference; the implementer's configured ceiling applies." },
+            settle_timeout_s: { $type: "f64", $description: "The longest (s) the move waits for the jaws to stand still, from the planned end of the commanded travel on: the tick the commanded opening, ramping to the target at the implementer's opening rate, comes to rest on the target or where the implementer's collision guard holds it." },
           },
         },
         result_service: {
           response_message_format: {
-            // From the planned end of the commanded travel on, the move
-            // completes as soon as the measured opening has stood still:
-            // every opening the gripper reported over 0.25 s lies within
-            // 0.01 of full jaw travel of the others. Jaws an object or the
-            // effort cap stops short of the target stand still there, and
-            // complete the move too. settle_timeout_s after the planned end
-            // the move completes wherever the jaws stand.
-            //
-            // True when the jaws stood still before the settle timeout;
-            // false when the move completed at the timeout.
-            settled: "bool",
-            // Measured opening fraction when the move ended: the target, the
-            // opening where an object or the effort cap stopped the jaws, or
-            // wherever they stood at the settle timeout. The caller judges a
-            // grasp from it.
-            final_opening: "f64",
-            // Wall-clock duration of the action (s).
-            action_time: "f64",
+            settled: { $type: "bool", $description: "True when the jaws stood still before the settle timeout; false when the move completed at the timeout." },
+            final_opening: { $type: "f64", $description: "Measured opening fraction when the move ended: the target, the opening where an object or the effort cap stopped the jaws, or wherever they stood at the settle timeout. The caller judges a grasp from it." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
           },
         },
         failure_kinds: ["leader_streaming"],
@@ -211,40 +91,19 @@
     ],
     services: [
       {
-        // Ends every planned move in flight on this robot, whoever started
-        // it: the moves of this contract and the posture moves of the same
-        // implementer. Each limb holds where it is commanded, as after a
-        // cancel, and each goal that the stop ends is cancelled, with a
-        // reason that names the stop and the reason of the stop request. A
-        // goal that arrives after the stop runs as usual. Setpoints streamed
-        // on a pairing are not stopped. The stop gives an error reply, with
-        // `attempt_failed`, only when the stop itself cannot be carried out.
         name: "stop",
+        description: "End every planned move in flight on this robot, whoever started it: the moves of this contract and the posture moves of the same implementer. Each limb holds where it is commanded, as after a cancel, and each goal that the stop ends is cancelled, with a reason that names the stop and the reason of the stop request. A goal that arrives after the stop runs as usual. Setpoints streamed on a pairing are not stopped. The stop gives an error reply, with `attempt_failed`, only when the stop itself cannot be carried out.",
         request_message_format: {
-          // Why the moves are stopped, carried into the reason of each goal
-          // the stop ends. Empty is accepted.
-          reason: "string",
+          reason: { $type: "string", $description: "Why the moves are stopped, carried into the reason of each goal the stop ends. Empty is accepted." },
         },
         response_message_format: {
-          // The limbs whose move was stopped, by their limb names; empty
-          // when nothing moved, as for a stop with nothing in flight.
-          stopped: { $type: "array", $items: "string" },
+          stopped: { $type: "array", $items: "string", $description: "The limbs whose move was stopped, by their limb names; empty when nothing moved, as for a stop with nothing in flight." },
         },
       },
       {
-        // Whether a move_arm goal with these fields has a plan from where
-        // the arm is commanded now, without moving it. It checks what
-        // move_arm checks before it moves, and no more: it does not check
-        // collisions with the robot itself or with what stands around it.
-        // A request that move_arm would refuse gets an error reply with the
-        // kind of that refusal: `rejected` for an unknown arm or a field
-        // that move_arm does not take, `precondition_failed` while the arm
-        // executes a move, which the check does not disturb, and
-        // `leader_streaming` while a leader streams the arm.
         name: "check_arm_move",
+        description: "Tell whether a move_arm goal with these fields has a plan from where the arm is commanded now, without moving it. The request holds the fields of the move_arm goal that decide whether it has a plan, with the same meaning. It checks what move_arm checks before it moves, and no more: it does not check collisions with the robot itself or with what stands around it. A request that move_arm would refuse gets an error reply with the kind of that refusal: `rejected` for an unknown arm or a field that move_arm does not take, `precondition_failed` while the arm executes a move, which the check does not disturb, and `leader_streaming` while a leader streams the arm.",
         request_message_format: {
-          // The fields of the move_arm goal that decide whether it has a
-          // plan, with the same meaning.
           arm_name: "string",
           position: { $type: "array", $items: "f64", $length: 3 },
           orientation: { $type: "array", $items: "f64", $length: 4 },
@@ -253,13 +112,9 @@
           plan_orientation_tolerance_rad: "f64",
         },
         response_message_format: {
-          // True when a plan exists.
-          reachable: "bool",
-          // Why no plan exists, in the words that a move_arm failure with
-          // the kind `unreachable` gives; empty when reachable.
-          reason: "string",
-          // The time the move would take (s); 0 when not reachable.
-          duration_s: "f64",
+          reachable: { $type: "bool", $description: "True when a plan exists." },
+          reason: { $type: "string", $description: "Why no plan exists, in the words that a move_arm failure with the kind `unreachable` gives; empty when reachable." },
+          duration_s: { $type: "f64", $description: "The time the move would take (s); 0 when not reachable." },
         },
         failure_kinds: ["leader_streaming"],
       },

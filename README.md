@@ -11,7 +11,14 @@ Create a new `.json5` file under the relevant category:
 ```json5
 {
   peppy_schema: "contract/v1",
-  manifest: { name: "<contract_name>", tag: "<tag>" }, // tag is a contract identifier like "v1", not semver (dots forbidden)
+  manifest: {
+    name: "<contract_name>",
+    tag: "<tag>", // tag is a contract identifier like "v1", not semver (dots forbidden)
+    description: [
+      "<What the contract is for, in one or two sentences: peppy repo search prints this paragraph.>",
+      "<What a caller needs besides: units, frames, the rules to slice arrays.>",
+    ],
+  },
   interfaces: {
     topics:   [ /* ... */ ],
     services: [ /* ... */ ],
@@ -19,6 +26,8 @@ Create a new `.json5` file under the relevant category:
   }
 }
 ```
+
+The description of a contract is a list of paragraphs, and each topic, service and action has a `description` of one string, right after its `name`. A field of a message format can have a `$description` beside its `$type`: `{ $type: "f64", $description: "<text>" }`. Peppy refuses a contract without its description, or with a member without its description, and reads no rule from a description: `$enum`, marks and failure kinds stay the rules. Notes for the maintainers and the implementers stay comments.
 
 ## Marks
 
@@ -56,7 +65,7 @@ publishes. Rename yours: within one repository, a `name:tag` is claimed by exact
 
 The **Contract similarity** workflow runs when a pull request is opened, updated, reopened, or
 edited. Claude compares added and modified contracts with the target branch's contracts,
-including their comments, topics, services, actions, and action goals. It looks for meaningful
+including their descriptions, comments, topics, services, actions, and action goals. It looks for meaningful
 overlap in purpose, not just matching field names, and explains relevant differences. New
 contracts are included even before they appear in `peppy_repository.json5`.
 

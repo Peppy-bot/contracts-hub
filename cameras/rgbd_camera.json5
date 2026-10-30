@@ -1,33 +1,31 @@
-// RGB-D camera contract: a device that emits synchronized color + depth
-// streams (e.g. Intel RealSense D4xx, or a simulated/mock RGB-D node). Color
-// and depth share a frame_id (a capture-pair counter, not a coordinate frame)
-// so consumers can correlate paired frames without timestamp matching. Cameras
-// that emit only color implement rgb_camera. Depth-derived stereo IR and IMU
-// streams are out of scope; an implementation exposing them should implement
-// an additional contract for those. Device-specific hardware knobs (depth
-// sensor gain, laser projector power, runtime re-alignment) are native
-// services on the implementing node, not contract members: the contract only
-// carries what every RGB-D device can honor. Frame alignment stays visible as
-// data through each stream header's align_mode field.
+// Depth-derived stereo IR and IMU streams are out of scope; an
+// implementation exposing them should implement an additional contract for
+// those.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "rgbd_camera",
-    tag: "v1"
+    tag: "v1",
+    description: [
+      "A color and depth (RGB-D) camera: a device or a simulated camera that streams synchronized color and depth frames, such as an Intel RealSense D4xx. A camera that streams only color implements rgb_camera.",
+      "Color and depth share a frame_id (a capture-pair counter, not a coordinate frame) so consumers can correlate paired frames without timestamp matching. Frame alignment stays visible as data through each stream header's align_mode field.",
+      "The contract only carries what every RGB-D device can honor: the controls act on the color stream. Device-specific hardware knobs (depth sensor gain, laser projector power, runtime re-alignment) are native services on the implementing node, not contract members. Each control value is in the unit and the range of the device, which get_camera_profile of camera_profile gives where the camera also implements it. Each setter answers with the value that the camera applies after the call; the device can clamp the requested value.",
+    ],
   },
   interfaces: {
     topics: [
       {
         name: "video_stream",
+        description: "The color frames of the camera, as it captures them. frame holds one image of width by height pixels in encoding.",
         qos_profile: "sensor_data",
         message_format: {
           header: {
             $type: "object",
             timestamp: "time",
             frame_id: "u32",
-            align_mode: "string",   // e.g. "none" | "depth_to_color" | "color_to_depth"
+            align_mode: { $type: "string", $description: "How the color and depth frames are aligned, e.g. \"none\", \"depth_to_color\" or \"color_to_depth\"." },
           },
-          encoding: "string",   // e.g. "rgb8" | "bgr8" | "yuyv" | "mjpeg"
+          encoding: { $type: "string", $description: "The encoding of frame, e.g. \"rgb8\", \"bgr8\", \"yuyv\" or \"mjpeg\"." },
           width: "u32",
           height: "u32",
           frame: {
@@ -38,15 +36,16 @@
       },
       {
         name: "depth_stream",
+        description: "The depth frames of the camera, as it captures them. frame holds one depth sample per pixel, width by height, in encoding. A sample times the depth_unit of depth_stream_info is the depth in meters, and 0 marks a pixel that the camera measured nothing at.",
         qos_profile: "sensor_data",
         message_format: {
           header: {
             $type: "object",
             timestamp: "time",
             frame_id: "u32",
-            align_mode: "string",   // e.g. "none" | "depth_to_color" | "color_to_depth"
+            align_mode: { $type: "string", $description: "How the color and depth frames are aligned, e.g. \"none\", \"depth_to_color\" or \"color_to_depth\"." },
           },
-          encoding: "string",   // e.g. "z16" (u16 little-endian)
+          encoding: { $type: "string", $description: "The encoding of frame, e.g. \"z16\" (u16 little-endian)." },
           width: "u32",
           height: "u32",
           frame: {
@@ -59,6 +58,7 @@
     services: [
       {
         name: "video_stream_info",
+        description: "Give the stream that video_stream carries: its width and height in pixels, its frame rate and its encoding.",
         response_message_format: {
           width: "u32",
           height: "u32",
@@ -68,19 +68,21 @@
       },
       {
         name: "depth_stream_info",
+        description: "Give the stream that depth_stream carries: its width and height in pixels, its frame rate, its encoding and the unit of its samples.",
         response_message_format: {
           width: "u32",
           height: "u32",
           frames_per_second: "u8",
           encoding: "string",
-          depth_unit: "f32",   // meters per LSB, e.g. 0.001 = 1mm
+          depth_unit: { $type: "f32", $description: "Meters per LSB of a depth sample, e.g. 0.001 = 1 mm." },
         }
       },
       {
         name: "set_color_exposure",
+        description: "Set the exposure of the color stream. current_value is the exposure that the camera applies after the call. A device that runs automatic exposure only refuses mode \"manual\".",
         request_message_format: {
-          mode: "string",   // "auto" | "manual"
-          value: "i32",     // microseconds (used when mode = "manual")
+          mode: { $type: "string", $description: "\"auto\" or \"manual\"." },
+          value: { $type: "i32", $description: "The manual exposure in the unit of the device, microseconds on an Intel RealSense. Used when mode is \"manual\"." },
         },
         response_message_format: {
           current_value: "i32",
@@ -88,9 +90,10 @@
       },
       {
         name: "set_color_white_balance",
+        description: "Set the white balance of the color stream. current_temperature is the temperature that the camera applies after the call.",
         request_message_format: {
-          mode: "string",        // "auto" | "manual"
-          temperature: "i32",    // Kelvin (used when mode = "manual")
+          mode: { $type: "string", $description: "\"auto\" or \"manual\"." },
+          temperature: { $type: "i32", $description: "The manual color temperature in kelvin. Used when mode is \"manual\"." },
         },
         response_message_format: {
           current_temperature: "i32",
@@ -98,6 +101,7 @@
       },
       {
         name: "set_color_gain",
+        description: "Set the gain of the color stream, in the unit of the device. current_value is the gain that the camera applies after the call.",
         request_message_format: { value: "i32" },
         response_message_format: {
           current_value: "i32",
@@ -105,6 +109,7 @@
       },
       {
         name: "set_color_brightness",
+        description: "Set the brightness of the color stream, in the unit of the device. current_value is the brightness that the camera applies after the call.",
         request_message_format: { value: "i32" },
         response_message_format: {
           current_value: "i32",
@@ -112,6 +117,7 @@
       },
       {
         name: "set_color_contrast",
+        description: "Set the contrast of the color stream, in the unit of the device. current_value is the contrast that the camera applies after the call.",
         request_message_format: { value: "i32" },
         response_message_format: {
           current_value: "i32",

@@ -1,80 +1,32 @@
-// Pictures of the simulated world, for a caller that sets the world up
-// and looks at what it builds: a view of the world from a free viewpoint,
-// the preview of an asset of the catalogue scene_manipulation lists, to
-// pick an asset before placing it, and what a region or points of a
-// picture of the world show, found in the world. Only a simulation can
-// give them: no robot sees these pictures, and the cameras a robot carries
-// publish through the camera contracts. A view is rendered on request from
-// the world as it stands at that instant, with the lighting and materials
-// the scene renders under; a preview is the picture the catalogue holds
-// for the asset, the same whatever the world holds.
-//
-// A camera, in render_view's answer and in the requests of
-// locate_in_view and locate_points, takes a picture of width x height
-// pixels from position, a world-frame point in metres, turned by
-// orientation, a unit quaternion [x, y, z, w] in the world frame. The
-// camera looks along its own -Z axis, with its own +X to the right of the
-// picture and its own +Y up. vertical_fov_deg is the angle from the top
-// edge of the picture to its bottom edge, and the picture's aspect sets
-// the angle across. A pixel coordinate (u, v) counts u pixels from the
-// left edge and v pixels from the top edge, so that (0, 0) is the top-left
-// corner of the picture and (width, height) its bottom-right corner;
-// (u, v) lies on the ray from position along
-// ((2u / width - 1) * t * width / height, (1 - 2v / height) * t, -1) in
-// the camera's frame, t being the tangent of half of vertical_fov_deg.
-// sim_time_s is the simulated instant the picture shows, in seconds on the
-// implementer's own clock of simulated time, which never runs back.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "scene_view",
     tag: "v1",
+    description: [
+      "Pictures of the simulated world, for a caller that sets the world up and looks at what it builds: a view of the world from a free viewpoint, the preview of an asset of the catalogue scene_manipulation lists, to pick an asset before placing it, and what a region or points of a picture of the world show, found in the world.",
+      "Only a simulation can give them: no robot sees these pictures, and the cameras a robot carries publish through the camera contracts. A view is rendered on request from the world as it stands at that instant, with the lighting and materials the scene renders under; a preview is the picture the catalogue holds for the asset, the same whatever the world holds.",
+      "A camera, in render_view's answer and in the requests of locate_in_view and locate_points, takes a picture of width x height pixels from position, a world-frame point in metres, turned by orientation, a unit quaternion [x, y, z, w] in the world frame. The camera looks along its own -Z axis, with its own +X to the right of the picture and its own +Y up. vertical_fov_deg is the angle from the top edge of the picture to its bottom edge, and the picture's aspect sets the angle across. A pixel coordinate (u, v) counts u pixels from the left edge and v pixels from the top edge, so that (0, 0) is the top-left corner of the picture and (width, height) its bottom-right corner; (u, v) lies on the ray from position along ((2u / width - 1) * t * width / height, (1 - 2v / height) * t, -1) in the camera's frame, t being the tangent of half of vertical_fov_deg. sim_time_s is the simulated instant the picture shows, in seconds on the implementer's own clock of simulated time, which never runs back.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // Renders the world as seen from `position`, looking at `target`,
-        // both world-frame points in metres, with +Z up in the picture. A
-        // position equal to the target gets an error reply with `rejected`,
-        // and so does a line of sight straight along the vertical, which
-        // leaves the picture with no up. The picture leaves out each part of
-        // a room of the scene (a wall, a piece of a fence, a ceiling or a
-        // floor) when `position` stands behind the inner face of that part,
-        // as seen from the room. The inner face of a part is the plane across
-        // the direction from the part into its room, through the point
-        // farthest along that direction of the boxes around the shapes the
-        // part is drawn with, each box aligned with its shape: a post of a
-        // wall that juts into the room puts the wall's inner face at the far
-        // side of the post's box, which can stand past the post's tip. The
-        // parts it leaves out still cast their shadows.
-        // From outside a room or above it, the picture so shows the room's
-        // inside; from a position on the room's side of the inner face of
-        // every part, it leaves nothing out. The cameras a robot carries
-        // see every part. Past the walls and through the doorways and
-        // windows, the picture shows the scene's ground and sky. An engine
-        // that renders nothing gives an error reply with `rejected`, and an
-        // engine whose clock has no time yet one with `precondition_failed`.
         name: "render_view",
+        description: "Render the world as seen from `position`, looking at `target`, both world-frame points in metres, with +Z up in the picture. A position equal to the target gets an error reply with `rejected`, and so does a line of sight straight along the vertical, which leaves the picture with no up. The picture leaves out each part of a room of the scene (a wall, a piece of a fence, a ceiling or a floor) when `position` stands behind the inner face of that part, as seen from the room. The inner face of a part is the plane across the direction from the part into its room, through the point farthest along that direction of the boxes around the shapes the part is drawn with, each box aligned with its shape: a post of a wall that juts into the room puts the wall's inner face at the far side of the post's box, which can stand past the post's tip. The parts it leaves out still cast their shadows. From outside a room or above it, the picture so shows the room's inside; from a position on the room's side of the inner face of every part, it leaves nothing out. The cameras a robot carries see every part. Past the walls and through the doorways and windows, the picture shows the scene's ground and sky. An engine that renders nothing gives an error reply with `rejected`, and an engine whose clock has no time yet one with `precondition_failed`.",
         request_message_format: {
-          // Where the viewpoint is: x, y, z (m).
-          position: { $type: "array", $items: "f64", $length: 3 },
-          // The point the view looks at: x, y, z (m).
-          target: { $type: "array", $items: "f64", $length: 3 },
+          position: { $type: "array", $items: "f64", $length: 3, $description: "Where the viewpoint is: x, y, z (m)." },
+          target: { $type: "array", $items: "f64", $length: 3, $description: "The point the view looks at: x, y, z (m)." },
         },
         response_message_format: {
-          // The simulated instant the picture shows.
-          timestamp: "time",
-          // The pixel format of frame: "rgb8".
-          encoding: "string",
+          timestamp: { $type: "time", $description: "The simulated instant the picture shows." },
+          encoding: { $type: "string", $description: "The pixel format of frame: \"rgb8\"." },
           width: "u32",
           height: "u32",
-          // The picture, width x height pixels, rows from the top, each
-          // pixel three bytes.
-          frame: { $type: "array", $items: "u8" },
-          // The camera that took the picture, in the form locate_in_view
-          // takes. Its width and height are the picture's.
+          frame: { $type: "array", $items: "u8", $description: "The picture, width x height pixels, rows from the top, each pixel three bytes." },
           camera: {
             $type: "object",
+            $description: "The camera that took the picture, in the form locate_in_view takes. Its width and height are the picture's.",
             position: { $type: "array", $items: "f64", $length: 3 },
             orientation: { $type: "array", $items: "f64", $length: 4 },
             vertical_fov_deg: "f64",
@@ -85,129 +37,58 @@
         },
       },
       {
-        // The preview the catalogue holds for the asset `asset_id` names:
-        // an object shown alone as authored, or a robot model standing
-        // alone at its start pose, over a white background; a scene seen
-        // from the viewpoint it opens on, under its own lighting with its
-        // exposure raised by up to 3 stops until the picture is bright, on
-        // the ground and under the sky of its site, and without the parts of
-        // its rooms (walls, pieces of fences, ceilings and floors) that
-        // render_view leaves out of a picture from that viewpoint. It shows
-        // the asset, not the world as it stands. An id the catalogue lacks,
-        // and an entry the catalogue holds no preview for, get an error
-        // reply with `rejected`; a preview the implementer cannot fetch or
-        // decode gets one with `attempt_failed`.
         name: "preview_asset",
+        description: "Give the preview the catalogue holds for the asset `asset_id` names: an object shown alone as authored, or a robot model standing alone at its start pose, over a white background; a scene seen from the viewpoint it opens on, under its own lighting with its exposure raised by up to 3 stops until the picture is bright, on the ground and under the sky of its site, and without the parts of its rooms (walls, pieces of fences, ceilings and floors) that render_view leaves out of a picture from that viewpoint. It shows the asset, not the world as it stands. An id the catalogue lacks, and an entry the catalogue holds no preview for, get an error reply with `rejected`; a preview the implementer cannot fetch or decode gets one with `attempt_failed`.",
         request_message_format: {
-          // The asset, as get_assets_list of scene_manipulation names it:
-          // "scene/<id>" or "object/<id>"; or a robot model of the
-          // catalogue, "robot/<model>", by the model id that
-          // get_robots_list of scene_manipulation reports.
-          asset_id: "string",
+          asset_id: { $type: "string", $description: "The asset, as get_assets_list of scene_manipulation names it: \"scene/<id>\" or \"object/<id>\"; or a robot model of the catalogue, \"robot/<model>\", by the model id that get_robots_list of scene_manipulation reports." },
         },
         response_message_format: {
-          // The pixel format of frame: "rgb8".
-          encoding: "string",
+          encoding: { $type: "string", $description: "The pixel format of frame: \"rgb8\"." },
           width: "u32",
           height: "u32",
-          // The picture, width x height pixels, rows from the top, each
-          // pixel three bytes.
-          frame: { $type: "array", $items: "u8" },
+          frame: { $type: "array", $items: "u8", $description: "The picture, width x height pixels, rows from the top, each pixel three bytes." },
         },
       },
       {
-        // Finds in the world as it stands now what the region `shape`
-        // marks on a picture that `camera` took. Rays leave the camera
-        // through the centre of the shape, through its corners, and through
-        // a grid of 16 by 16 points over its box, the centres of the grid's
-        // cells, of which an ellipse keeps the ones inside it. Each ray
-        // stops at the first thing it meets within 50 m: geometry the
-        // world's cameras draw, or the collision geometry of the scene's
-        // backdrop, which stands in for the backdrop's drawn mesh. A ray
-        // passes through each part of a room (a wall, a piece of a fence, a
-        // ceiling or a floor) that render_view leaves out of a picture taken
-        // from the camera's position. A ray meets no liquid and no soft
-        // object. A ray meets the floor where it meets the world's floor,
-        // the scene's ground, which reaches to the horizon, or a fixed piece
-        // of the scene that is no object within 0.01 m of z = 0, the height
-        // of the rooms' floors.
-        //
-        // An error reply with `rejected` answers a value that is not
-        // finite, an orientation whose norm is not within 0.001 of 1, a
-        // vertical_fov_deg outside the open range from 0 to 180, a width or
-        // a height of 0, a kind other than "rectangle" or "ellipse", a box
-        // whose x0 is not below its x1 or whose y0 is not below its y1, a
-        // box that does not lie inside the picture, a sim_time_s later than
-        // the simulated instant of the rays (a picture of an earlier run of
-        // the implementer), and a world the implementer lets no caller
-        // inspect. An error reply with `precondition_failed` answers a world
-        // whose clock has no time yet.
         name: "locate_in_view",
+        description: "Find in the world as it stands now what the region `shape` marks on a picture that `camera` took. Rays leave the camera through the centre of the shape, through its corners, and through a grid of 16 by 16 points over its box, the centres of the grid's cells, of which an ellipse keeps the ones inside it. Each ray stops at the first thing it meets within 50 m: geometry the world's cameras draw, or the collision geometry of the scene's backdrop, which stands in for the backdrop's drawn mesh. A ray passes through each part of a room (a wall, a piece of a fence, a ceiling or a floor) that render_view leaves out of a picture taken from the camera's position. A ray meets no liquid and no soft object. A ray meets the floor where it meets the world's floor, the scene's ground, which reaches to the horizon, or a fixed piece of the scene that is no object within 0.01 m of z = 0, the height of the rooms' floors. An error reply with `rejected` answers a value that is not finite, an orientation whose norm is not within 0.001 of 1, a vertical_fov_deg outside the open range from 0 to 180, a width or a height of 0, a kind other than \"rectangle\" or \"ellipse\", a box whose x0 is not below its x1 or whose y0 is not below its y1, a box that does not lie inside the picture, a sim_time_s later than the simulated instant of the rays (a picture of an earlier run of the implementer), and a world the implementer lets no caller inspect. An error reply with `precondition_failed` answers a world whose clock has no time yet.",
         request_message_format: {
-          // The camera that took the picture.
           camera: {
             $type: "object",
-            // Where the camera stands: x, y, z (m).
-            position: { $type: "array", $items: "f64", $length: 3 },
-            // How the camera is turned: a unit quaternion [x, y, z, w].
-            orientation: { $type: "array", $items: "f64", $length: 4 },
-            // The angle from the top edge of the picture to its bottom
-            // edge (deg).
-            vertical_fov_deg: "f64",
-            // The size of the picture the box is measured on (px).
-            width: "u32",
-            height: "u32",
-            // The simulated instant the picture shows (s).
-            sim_time_s: "f64",
+            $description: "The camera that took the picture.",
+            position: { $type: "array", $items: "f64", $length: 3, $description: "Where the camera stands: x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $description: "How the camera is turned: a unit quaternion [x, y, z, w]." },
+            vertical_fov_deg: { $type: "f64", $description: "The angle from the top edge of the picture to its bottom edge (deg)." },
+            width: { $type: "u32", $description: "The width of the picture the box is measured on (px)." },
+            height: { $type: "u32", $description: "The height of the picture the box is measured on (px)." },
+            sim_time_s: { $type: "f64", $description: "The simulated instant the picture shows (s)." },
           },
-          // The region of the picture.
           shape: {
             $type: "object",
-            // "rectangle", the box itself, or "ellipse", the ellipse
-            // inscribed in the box.
-            kind: "string",
-            // The box, as pixel coordinates [x0, y0, x1, y1]: its top-left
-            // corner (x0, y0) and its bottom-right corner (x1, y1).
-            box: { $type: "array", $items: "f64", $length: 4 },
+            $description: "The region of the picture.",
+            kind: { $type: "string", $description: "\"rectangle\", the box itself, or \"ellipse\", the ellipse inscribed in the box." },
+            box: { $type: "array", $items: "f64", $length: 4, $description: "The box, as pixel coordinates [x0, y0, x1, y1]: its top-left corner (x0, y0) and its bottom-right corner (x1, y1)." },
           },
         },
         response_message_format: {
-          // The simulated instant of the rays, on the implementer's clock.
-          timestamp: "time",
-          // The simulated time from camera.sim_time_s to the rays (s). A
-          // thing that moves can stand elsewhere than the picture shows.
-          capture_age_s: "f64",
-          // What the ray through the centre of the box meets.
+          timestamp: { $type: "time", $description: "The simulated instant of the rays, on the implementer's clock." },
+          capture_age_s: { $type: "f64", $description: "The simulated time from camera.sim_time_s to the rays (s). A thing that moves can stand elsewhere than the picture shows." },
           centre: {
             $type: "object",
-            // Whether the ray meets anything within 50 m. When false,
-            // reason says why and the other fields are empty.
-            hit: "bool",
+            $description: "What the ray through the centre of the box meets.",
+            hit: { $type: "bool", $description: "Whether the ray meets anything within 50 m. When false, reason says why and the other fields are empty." },
             reason: "string",
-            // Where the ray meets it: x, y, z (m).
-            point: { $type: "array", $items: "f64" },
-            // "object", "robot", "floor" or "backdrop".
-            kind: "string",
-            // For an object: the object_id get_objects_list of
-            // scene_manipulation gives, and its "object/<id>" asset.
-            object_id: "string",
-            asset_id: "string",
-            // For a robot: its name, and the part the ray meets, an arm or
-            // a gripper under the name the robot's limbs answer to, or
-            // "body" for the rest of the robot.
-            robot: "string",
-            part: "string",
-            // For "backdrop", a fixed piece of the scene that is no object,
-            // such as a wall of the scene's backdrop: the name the scene
-            // gives it.
-            name: "string",
+            point: { $type: "array", $items: "f64", $description: "Where the ray meets it: x, y, z (m)." },
+            kind: { $type: "string", $description: "\"object\", \"robot\", \"floor\" or \"backdrop\"." },
+            object_id: { $type: "string", $description: "For an object: the object_id get_objects_list of scene_manipulation gives." },
+            asset_id: { $type: "string", $description: "For an object: its \"object/<id>\" asset." },
+            robot: { $type: "string", $description: "For a robot: its name." },
+            part: { $type: "string", $description: "For a robot: the part the ray meets, an arm or a gripper under the name the robot's limbs answer to, or \"body\" for the rest of the robot." },
+            name: { $type: "string", $description: "For \"backdrop\", a fixed piece of the scene that is no object, such as a wall of the scene's backdrop: the name the scene gives it." },
           },
-          // What the rays through the corners meet, each as centre is. For
-          // a rectangle, its top-left, top-right, bottom-right and
-          // bottom-left corners; for an ellipse, the top, right, bottom and
-          // left ends of its axes.
           corners: {
             $type: "array",
+            $description: "What the rays through the corners meet, each as centre is. For a rectangle, its top-left, top-right, bottom-right and bottom-left corners; for an ellipse, the top, right, bottom and left ends of its axes.",
             $items: {
               $type: "object",
               hit: "bool",
@@ -221,11 +102,9 @@
               name: "string",
             },
           },
-          // Each thing the grid rays meet, the largest share first. A thing
-          // is an object, a part of a robot, the floor, or a piece of the
-          // backdrop, named as centre names it.
           covered: {
             $type: "array",
+            $description: "Each thing the grid rays meet, the largest share first. A thing is an object, a part of a robot, the floor, or a piece of the backdrop, named as centre names it.",
             $items: {
               $type: "object",
               kind: "string",
@@ -234,50 +113,28 @@
               robot: "string",
               part: "string",
               name: "string",
-              // The part of the grid rays that meet this thing, from 0 to
-              // 1. The shares of all things add up to less than 1 when
-              // some rays meet nothing.
-              share: "f64",
-              // The world-frame box of the points where the rays meet it:
-              // its lowest x, y, z and its highest x, y, z (m).
-              min: { $type: "array", $items: "f64", $length: 3 },
-              max: { $type: "array", $items: "f64", $length: 3 },
+              share: { $type: "f64", $description: "The part of the grid rays that meet this thing, from 0 to 1. The shares of all things add up to less than 1 when some rays meet nothing." },
+              min: { $type: "array", $items: "f64", $length: 3, $description: "The world-frame box of the points where the rays meet it: its lowest x, y, z (m)." },
+              max: { $type: "array", $items: "f64", $length: 3, $description: "The world-frame box of the points where the rays meet it: its highest x, y, z (m)." },
             },
           },
-          // The object the ray through the centre meets from above, on a
-          // face that turns at most 45 degrees away from straight up.
           surface: {
             $type: "object",
-            // false when the centre ray meets no object from above.
-            found: "bool",
+            $description: "The object the ray through the centre meets from above, on a face that turns at most 45 degrees away from straight up.",
+            found: { $type: "bool", $description: "false when the centre ray meets no object from above." },
             object_id: "string",
             asset_id: "string",
-            // The height of the point where the ray meets the object (m).
-            top: "f64",
+            top: { $type: "f64", $description: "The height of the point where the ray meets the object (m)." },
           },
         },
       },
       {
-        // Finds in the world as it stands now what the pixels `points` of
-        // a picture that `camera` took show, such as the points of a line
-        // drawn on the picture. A ray leaves the camera through each point
-        // and stops at the first thing it meets within 50 m, as each ray
-        // of locate_in_view does.
-        //
-        // An error reply with `rejected` answers a value that is not
-        // finite, an orientation whose norm is not within 0.001 of 1, a
-        // vertical_fov_deg outside the open range from 0 to 180, a width or
-        // a height of 0, no point, more than 256 points, a point that does
-        // not lie inside the picture, a sim_time_s later than the simulated
-        // instant of the rays (a picture of an earlier run of the
-        // implementer), and a world the implementer lets no caller inspect.
-        // An error reply with `precondition_failed` answers a world whose
-        // clock has no time yet.
         name: "locate_points",
+        description: "Find in the world as it stands now what the pixels `points` of a picture that `camera` took show, such as the points of a line drawn on the picture. A ray leaves the camera through each point and stops at the first thing it meets within 50 m, as each ray of locate_in_view does. An error reply with `rejected` answers a value that is not finite, an orientation whose norm is not within 0.001 of 1, a vertical_fov_deg outside the open range from 0 to 180, a width or a height of 0, no point, more than 256 points, a point that does not lie inside the picture, a sim_time_s later than the simulated instant of the rays (a picture of an earlier run of the implementer), and a world the implementer lets no caller inspect. An error reply with `precondition_failed` answers a world whose clock has no time yet.",
         request_message_format: {
-          // The camera that took the picture, as locate_in_view takes it.
           camera: {
             $type: "object",
+            $description: "The camera that took the picture, as locate_in_view takes it.",
             position: { $type: "array", $items: "f64", $length: 3 },
             orientation: { $type: "array", $items: "f64", $length: 4 },
             vertical_fov_deg: "f64",
@@ -285,10 +142,9 @@
             height: "u32",
             sim_time_s: "f64",
           },
-          // The points, as pixel coordinates (u, v) of the picture, from
-          // (0, 0) to (width, height): 1 to 256 of them.
           points: {
             $type: "array",
+            $description: "The points, as pixel coordinates (u, v) of the picture, from (0, 0) to (width, height): 1 to 256 of them.",
             $items: {
               $type: "object",
               u: "f64",
@@ -297,15 +153,11 @@
           },
         },
         response_message_format: {
-          // The simulated instant of the rays, on the implementer's clock.
-          timestamp: "time",
-          // The simulated time from camera.sim_time_s to the rays (s). A
-          // thing that moves can stand elsewhere than the picture shows.
-          capture_age_s: "f64",
-          // What the ray through each point meets, in the order of points,
-          // each as the centre of locate_in_view is.
+          timestamp: { $type: "time", $description: "The simulated instant of the rays, on the implementer's clock." },
+          capture_age_s: { $type: "f64", $description: "The simulated time from camera.sim_time_s to the rays (s). A thing that moves can stand elsewhere than the picture shows." },
           rays: {
             $type: "array",
+            $description: "What the ray through each point meets, in the order of points, each as the centre of locate_in_view is.",
             $items: {
               $type: "object",
               hit: "bool",
