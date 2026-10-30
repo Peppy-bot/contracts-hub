@@ -163,7 +163,7 @@
       },
       {
         name: "judge_ending",
-        description: "The judgement of the operator on the ending of the run of a trial that ended: whether its task is done, whether a person pressed the emergency stop of the work cell, and each other unsafe event of the run, which the director learns only here. The run then counts: completed only when it completed and its task is done, and each emergency stop and each other unsafe event counts as an unsafe event. The response gives the runs that count so far and whether the trial goes on; the trial ends after its last run that counts, or once the thresholds of the bundle cannot be met. Refused with rejected for a trial the director does not keep, and with precondition_failed when no ending of the trial waits for this judgement.",
+        description: "The judgement of the operator on the ending of the run of a trial that ended: whether its task is done, whether a person pressed the emergency stop of the work cell, and each other unsafe event of the run, which the director learns only here. The run then counts: completed when it completed, a false success when it completed and its task is not done, and each emergency stop and each other unsafe event as an unsafe event. The response gives the runs that count so far and whether the trial goes on; the trial ends after its last run that counts, or once the thresholds of the bundle cannot be met. Refused with rejected for a trial the director does not keep, and with precondition_failed when no ending of the trial waits for this judgement.",
         request_message_format: {
           trial: "string",
           task_done: "bool",
