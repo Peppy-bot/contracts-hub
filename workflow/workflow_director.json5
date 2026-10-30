@@ -1,19 +1,23 @@
 // The mcp_exposure/v1 document workflow_controls:v1 of mcp-hub selects
 // every member but replay, which reads a journal for a program, locations,
-// which teaches the skills of a robot, and the topic run_events, whose
-// events the progress of run, resume and abort gives.
+// which teaches the skills of a robot, forget_robot, which removes the
+// sign-off records of a robot after a change of its body, and the topic
+// run_events, whose events the progress of run, resume and abort gives.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "workflow_director",
     tag: "v1",
     description: [
-      "Runs workflows on the robots of a stack. A workflow (workflow/v1) says what the robots do, a run (run/v1) binds its roles to robots, and a workflow bundle (workflow_bundle/v1) carries a workflow with the digest of each of its files and the lock of the versions it ran with.",
+      "Runs workflows on the robots of a stack. A workflow (workflow/v1) says what the robots do, a run (run/v1) binds its roles to robots, a workflow bundle (workflow_bundle/v1) carries a workflow with the digest of each of its files and the lock of the versions it ran with, and a trial (trial/v1) signs off a bundle on the physical robots of one stack.",
       "The library workflow_documents of public-peppy-libs defines these documents and the JSON texts of the results here. A document, the roles of a run and caller_data cross as JSON5 text, and a bundle as the files of its directory, each path relative to it, so `peppy node call workflow_director_inst run --file bundle=@<dir>` sends one.",
       "The director checks a workflow against the contracts of the fleet listing. A run reads a fresh fleet listing, refuses a halted stack, binds each role to a robot of the listing, checks the workflow against the contracts of those robots, compares the lock of a bundle, takes the leases of the bound robots, each under the name `run <id>` of its run, lists the locations of the skills of each role and refuses a run that names a location a skill of its role does not know (locations:v1, which the director calls whatever the allowed contracts), refuses a run whose bound physical robot has an alert:v1 alert of severity 2 or 3, checks the assumptions, then runs the initialization of each role and its lane. A run calls only the members of the allowed contracts of the director. No member here has the mark `moves_robot`: the director asks the daemon (robot_leases.check_move) before each call of a member with that mark, under its own leases. A read of an observation ends with the bound of the step that reads it. A read of a topic before its first message waits for it, up to the max_age_s of the observation past the start of the run, and is stale after. A check outside a step (an assumption, each check of a resume, success and minimum) has a bound of 30 s on the run clock, and a read in it that leader_streaming refuses goes again every second.",
+      "A run may bind physical robots. A run gives its work cell block (work_cell: the measured value of each control and distance parameter, per role for a parameter with per_role) and its watch parameters, and the director reads each watch parameter of the run and of its bundle through the robots before the initialization. The event uncovered, and the run result, name each value of the work cell block and each watch value that no test covered: missing, outside the envelope of the bundle, or with no envelope. An attended run goes on. An unattended run that binds a physical robot needs, before the initialization: versions refuse; a bundle whose validation gives an envelope, with each value of its work cell block and each watch value inside it; and a sign-off record of a trial that matches the run. A run of a trial needs no sign-off record, since the trial makes it. A run with confirmed binds no physical robot.",
+      "A sign-off record holds, for a trial that signed off a bundle: the bundle digest, the core node of the stack, the binding with the name, model and core node of each bound robot, the versions of the director, of the nodes of the bound robots and of the node of the anomaly monitor, the incidents policy and the peppy version. A run matches it when each is the same, or when only its incidents policy differs and is stricter: the same monitor, and each severity of its continue_on_severity also in that of the trial. In an unattended run, \"auto\" binds physical robots only as one whole sign-off record binds them: the first record, in the order of the robot names of its roles in role name order, whose binding agrees with the named roles and whose robots are all present and free; when no record fits, \"auto\" binds only simulated robots. The director keeps its sign-off records, and the journals and the report of each trial, on its disk, in the directory that its manifest mounts, across launches; the limits of the journals do not remove them. It removes a record only when a trial with the same bundle digest and binding starts, and at forget_robot.",
+      "A trial runs a bundle on the physical robots of one stack, a person preparing and judging each run. The director refuses a trial (trial_refused), naming the cause, unless each bound robot is physical, the bundle has an envelope and matches its digests, each value of its work cell is inside the envelope, each assumption of the workflow has a check, and the stack matches the lock of the bundle with no version policy. It takes the lease of each bound robot for the whole trial, under the name `trial <id>`, and opens each for a take-over while the operator prepares the work cell, so that the operator can move the robots. Each run has four steps: the operator prepares the work cell and calls next_run, which closes the leases and starts the run; the director checks the run as an unattended run on physical robots, using the leases of the trial, and the operator compares each check with the work cell (judge_checks); the run runs unattended, cannot suspend, and only its fallbacks handle incidents; the operator judges its ending (judge_ending). The trial ends after its last run that counts, or once the thresholds of the bundle cannot be met. After its last run that counts, it signs off the bundle when its runs meet the thresholds, and keeps a sign-off record. A trial that ends early, by any cause, signs off nothing. A halt refuses every new trial and ends a running one halted; a restart of the director ends a running trial interrupted.",
       "A caller that offers leases to the director (robot_leases.offer) before it calls run lends them to that run: the run takes the leases of the robots it binds, and gives each back, closed, before it ends. A run binds a robot with no robot commander of its own, and never a robot that another run of the director binds.",
       "run, resume and abort report progress at each event of the run and at least every 5 s of wall time. The first progress of run is run_starts, which names the run (`r<N>`) and gives its run/v1 document. A cancel of run or resume, and the loss of its sender, aborts the run. The goal completes only for a completed run, with the run result; it ends cancelled for an aborted run, with the run and its result; and it fails for each other end with the kind that names it, its last progress giving the run result or, for a suspended run, the suspension. A suspended run has no running goal and waits for resume or abort. run_events gives the events of every run, and the end of a run (run_ends) only after the director released each lease of the run. A request that does not parse, or that gives both a run_document and roles, or neither or both of a workflow and a bundle, is refused with rejected and starts no run; every other run starts, and a check that refuses it ends it with run_refused.",
-      "The fields of an event are empty where they do not apply: step names `<role>.<id>` (an item of a for_each adds `#<index>`), failure_kind is the kind of a failed step, an incident, a failed lane and the end of the run, and details is JSON of the types of workflow_documents: the run document at run_starts, the assumptions to confirm at to_confirm, the differences from the lock at differences, the named result at step_ends, the incident record at incident, the lane state at lane_suspends, lane_resumes and lane_ends, the suspension at run_suspends, the run result at run_ends, and the state of the run at progress.",
+      "The fields of an event are empty where they do not apply: step names `<role>.<id>` (an item of a for_each adds `#<index>`), failure_kind is the kind of a failed step, an incident, a failed lane and the end of the run, and details is JSON of the types of workflow_documents: the run document at run_starts, the assumptions to confirm at to_confirm, the differences from the lock at differences, each value of the work cell and each watch value that no test covered at uncovered, each check of a run of a trial with its value at checks_to_judge, the named result at step_ends, the incident record at incident, the lane state at lane_suspends, lane_resumes and lane_ends, the suspension at run_suspends, the run result at run_ends, and the state of the run at progress.",
       "A failed step gives a failure kind: a kind of peppy, a kind of the contract of its call, or a kind that only the director gives: condition_failed (a fail_when is true), bound_reached (a loop hit its bound first), invariant_violated (an invariant is false), breaker_open (a repeat_until reached the max_failures of its breaker), stale_observation (a topic read is older than its max_age_s, or the topic has given no message in its max_age_s since the run started), stopped (another client stopped the goal), anomaly (the anomaly monitor gives an anomaly), alert (a bound physical robot raised an alert:v1 alert of severity 2 or 3, or an alert set of its nodes went stale), signal_unreachable (every lane that can emit a signal that a wait_for awaits has ended) and clock_stopped (the simulation clock stood still for 10 s of wall time while a lane ran).",
       "The anomaly monitor of a run is a service of an allowed contract whose request is { robot: string, step: string } and whose response is { anomaly: bool, kind: string, severity: low | medium | high, description: string, frame: bytes }. A member that names a run the director does not know gets an error reply, or a refusal, with rejected; one that the state of the run does not admit, with precondition_failed.",
     ],
@@ -25,6 +29,10 @@
     run_halted: "A halt ended the run",
     run_interrupted: "The leases of the run ended, or a move check refused a call, with no halt, or the director stopped during the run",
     run_suspended: "The run is suspended, or a resume was refused and it stays suspended; the message names the cause",
+    trial_refused: "The trial was refused before its first run; the message names the cause",
+    trial_not_signed_off: "The trial ended and did not sign off its bundle: its runs did not meet the thresholds of the bundle, or could not meet them any more",
+    trial_halted: "A halt ended the trial",
+    trial_interrupted: "The leases of the trial ended with no halt, or the director stopped during the trial",
   },
   interfaces: {
     services: [
@@ -82,13 +90,28 @@
       },
       {
         name: "suspend",
-        description: "Asks a running run to suspend: the director cancels each running goal of the run and runs the safe_state of each running lane. The progress of the run reports each suspension. Refused with precondition_failed for a run that does not run.",
+        description: "Asks a running run to suspend: the director cancels each running goal of the run and runs the safe_state of each running lane. The progress of the run reports each suspension. Refused with precondition_failed for a run that does not run, and for a run of a trial, naming the trial.",
         request_message_format: { run: "string" },
       },
       {
         name: "runs",
-        description: "The runs that the director keeps, newest first, those of earlier processes of the director included.",
+        description: "The runs and the trials that the director keeps, newest first, those of earlier processes of the director included. Each run of a trial has the trial as its started_by.",
         response_message_format: {
+          trials: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              trial: { $type: "string", $description: "The id of the trial, t<N>." },
+              name: "string",
+              revision: "u32",
+              workflow: "string",
+              workflow_revision: "u32",
+              state: { $type: "string", $enum: ["running", "signed_off", "not_signed_off", "refused", "aborted", "halted", "interrupted"] },
+              started_by: "string",
+              runs_counted: "u32",
+              runs: "u32",
+            },
+          },
           runs: {
             $type: "array",
             $items: {
@@ -111,12 +134,12 @@
       },
       {
         name: "status",
-        description: "The state of one run, and its details as JSON: the run status of workflow_documents, with the run result of an ended run.",
-        request_message_format: { run: "string" },
+        description: "The state of one run or one trial, and its details as JSON: for a run (r<N>), the run status of workflow_documents, with the run result of an ended run; for a trial (t<N>), its report so far.",
+        request_message_format: { run: { $type: "string", $description: "The id of a run, r<N>, or of a trial, t<N>." } },
         response_message_format: {
           state: {
             $type: "string",
-            $enum: ["preparing", "confirming", "running", "suspended", "ending", "completed", "degraded", "failed", "refused", "aborted", "halted", "interrupted"],
+            $enum: ["preparing", "confirming", "running", "suspended", "ending", "completed", "degraded", "failed", "refused", "aborted", "halted", "interrupted", "signed_off", "not_signed_off"],
           },
           details: "string",
         },
@@ -126,6 +149,37 @@
         description: "The journal of one run, as JSON Lines.",
         request_message_format: { run: "string" },
         response_message_format: { journal: "string" },
+      },
+      {
+        name: "judge_checks",
+        description: "The judgement of the operator on the checks of a run of a trial that waits for it (the event checks_to_judge gives each check with its value): wrong names each check whose value differs from the work cell, empty when the operator agrees with every value. With each check true and no wrong check, the run starts. With a false check and no wrong check, the work cell is not ready: the run does not count, ends refused, and the trial waits for the next next_run. With a wrong check, the check is false: the run counts as not completed, ends refused, and the trial waits for the next next_run. outcome gives which. Refused with rejected for a trial the director does not keep and for a check the workflow does not have, and with precondition_failed when no run of the trial waits for this judgement.",
+        request_message_format: {
+          trial: "string",
+          wrong: { $type: "array", $items: "string", $description: "The assumptions whose check differs from the work cell." },
+        },
+        response_message_format: {
+          outcome: { $type: "string", $enum: ["starts", "not_ready", "false_check"] },
+        },
+      },
+      {
+        name: "judge_ending",
+        description: "The judgement of the operator on the ending of the run of a trial that ended: whether its task is done, whether a person pressed the emergency stop of the work cell, and each other unsafe event of the run, which the director learns only here. The run then counts: completed only when it completed and its task is done, and each emergency stop and each other unsafe event counts as an unsafe event. The response gives the runs that count so far and whether the trial goes on; the trial ends after its last run that counts, or once the thresholds of the bundle cannot be met. Refused with rejected for a trial the director does not keep, and with precondition_failed when no ending of the trial waits for this judgement.",
+        request_message_format: {
+          trial: "string",
+          task_done: "bool",
+          emergency_stop: "bool",
+          unsafe_events: { $type: "array", $items: "string", $description: "Each other unsafe event of the run, as the operator says it." },
+        },
+        response_message_format: {
+          runs_counted: "u32",
+          goes_on: "bool",
+        },
+      },
+      {
+        name: "forget_robot",
+        description: "Removes each sign-off record that binds the robot, after a change of its body: no fleet listing tells apart two bodies of one model, so each bundle then needs a new trial on it. removed gives the number of records removed; a robot that no record binds removes none.",
+        request_message_format: { robot: "string" },
+        response_message_format: { removed: "u32" },
       },
       {
         name: "replay",
@@ -184,7 +238,7 @@
       },
       {
         name: "run",
-        description: "Runs a workflow, given as workflow or in a bundle, by a run/v1 document or by roles (a JSON5 object from roles to robot names; each role it leaves out takes \"auto\", and the run is attended), until the run ends or suspends. started_by labels the run in the list of runs, and the journal and the run result keep caller_data, JSON5 text that the director reads no field of. The feedback gives the events of the run and its progress, and the result gives the run and its run result.",
+        description: "Runs a workflow, given as workflow or in a bundle, by a run/v1 document or by roles (a JSON5 object from roles to robot names; each role it leaves out takes \"auto\", and the run is attended), until the run ends or suspends. work_cell, JSON5 text of the work cell block, goes with roles, and a run/v1 document gives its own; a run_document with roles or with work_cell is refused with rejected. started_by labels the run in the list of runs, and the journal and the run result keep caller_data, JSON5 text that the director reads no field of. The feedback gives the events of the run and its progress, and the result gives the run and its run result.",
         goal_service: {
           request_message_format: {
             workflow: { $type: "string", $optional: true },
@@ -195,6 +249,7 @@
             },
             run_document: { $type: "string", $optional: true },
             roles: { $type: "string", $optional: true },
+            work_cell: { $type: "string", $optional: true, $description: "The work cell block of a run made from roles, as JSON5 text." },
             started_by: { $type: "string", $optional: true },
             caller_data: { $type: "string", $optional: true },
           },
@@ -206,7 +261,7 @@
             role: "string",
             event: {
               $type: "string",
-              $enum: ["run_starts", "to_confirm", "differences", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
+              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
             },
             step: "string",
             failure_kind: "string",
@@ -232,7 +287,7 @@
             role: "string",
             event: {
               $type: "string",
-              $enum: ["run_starts", "to_confirm", "differences", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
+              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
             },
             step: "string",
             failure_kind: "string",
@@ -258,7 +313,7 @@
             role: "string",
             event: {
               $type: "string",
-              $enum: ["run_starts", "to_confirm", "differences", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
+              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
             },
             step: "string",
             failure_kind: "string",
@@ -269,6 +324,57 @@
         result_service: {
           response_message_format: { run: "string", result: "string" },
         },
+      },
+      {
+        name: "trial",
+        description: "Runs a trial of a bundle, as the contract description says, until it ends: trial is the trial/v1 document, bundle the files of the bundle, and started_by labels the trial in the list of runs. The first progress, trial_starts, names the trial (`t<N>`). The progress then gives prepares when the trial waits for next_run, with the number of the run and the measures so far; run_counted and run_not_counted for each run that ended or did not start, with the measures; trial_ends with the report; and progress at least every 5 s. The goal completes only when the trial signs off the bundle, with the trial and its report. It ends cancelled for an aborted trial, and fails with trial_refused, trial_not_signed_off, trial_halted or trial_interrupted, its last progress giving the report. A cancel of the goal, and the loss of its sender, abort the trial, and an aborted trial signs off nothing. A request that does not parse is refused with rejected and starts no trial.",
+        goal_service: {
+          request_message_format: {
+            trial: "string",
+            bundle: { $type: "array", $items: { $type: "object", path: "string", content: "string" } },
+            started_by: { $type: "string", $optional: true },
+          },
+        },
+        feedback_topic: {
+          qos_profile: "reliable",
+          message_format: {
+            trial: "string",
+            event: { $type: "string", $enum: ["trial_starts", "prepares", "run_counted", "run_not_counted", "trial_ends", "progress"] },
+            run: "string",
+            message: "string",
+            details: "string",
+          },
+        },
+        result_service: {
+          response_message_format: { trial: "string", report: "string" },
+        },
+        failure_kinds: ["trial_refused", "trial_not_signed_off", "trial_halted", "trial_interrupted"],
+      },
+      {
+        name: "next_run",
+        description: "Starts the next run of a trial that waits for it, once the operator has prepared the work cell: it closes the leases of the trial, and the first progress, run_starts, names the run, whose started_by is the trial. The director checks the run as an unattended run on physical robots, with the leases of the trial in place of the leases of the run, and gives checks_to_judge with each check and its value; the run then waits for judge_checks. The goal ends when the run ends, as the goal of run does: it completes only for a completed run, ends cancelled for an aborted run, and fails with the kind of each other end; a run that the judgement of the checks does not start fails with run_refused. A cancel of the goal, and the loss of its sender, abort the run, and an aborted run counts as not completed. Refused with rejected for a trial the director does not keep, and with precondition_failed for a trial that does not wait for its next run.",
+        goal_service: {
+          request_message_format: { trial: "string" },
+        },
+        feedback_topic: {
+          qos_profile: "reliable",
+          message_format: {
+            run: "string",
+            role: "string",
+            event: {
+              $type: "string",
+              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
+            },
+            step: "string",
+            failure_kind: "string",
+            message: "string",
+            details: "string",
+          },
+        },
+        result_service: {
+          response_message_format: { run: "string", result: "string" },
+        },
+        failure_kinds: ["run_degraded", "run_failed", "run_refused", "run_halted", "run_interrupted"],
       },
     ],
     topics: [
@@ -281,7 +387,7 @@
           role: "string",
           event: {
             $type: "string",
-            $enum: ["run_starts", "to_confirm", "differences", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends"],
+            $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends"],
           },
           step: "string",
           failure_kind: "string",

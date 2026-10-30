@@ -4,13 +4,17 @@
     name: "simulation_world",
     tag: "v1",
     description: [
-      "The worlds of a simulation: the record of its setup, the build of a world in one step, and the judges that check ground truth in it. It is for the applier of worlds, which rebuilds the world of a past conversation, and for an evaluation that scores a built world; no model of a chat calls it.",
+      "The worlds of a simulation: the record of its setup, the build of a world in one step, the expansion of a world pattern into a world, the measure of the work cell of the world, and the judges that check ground truth in it. It is for the applier of worlds, which rebuilds the world of a past conversation and runs the sweeps of a workflow, and for an evaluation that scores a built world; no model of a chat calls it.",
       "The setup record is the last value of each setup call the simulation took (scene_manipulation, object_controls, scene_lighting, scene_materials, scene_daylight and scene_workspace): the scene and its scale, the scene objects moved, removed or with a control set, the objects spawned, the lighting, the materials, the daylight, the named locations and the stand of each robot with a body. It holds call values, never physics: the clock, apply_force, looks, listings, robot motions and camera settings do not change it, and the daylight's hour is the one set_daylight_time set, whatever the daylight's clock ran since. A world document (world/v1) is that record with the join of each robot, which the stack listing gives.",
       "The apply id names the world that is live. It changes at each start_apply and at each start of the simulation, so two equal apply ids name one apply of one world, and a client that holds an apply id knows whether the world it applied is still the one that stands.",
       "The setup claim (claim) gives the setup to one client at a time. While it lasts, only the holder makes setup calls: each call of scene_manipulation, object_controls, scene_lighting, scene_materials, scene_daylight and scene_workspace that changes the setup record, apply_force and move_robot, set_paused and step of simulation_clock, and start_apply and build here. The simulation refuses those of every other client with `precondition_failed`, naming the claim and its holder. A spawn by a feeder goes through, and so do reads, views, camera settings and sensor holds. The pause of the viewer and the hand teleoperation of the simulation's page carry no client: while the claim lasts, the simulation refuses each pause and each daylight edit from the viewer, and each drive of the hand teleoperation on a robot that the holder has not named with allow_hand_teleop. It stands a joining robot (attach of simulation_robot) only when the last start_apply of the claim named it, and refuses each other attach with `precondition_failed`, naming the claim; a robot that leaves goes through, and so does a standing robot that registers again.",
-      "Members carry documents as JSON5 text: the setup record, a world/v1, the list of judges and the list of verdicts, each in the form the simulation documents of the simulation side define.",
+      "A world pattern is a world/v1 with samplers in place of some values: one_of and range in any value but a join, on (a surface, with reachable_by) and in (a named region) in an object pose, in in the position of a stand, entries of an item kind with a count, work_cell_parameters and min_spacing_m. A seed picks one value from each sampler (expand). Each sampler draws from its own stream, which the seed and the path of the sampler in the drawn world give, so the same pattern, seed, catalogue, robot models and simulation give the same world, and an added entry changes no other value. A work cell parameter is a number that an operator can measure in a real work cell: a control value of an object, or the distance from the base of a robot to a surface label or a landmark (measure).",
+      "Members carry documents as JSON5 text: the setup record, a world/v1 and a world pattern, the list of judges and the list of verdicts, the work cell parameters and their measurements, each in the form the simulation documents of the simulation side define.",
       "A simulation that lets no caller edit or inspect its world answers each member with `rejected`: an error reply to a service, a refusal to the build.",
     ],
+  },
+  failure_kinds: {
+    seed_refused: "The seed gives no world of the world pattern: a sampler finds no value, a name that an entry of an item kind adds is a scene object name of the drawn scene, or the simulation refuses the drawn world; the message names the entry",
   },
   interfaces: {
     services: [
@@ -45,6 +49,16 @@
         },
         response_message_format: {
           verdicts: { $type: "string", $description: "A JSON5 list of { holds, why }, one for each judge." },
+        },
+      },
+      {
+        name: "measure",
+        description: "Give the value of each work cell parameter in the live world: for a control, the value of the control of its object; for a distance, the coordinate along an axis of the frame of a robot base (ahead, its +X; side, its +Y, to its left; up, its +Z) of the centre of a landmark, or of the point of the top of a surface label nearest to the base, from the base of each robot of per_robot, or of the one robot with a stand without per_robot. Changes nothing. A list that does not parse, and a parameter that names an object, a control, a surface label or a landmark the world does not hold, get an error reply with `rejected` that names it, and a parameter that names a robot that does not stand in the simulation one with `resource_unavailable`; no value is given. A simulation that cannot read its world gives an error reply with `precondition_failed`, and one that cannot write the values as JSON5 one with `attempt_failed`.",
+        request_message_format: {
+          parameters: { $type: "string", $description: "The work cell parameters of a world pattern, as JSON5 text: an object from each name to { unit, control } or { unit, distance, per_robot }." },
+        },
+        response_message_format: {
+          values: { $type: "string", $description: "The value of each parameter, as JSON5 text: an object from each name to its value, or, for a parameter with per_robot, to an object from each robot to its value." },
         },
       },
       {
@@ -83,6 +97,33 @@
             setup_record: { $type: "string", $description: "The setup record of the built world, as JSON5 text; empty for a build that ends cancelled." },
           },
         },
+      },
+      {
+        name: "expand",
+        description: "Give the concrete world of a world pattern and a seed, drawn in a model of the drawn world, apart from the live world. The seed first draws the scene, the controls, each other one_of and range, and the count and the asset of each object of an item kind. The simulation then draws each stand and each pose on a surface or in a region after the values that it depends on, in the order that the simulation documents give: a pose with reachable_by where the robot reaches and sees it, by the rules of reach and view of find_places of scene_workspace, and each sampled object at least min_spacing_m from each other one. Changes neither the live world nor the setup record, and takes no claim. Before any draw, refused with `rejected` for a pattern that does not parse or extends a base, a catalogue release other than the simulation's, a scene that load_scene of scene_manipulation refuses, an item kind that no asset of the catalogue carries, a robot model that the simulation cannot measure, a surface, a landmark or a region that a scene or an object of the pattern does not declare, and a cycle of stands and poses that depend on each other, each naming its entry. Fails with seed_refused for a seed that gives no world, naming the entry, and with `attempt_failed` when the files of the drawn world do not come. The feedback is that of build, over the files of the drawn world. The result gives the concrete world, named for the pattern and the seed.",
+        goal_service: {
+          request_message_format: {
+            pattern: { $type: "string", $description: "A world pattern that extends no base, as JSON5 text." },
+            seed: "u32",
+          },
+        },
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            bytes_fetched: "u64",
+            files_ready: "u64",
+            building: "bool",
+            bytes_ready: "u64",
+            bytes_total: "u64",
+            bytes_per_second: "u64",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            world: { $type: "string", $description: "The concrete world/v1 document, as JSON5 text, named <pattern>_seed_<seed> with the revision of the pattern." },
+          },
+        },
+        failure_kinds: ["seed_refused"],
       },
       {
         name: "claim",
