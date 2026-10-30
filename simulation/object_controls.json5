@@ -1,81 +1,38 @@
-// The adjustable controls of the objects a simulation engine spawned through
-// scene_manipulation: what a spawned object lets a caller set (a standing
-// desk's height, a conveyor's belt speed, a stove's oven thermostat), read
-// with its unit, bounds, authored default and current value, and set one at a
-// time. Which controls an object offers is authored in its asset, so an engine
-// implements this contract once and needs no code per asset; an asset with
-// nothing to adjust offers no controls, and only objects that offer at least
-// one are listed. What a caller chooses when it picks the asset (a conveyor's
-// width or shape) is a catalogue entry, not a control.
-//
-// Object ids are the ones scene_manipulation minted, and an object is listed
-// from its spawn, every control at its default or at the value the scene that
-// placed it starts it at, until it is removed or the scene is loaded or
-// cleared. Within one object every control id is unique and is what
-// set_object_control takes. A control is a scalar in the unit it reports; its
-// bounds are inclusive, and bounds, default and value are world quantities, so
-// a length or speed control on an object spawned at scale 2 reports twice its
-// authored range; a heater's control keeps its range at every scale. Where the
-// object stands is object_state's to report; a control's value is read here.
-//
-// A control holds a part at a displacement, drives a part at a speed, or runs
-// a heater at a setting. A displacement set (unit "m" or "rad") takes effect
-// within the goal, like a teleport: when the goal completes the part stands at
-// the new value, whatever the object's physics, and anything resting on it is
-// displaced, not carried, so a caller sets such a control before placing
-// things on the part. A speed set (unit "m/s", such as a conveyor's belt)
-// takes effect from the next physics step and the goal completes then: the
-// part stays where it stands, its surface moves at the new speed (a negative
-// value the other way) and what rests on it is carried by friction. A heater
-// setting (unit "degC", an oven's thermostat, or "W", a hotplate's power)
-// takes effect from the next physics step and the goal completes then: nothing
-// moves, and the heater and what it heats warm or cool from there at the pace
-// of their heat exchange, not at once. A setter validates its whole request
-// before it changes anything: it refuses with `rejected` a goal for an
-// unknown object or control, or with a value not finite or out of bounds,
-// and the object stays as it was.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "object_controls",
     tag: "v1",
+    description: [
+      "The adjustable controls of the objects a simulation engine spawned through scene_manipulation: what a spawned object lets a caller set (a standing desk's height, a conveyor's belt speed, a stove's oven thermostat), read with its unit, bounds, authored default and current value, and set one at a time.",
+      "Which controls an object offers is authored in its asset, so an engine implements this contract once and needs no code per asset; an asset with nothing to adjust offers no controls, and only objects that offer at least one are listed. What a caller chooses when it picks the asset (a conveyor's width or shape) is a catalogue entry, not a control.",
+      "Object ids are the ones scene_manipulation minted, and an object is listed from its spawn, every control at its default or at the value the scene that placed it starts it at, until it is removed or the scene is loaded or cleared. Within one object every control id is unique and is what set_object_control takes. A control is a scalar in the unit it reports; its bounds are inclusive, and bounds, default and value are world quantities, so a length or speed control on an object spawned at scale 2 reports twice its authored range; a heater's control keeps its range at every scale. Where the object stands is object_state's to report; a control's value is read here.",
+      "A control holds a part at a displacement, drives a part at a speed, or runs a heater at a setting. A displacement set (unit \"m\" or \"rad\") takes effect within the goal, like a teleport: when the goal completes the part stands at the new value, whatever the object's physics, and anything resting on it is displaced, not carried, so a caller sets such a control before placing things on the part. A speed set (unit \"m/s\", such as a conveyor's belt) takes effect from the next physics step and the goal completes then: the part stays where it stands, its surface moves at the new speed (a negative value the other way) and what rests on it is carried by friction. A heater setting (unit \"degC\", an oven's thermostat, or \"W\", a hotplate's power) takes effect from the next physics step and the goal completes then: nothing moves, and the heater and what it heats warm or cool from there at the pace of their heat exchange, not at once. A setter validates its whole request before it changes anything: it refuses with `rejected` a goal for an unknown object or control, or with a value not finite or out of bounds, and the object stays as it was.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // Every spawned object that offers a control, in the implementer's
-        // order, with every control it offers. A world without adjustable
-        // objects answers an empty list. An implementer that has no controls
-        // to report gives an error reply: with `rejected` when it does not
-        // inspect its scene, and with `precondition_failed` when it is not
-        // ready yet.
         name: "get_object_controls",
+        description: "Give every spawned object that offers a control, in the implementer's order, with every control it offers. A world without adjustable objects answers an empty list. An implementer that has no controls to report gives an error reply: with `rejected` when it does not inspect its scene, and with `precondition_failed` when it is not ready yet.",
         response_message_format: {
           objects: {
             $type: "array",
             $items: {
               $type: "object",
               object_id: "string",
-              // The asset it was spawned from.
-              asset_id: "string",
+              asset_id: { $type: "string", $description: "The asset it was spawned from." },
               controls: {
                 $type: "array",
                 $items: {
                   $type: "object",
-                  // What set_object_control takes; unique within the object.
-                  id: "string",
-                  // What the control adjusts, for a reader.
-                  label: "string",
-                  // The unit of min, max, default and value ("m", "m/s",
-                  // "rad", "degC", "W").
-                  unit: "string",
-                  // Inclusive bounds of value.
-                  min: "f64",
-                  max: "f64",
-                  // The authored value, which a spawned object starts at.
-                  default: "f64",
-                  // The current value.
-                  value: "f64",
+                  id: { $type: "string", $description: "What set_object_control takes; unique within the object." },
+                  label: { $type: "string", $description: "What the control adjusts, for a reader." },
+                  unit: { $type: "string", $description: "The unit of min, max, default and value (\"m\", \"m/s\", \"rad\", \"degC\", \"W\")." },
+                  min: { $type: "f64", $description: "The inclusive lower bound of value." },
+                  max: { $type: "f64", $description: "The inclusive upper bound of value." },
+                  default: { $type: "f64", $description: "The authored value, which a spawned object starts at." },
+                  value: { $type: "f64", $description: "The current value." },
                 },
               },
             },
@@ -85,13 +42,8 @@
     ],
     actions: [
       {
-        // Set one control of one spawned object to value, in the control's
-        // unit and within its bounds. The goal completes once the part
-        // stands at the new value, or once a physics step has run the part
-        // at the new speed or the heater at the new setting. An implementer
-        // that does not inspect its scene refuses every set with `rejected`.
-        // It fails with `attempt_failed` when the change fails.
         name: "set_object_control",
+        description: "Set one control of one spawned object to value, in the control's unit and within its bounds. The goal completes once the part stands at the new value, or once a physics step has run the part at the new speed or the heater at the new setting. An implementer that does not inspect its scene refuses every set with `rejected`. It fails with `attempt_failed` when the change fails. The action gives no feedback. The result gives the value of the control when the goal ends.",
         goal_service: {
           request_message_format: {
             object_id: "string",
@@ -101,9 +53,7 @@
         },
         result_service: {
           response_message_format: {
-            // The control's value when the goal ends: the requested one
-            // when the goal completes.
-            current_value: "f64",
+            current_value: { $type: "f64", $description: "The control's value when the goal ends: the requested one when the goal completes." },
           },
         },
       },

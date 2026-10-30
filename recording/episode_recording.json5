@@ -1,99 +1,55 @@
-// Episodic dataset recording: a recorder that captures its observed sources
-// into episodes and groups them into sessions. One session is open at a time
-// and record_episode appends one episode to it. The session lifecycle is part
-// of the capability, so the contract carries the full loop: record episodes,
-// finalize the open session into a loadable dataset, and reopen a past
-// session to append more. What a session identifier looks like and where
-// datasets land is the implementer's business; clients treat the identifier
-// as an opaque token, never a path.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "episode_recording",
     tag: "v1",
+    description: [
+      "Episodic dataset recording: a recorder that captures its observed sources into episodes and groups them into sessions.",
+      "One session is open at a time and record_episode appends one episode to it. The session lifecycle is part of the capability, so the contract carries the full loop: record episodes, finalize the open session into a loadable dataset, and reopen a past session to append more. What a session identifier looks like and where datasets land is the implementer's business; clients treat the identifier as an opaque token, never a path.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // Finalize the open session into an immediately loadable dataset and
-        // open a fresh session in place. The call gets an error reply with
-        // `precondition_failed` when the recorder cannot finish the session
-        // now, such as while an episode records or when the session holds
-        // no episode, and with `attempt_failed` when the finish fails.
         name: "finish_session",
+        description: "Finalize the open session into an immediately loadable dataset and open a fresh session in place. The call gets an error reply with `precondition_failed` when the recorder cannot finish the session now, such as while an episode records or when the session holds no episode, and with `attempt_failed` when the finish fails.",
         response_message_format: {
-          // Identifier of the finished session.
-          session: "string",
+          session: { $type: "string", $description: "Identifier of the finished session." },
         },
       },
       {
-        // Record into a past session again, appending to its dataset. The
-        // call gets an error reply with `rejected` for a session the
-        // recorder does not have; with `precondition_failed` when the live
-        // sources no longer match what the session recorded, and when the
-        // recorder cannot change sessions now, such as while an episode
-        // records; and with `attempt_failed` when the resume fails. After an
-        // error reply, the open session stays as it was.
         name: "resume_session",
+        description: "Record into a past session again, appending to its dataset. The call gets an error reply with `rejected` for a session the recorder does not have; with `precondition_failed` when the live sources no longer match what the session recorded, and when the recorder cannot change sessions now, such as while an episode records; and with `attempt_failed` when the resume fails. After an error reply, the open session stays as it was.",
         request_message_format: {
-          // Identifier of the session to resume, exactly as finish_session
-          // returned it.
-          session: "string",
+          session: { $type: "string", $description: "Identifier of the session to resume, exactly as finish_session returned it." },
         },
         response_message_format: {
-          // Identifier of the session now recording.
-          session: "string",
-          // Episodes already saved in the resumed dataset.
-          episodes: "u64",
+          session: { $type: "string", $description: "Identifier of the session now recording." },
+          episodes: { $type: "u64", $description: "Episodes already saved in the resumed dataset." },
         },
       },
     ],
     actions: [
       {
-        // One episode: recording runs from goal acceptance until the caller
-        // cancels the goal or the recorder ends the episode itself, and the
-        // frames land in the open session. The goal never completes. The
-        // recorder refuses a goal with `precondition_failed` when it cannot
-        // start an episode now, such as while another episode records or
-        // while a source is not ready.
-        //
-        // A cancel by the caller ends the episode with a save, and the goal
-        // ends cancelled with its result. The recorder ends the episode
-        // itself, with a save, at its maximum episode length, when the free
-        // disk space falls below its floor, when a source goes silent or
-        // stale, when it cannot keep its frame rate, and when it shuts down:
-        // the goal then ends cancelled with its result, and the reason names
-        // the cause. A goal whose episode the recorder cannot write or save
-        // fails with `attempt_failed`, and its frames are dropped.
         name: "record_episode",
+        description: "Record one episode: recording runs from goal acceptance until the caller cancels the goal or the recorder ends the episode itself, and the frames land in the open session. The goal never completes. The recorder refuses a goal with `precondition_failed` when it cannot start an episode now, such as while another episode records or while a source is not ready. A cancel by the caller ends the episode with a save, and the goal ends cancelled with its result. The recorder ends the episode itself, with a save, at its maximum episode length, when the free disk space falls below its floor, when a source goes silent or stale, when it cannot keep its frame rate, and when it shuts down: the goal then ends cancelled with its result, and the reason names the cause. A goal whose episode the recorder cannot write or save fails with `attempt_failed`, and its frames are dropped. The feedback gives one message per recorded frame, and the result gives the saved episode.",
         goal_service: {
           request_message_format: {
-            // Natural-language description of what the episode demonstrates,
-            // stored with the dataset.
-            task: "string",
+            task: { $type: "string", $description: "Natural-language description of what the episode demonstrates, stored with the dataset." },
           },
         },
         feedback_topic: {
-          // One message per recorded frame.
           qos_profile: "standard",
           message_format: {
-            // Count of frames written so far, not image data.
-            frames_recorded: "u64",
-            // Remaining space where the dataset lands; the refresh cadence is
-            // the implementer's business.
-            disk_free_bytes: "u64",
+            frames_recorded: { $type: "u64", $description: "Count of frames written so far, not image data." },
+            disk_free_bytes: { $type: "u64", $description: "Remaining space where the dataset lands; the refresh cadence is the implementer's business." },
           },
         },
         result_service: {
           response_message_format: {
-            // Index of the saved episode in the open session.
-            episode_index: "i64",
-            // Count of frames captured during the goal.
-            frames_recorded: "u64",
-            // Frames that the shortest camera video of the saved episode
-            // misses against its state rows; 0 when every video holds every
-            // frame. An episode with missing frames should not be trained on.
-            video_frames_missing: "u64",
+            episode_index: { $type: "i64", $description: "Index of the saved episode in the open session." },
+            frames_recorded: { $type: "u64", $description: "Count of frames captured during the goal." },
+            video_frames_missing: { $type: "u64", $description: "Frames that the shortest camera video of the saved episode misses against its state rows; 0 when every video holds every frame. An episode with missing frames should not be trained on." },
           },
         },
       },

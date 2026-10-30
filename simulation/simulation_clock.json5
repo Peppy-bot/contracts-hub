@@ -1,77 +1,49 @@
-// The clock of a simulation and the hold on it: what simulated time it is
-// now, whether the simulation is paused, and a step of a paused simulation
-// by a chosen duration. `now` is on the same clock as the stamps of the
-// simulation's messages, so a caller compares a stamp with it and knows how
-// old the stamp is.
-//
-// While paused, simulated time stands still: the engine steps no physics,
-// publishes no clock tick and none of the streams of its state, and keeps
-// answering every service and every scene command, so a world can be
-// arranged with nothing moving. A step advances the simulation by a
-// duration, rounded up to whole physics steps, at the engine's normal pace,
-// and leaves it paused. A robot that runs on wall time cannot move while
-// the simulation is paused: its limbs go silent, and a move in flight fails.
-// Resume before a robot moves.
-//
-// Before the clock has a time, get_clock and set_paused give an error reply
-// with `precondition_failed`.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "simulation_clock",
     tag: "v1",
+    description: [
+      "The clock of a simulation and the hold on it: what simulated time it is now, whether the simulation is paused, and a step of a paused simulation by a chosen duration.",
+      "`now` is on the same clock as the stamps of the simulation's messages, so a caller compares a stamp with it and knows how old the stamp is.",
+      "While paused, simulated time stands still: the engine steps no physics, publishes no clock tick and none of the streams of its state, and keeps answering every service and every scene command, so a world can be arranged with nothing moving. A step advances the simulation by a duration, rounded up to whole physics steps, at the engine's normal pace, and leaves it paused. A robot that runs on wall time cannot move while the simulation is paused: its limbs go silent, and a move in flight fails. Resume before a robot moves.",
+      "Before the clock has a time, get_clock and set_paused give an error reply with `precondition_failed`.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // The simulated time now and whether the simulation is paused.
         name: "get_clock",
+        description: "Give the simulated time now and whether the simulation is paused.",
         response_message_format: {
-          // The simulated time now, on the clock the simulation's messages
-          // are stamped with.
-          now: "time",
+          now: { $type: "time", $description: "The simulated time now, on the clock the simulation's messages are stamped with." },
           paused: "bool",
         },
       },
       {
-        // Pauses the simulation, or resumes it. Setting the state it is
-        // already in gives the response and changes nothing.
         name: "set_paused",
+        description: "Pause the simulation, or resume it. Setting the state it is already in gives the response and changes nothing.",
         request_message_format: {
           paused: "bool",
         },
         response_message_format: {
-          // The simulated time now.
-          now: "time",
-          // The state after the call.
-          paused: "bool",
+          now: { $type: "time", $description: "The simulated time now." },
+          paused: { $type: "bool", $description: "The state after the call." },
         },
       },
     ],
     actions: [
       {
-        // Advances a paused simulation by duration_s of simulated time, at
-        // the engine's normal pace, and leaves it paused. The goal completes
-        // when the last physics step of the duration has run. A step waits
-        // for the step before it to end. The step is refused with
-        // `precondition_failed` while the simulation runs. A resume, or a
-        // build of simulation_world, that comes before the last physics
-        // step of the duration has run ends the step cancelled, with a
-        // reason that names it. A cancelled step gives the reason of the
-        // cancel and its result.
         name: "step",
+        description: "Advance a paused simulation by duration_s of simulated time, at the engine's normal pace, and leaves it paused. The goal completes when the last physics step of the duration has run. A step waits for the step before it to end. The step is refused with `precondition_failed` while the simulation runs. A resume, or a build of simulation_world, that comes before the last physics step of the duration has run ends the step cancelled, with a reason that names it. A cancelled step gives the reason of the cancel and its result. The action gives no feedback. The result gives the simulated time when the goal ended.",
         goal_service: {
           request_message_format: {
-            // How far to advance (s), rounded up to whole physics steps. A
-            // duration that is not finite, not above 0, or above 30 is
-            // refused with `rejected`.
-            duration_s: "f64",
+            duration_s: { $type: "f64", $description: "How far to advance (s), rounded up to whole physics steps. A duration that is not finite, not above 0, or above 30 is refused with `rejected`." },
           },
         },
         result_service: {
           response_message_format: {
-            // The simulated time when the goal ended.
-            now: "time",
+            now: { $type: "time", $description: "The simulated time when the goal ended." },
           },
         },
       },

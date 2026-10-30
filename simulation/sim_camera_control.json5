@@ -1,43 +1,20 @@
-// The rendered cameras of a simulation engine and their controls: the
-// channel through which a rendered-camera relay forwards the camera
-// controls it receives to the engine that renders the camera, and through
-// which the scene commander's camera panel lists and edits every camera.
-// The engine models each rendered camera's response after the real device
-// the camera stands for (exposure, gain, white balance, brightness,
-// contrast, in that device's units and bounds) and applies a control to
-// that camera's colour stream alone; the relay presents the result as the
-// rgb_camera or rgbd_camera contract and describes it through
-// camera_profile. Every request names the camera by its name on the robot,
-// which is its relay's name in the copy (wrist_left, front), and by its
-// robot, the copy the robot runs as. A relay leaves robot empty: the engine
-// tells the relay's robot by the camera pair the relay holds, as it tells a
-// limb's by its pair. A robot renders the cameras of its rig while it holds
-// their pairs, so a robot without a rig has none.
-//
-// Response fields mirror the camera contracts' control responses so the
-// relay answers what the engine answers. An engine that does not model a
-// control for a camera gives an error reply with `rejected` to a request
-// for that control, and so does a setter with a value out of the device's
-// bounds or a mode the device does not have. A request for a camera that
-// the engine does not render, and a request without a robot from a caller
-// that holds no pair of the camera it names, get an error reply with
-// `resource_unavailable`.
-//
-// No MCP exposure publishes this contract, and it has no counterpart on a
-// physical robot, where the camera node drives the device itself.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "sim_camera_control",
     tag: "v1",
+    description: [
+      "The rendered cameras of a simulation engine and their controls: the channel through which a rendered-camera relay forwards the camera controls it receives to the engine that renders the camera, and through which the scene commander's camera panel lists and edits every camera.",
+      "The engine models each rendered camera's response after the real device the camera stands for (exposure, gain, white balance, brightness, contrast, in that device's units and bounds) and applies a control to that camera's colour stream alone; the relay presents the result as the rgb_camera or rgbd_camera contract and describes it through camera_profile. Every request names the camera by its name on the robot, which is its relay's name in the copy (wrist_left, front), and by its robot, the copy the robot runs as. A relay leaves robot empty: the engine tells the relay's robot by the camera pair the relay holds, as it tells a limb's by its pair. A robot renders the cameras of its rig while it holds their pairs, so a robot without a rig has none.",
+      "Response fields mirror the camera contracts' control responses so the relay answers what the engine answers. An engine that does not model a control for a camera gives an error reply with `rejected` to a request for that control, and so does a setter with a value out of the device's bounds or a mode the device does not have. A request for a camera that the engine does not render, and a request without a robot from a caller that holds no pair of the camera it names, get an error reply with `resource_unavailable`.",
+      "No MCP exposure publishes this contract, and it has no counterpart on a physical robot, where the camera node drives the device itself.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // Every camera the engine renders, in the order its robots stand:
-        // its robot and name, its kind ("rgb" or "rgbd") and its colour
-        // stream, in the fields of the camera contracts' video_stream_info.
         name: "get_cameras",
+        description: "Give every camera the engine renders, in the order its robots stand: its robot and name, its kind (\"rgb\" or \"rgbd\") and its colour stream, in the fields of the camera contracts' video_stream_info.",
         response_message_format: {
           cameras: {
             $type: "array",
@@ -55,9 +32,8 @@
         },
       },
       {
-        // The camera's device profile, in the JSON shape camera_profile's
-        // get_camera_profile publishes.
         name: "describe_camera",
+        description: "Give the camera's device profile, in the JSON shape camera_profile's get_camera_profile publishes.",
         request_message_format: {
           robot: "string",
           camera: "string",
@@ -67,9 +43,8 @@
         },
       },
       {
-        // mode is "auto" or "manual"; value is the manual exposure in the
-        // device's units and is ignored in auto mode.
         name: "set_camera_exposure",
+        description: "Set the exposure of the camera's colour stream. mode is \"auto\" or \"manual\"; value is the manual exposure in the device's units and is ignored in auto mode.",
         request_message_format: {
           robot: "string",
           camera: "string",
@@ -81,9 +56,8 @@
         },
       },
       {
-        // mode is "auto" or "manual"; temperature is Kelvin and is ignored
-        // in auto mode.
         name: "set_camera_white_balance",
+        description: "Set the white balance of the camera's colour stream. mode is \"auto\" or \"manual\"; temperature is Kelvin and is ignored in auto mode.",
         request_message_format: {
           robot: "string",
           camera: "string",
@@ -96,6 +70,7 @@
       },
       {
         name: "set_camera_gain",
+        description: "Set the gain of the camera's colour stream, in the device's units and bounds. current_value is the gain that the engine applies after the call.",
         request_message_format: {
           robot: "string",
           camera: "string",
@@ -107,6 +82,7 @@
       },
       {
         name: "set_camera_brightness",
+        description: "Set the brightness of the camera's colour stream, in the device's units and bounds. current_value is the brightness that the engine applies after the call.",
         request_message_format: {
           robot: "string",
           camera: "string",
@@ -118,6 +94,7 @@
       },
       {
         name: "set_camera_contrast",
+        description: "Set the contrast of the camera's colour stream, in the device's units and bounds. current_value is the contrast that the engine applies after the call.",
         request_message_format: {
           robot: "string",
           camera: "string",
@@ -128,8 +105,8 @@
         },
       },
       {
-        // Every control of the camera back to its device defaults.
         name: "reset_camera",
+        description: "Put every control of the camera back to its device defaults.",
         request_message_format: {
           robot: "string",
           camera: "string",

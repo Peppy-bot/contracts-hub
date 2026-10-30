@@ -1,277 +1,117 @@
-// Manipulating items with a multi-limb robot: pick an item up, put it down
-// where the gripper stands or carry it somewhere first, stop whatever is in
-// flight, and report what is held. Each action is a whole sequence, planned
-// and carried out by the implementer, and returns a result when the sequence
-// ends. They sit above limb_motion, whose moves command one limb at a time
-// and carry no knowledge of what the limb is reaching for. Finding an item
-// is item_perception's job; the identifier it mints is what grab_item takes.
-//
-// Every pose, commanded or reported, is in the robot frame, position in
-// meters and orientation as a unit quaternion [x, y, z, w]. A pose is the
-// gripper's grasp point, the same convention item_perception reports an
-// item's pose in. Grippers are named from the implementer's fixed set of
-// gripper names, which get_state lists.
-//
-// The robot frame is fixed to the robot's base: its origin is the point
-// the base stands on, +X points the way the robot faces, +Y to its left
-// and +Z up. It moves with the robot, and it is not a frame of the room or
-// of a simulated world.
-//
-// A position says where and is always required. An orientation says how and
-// is optional wherever it appears: absent on a goal leaves the choice to the
-// implementer, so a caller never has to invent a quaternion it does not mean.
-//
-// One sequence at a time. A goal that arrives while another sequence is
-// running is refused and the running sequence continues untouched; the
-// refusal names the running action. A caller that wants the robot regardless
-// aborts first. This is what keeps two callers, an operator and an autonomous
-// planner among them, from interleaving sequences on one robot.
-//
-// abort is the one goal admitted while a sequence is running: it stops that
-// sequence and returns once the robot has come to rest, standing where the
-// stop left it. A cancel on a running goal's own handle stops the robot the
-// same way; the two differ only in who may issue them, since a cancel is
-// available only to the caller holding the handle while abort is a goal in
-// its own right that any caller can issue. abort never appears as
-// current_action in get_state, and abort against an idle robot succeeds and
-// reports that no sequence was running.
-//
-// grab_item, drop_item and place_item have the mark `moves_robot`, and abort
-// and get_state have no mark: each MCP server, `peppy node call` and each
-// lease holder asks the daemon (`robot_leases.check_move`) whether it may
-// move the robot before it calls one of the three, so an abort never waits
-// for a lease.
-//
-// An item identifier comes from item_perception's identify_item, or is minted
-// here when grab_item takes an item addressed by pose, and names that one
-// item for as long as the implementer can still account for it. An
-// identifier the implementer no longer recognises is refused in the result.
-// Identifiers are opaque: callers compare them and pass them back, and read
-// nothing into their text.
-//
-// A gripper's held flag is set when grab_item succeeds on it and cleared when
-// drop_item or place_item succeeds on it. A refused, failed, cancelled, or
-// aborted sequence leaves the flag as it was. The flag follows results, not
-// the jaws: a sequence stopped partway can leave the gripper holding what the
-// flag does not report, or the reverse, and the flag stays as it was until a
-// later grab_item, drop_item, or place_item succeeds. get_state reports the
-// flag, and beside it the opening of each gripper as the implementer last
-// measured it: an item that slips out of the jaws after grab_item succeeded
-// leaves the flag set and the opening near 0.
-//
-// The fields that hold an item identifier have the mark `item_id`, and the
-// positions and orientations in the robot frame the mark `robot_frame`
-// (marks.json5). The workflow side reads them: a workflow passes the value of
-// such a field only from a field with the same mark of a result or an
-// observation, an item identifier of the same node instance and a position
-// or an orientation of the same role, never as a literal.
-// grab_item also has the mark `reaches_for_item`: a workflow that calls it
-// first checks that the robot reaches its work zone.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "item_manipulation",
     tag: "v1",
+    description: [
+      "Manipulating items with a multi-limb robot: pick an item up, put it down where the gripper stands or carry it somewhere first, stop whatever is in flight, and report what is held.",
+      "Each action is a whole sequence, planned and carried out by the implementer, and returns a result when the sequence ends. They sit above limb_motion, whose moves command one limb at a time and carry no knowledge of what the limb is reaching for. Finding an item is item_perception's job; the identifier it mints is what grab_item takes.",
+      "Every pose, commanded or reported, is in the robot frame, position in meters and orientation as a unit quaternion [x, y, z, w]. A pose is the gripper's grasp point, the same convention item_perception reports an item's pose in. Grippers are named from the implementer's fixed set of gripper names, which get_state lists.",
+      "The robot frame is fixed to the robot's base: its origin is the point the base stands on, +X points the way the robot faces, +Y to its left and +Z up. It moves with the robot, and it is not a frame of the room or of a simulated world.",
+      "A position says where and is always required. An orientation says how and is optional wherever it appears: absent on a goal leaves the choice to the implementer, so a caller never has to invent a quaternion it does not mean.",
+      "One sequence at a time. A goal that arrives while another sequence is running is refused and the running sequence continues untouched; the refusal names the running action. A caller that wants the robot regardless aborts first. This is what keeps two callers, an operator and an autonomous planner among them, from interleaving sequences on one robot.",
+      "abort is the one goal admitted while a sequence is running: it stops that sequence and returns once the robot has come to rest, standing where the stop left it. A cancel on a running goal's own handle stops the robot the same way; the two differ only in who may issue them, since a cancel is available only to the caller holding the handle while abort is a goal in its own right that any caller can issue. abort never appears as current_action in get_state, and abort against an idle robot succeeds and reports that no sequence was running.",
+      "grab_item, drop_item and place_item have the mark `moves_robot`, and abort and get_state have no mark: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls one of the three, so an abort never waits for a lease.",
+      "An item identifier comes from item_perception's identify_item, or is minted here when grab_item takes an item addressed by pose, and names that one item for as long as the implementer can still account for it. An identifier the implementer no longer recognises is refused in the result. Identifiers are opaque: callers compare them and pass them back, and read nothing into their text.",
+      "A gripper's held flag is set when grab_item succeeds on it and cleared when drop_item or place_item succeeds on it. A refused, failed, cancelled, or aborted sequence leaves the flag as it was. The flag follows results, not the jaws: a sequence stopped partway can leave the gripper holding what the flag does not report, or the reverse, and the flag stays as it was until a later grab_item, drop_item, or place_item succeeds. get_state reports the flag, and beside it the opening of each gripper as the implementer last measured it: an item that slips out of the jaws after grab_item succeeded leaves the flag set and the opening near 0.",
+      "The fields that hold an item identifier have the mark `item_id`, and the positions and orientations in the robot frame the mark `robot_frame` (marks.json5). The workflow side reads them: a workflow passes the value of such a field only from a field with the same mark of a result or an observation, an item identifier of the same node instance and a position or an orientation of the same role, never as a literal. grab_item also has the mark `reaches_for_item`: a workflow that calls it first checks that the robot reaches its work zone.",
+    ],
   },
   interfaces: {
     actions: [
       {
         name: "grab_item",
+        description: "Pick an item up with one gripper: the implementer reaches the item, named by its item_id or by a grasp pose, and closes the gripper on it. The action gives no feedback. The result tells whether the grasp succeeded, and names the gripper that now holds the item and the identifier of the item. All other fields except action_time are zero or empty when success is false.",
         goal_service: {
           request_message_format: {
-            // Which gripper closes on the item, named from the implementer's
-            // fixed set of gripper names (e.g. "left_gripper"). An unknown
-            // name is refused in the result, as is a gripper that already
-            // holds an item. Empty leaves the choice to the implementer,
-            // which picks a free gripper suited to the item's position and
-            // is refused in the result when none is free. The result names
-            // the gripper that took the item either way.
-            gripper_name: "string",
-            // Identifier of an item item_perception's identify_item found. Empty
-            // hands the grasp pose below to the implementer instead, so a
-            // caller that already knows where to reach needs no identify_item
-            // first. An identifier the implementer no longer recognises is
-            // refused in the result.
-            item_id: { $type: "string", $marks: ["item_id"] },
-            // Grasp-point position, robot frame: x, y, z (m). Read only when
-            // item_id is empty; a goal that names an item_id sends zeros here.
-            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
-            // Grasp-point orientation, quaternion [x, y, z, w]. Read only
-            // when item_id is empty. Absent asks the implementer to approach
-            // the position however it judges best, the same freedom it has
-            // when the goal names an item_id instead.
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"] },
-            // Maximum effort the gripper may exert closing on the item
-            // (magnitude, in the gripper's effort unit). 0 = no preference;
-            // the implementer's configured ceiling applies.
-            max_effort: "f64",
+            gripper_name: { $type: "string", $description: "Which gripper closes on the item, named from the implementer's fixed set of gripper names (e.g. \"left_gripper\"). An unknown name is refused in the result, as is a gripper that already holds an item. Empty leaves the choice to the implementer, which picks a free gripper suited to the item's position and is refused in the result when none is free. The result names the gripper that took the item either way." },
+            item_id: { $type: "string", $marks: ["item_id"], $description: "Identifier of an item item_perception's identify_item found. Empty hands the grasp pose (position and orientation) to the implementer instead, so a caller that already knows where to reach needs no identify_item first. An identifier the implementer no longer recognises is refused in the result." },
+            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Grasp-point position, robot frame: x, y, z (m). Read only when item_id is empty; a goal that names an item_id sends zeros here." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"], $description: "Grasp-point orientation, quaternion [x, y, z, w]. Read only when item_id is empty. Absent asks the implementer to approach the position however it judges best, the same freedom it has when the goal names an item_id instead." },
+            max_effort: { $type: "f64", $description: "Maximum effort the gripper may exert closing on the item (magnitude, in the gripper's effort unit). 0 = no preference; the implementer's configured ceiling applies." },
           },
         },
         result_service: {
           response_message_format: {
-            // False when the grasp was refused, failed, cancelled, or
-            // aborted; message says which. Refused before reaching when
-            // another sequence is running, the named gripper is unknown or
-            // already holds an item, no gripper is free for a goal that
-            // named none, or the item_id is one the implementer no longer
-            // recognises. All other fields except action_time are zero or
-            // empty when success is false.
-            success: "bool",
+            success: { $type: "bool", $description: "False when the grasp was refused, failed, cancelled, or aborted; message says which. Refused before reaching when another sequence is running, the named gripper is unknown or already holds an item, no gripper is free for a goal that named none, or the item_id is one the implementer no longer recognises." },
             message: "string",
-            // Gripper that now holds the item, from the implementer's fixed
-            // set of gripper names. It repeats the goal's name, or names the
-            // one the implementer chose when the goal left it empty, so the
-            // caller knows which gripper to address with drop_item or
-            // place_item.
-            gripper_name: "string",
-            // Identifier of the item the gripper now holds. It repeats the
-            // goal's identifier, or names one the implementer minted for an
-            // item the goal addressed by pose, so the held item is always
-            // addressable afterwards.
-            item_id: { $type: "string", $marks: ["item_id"] },
-            // Wall-clock duration of the action (s), whatever the outcome.
-            action_time: "f64",
+            gripper_name: { $type: "string", $description: "Gripper that now holds the item, from the implementer's fixed set of gripper names. It repeats the goal's name, or names the one the implementer chose when the goal left it empty, so the caller knows which gripper to address with drop_item or place_item." },
+            item_id: { $type: "string", $marks: ["item_id"], $description: "Identifier of the item the gripper now holds. It repeats the goal's identifier, or names one the implementer minted for an item the goal addressed by pose, so the held item is always addressable afterwards." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s), whatever the outcome." },
           },
         },
         marks: ["moves_robot", "reaches_for_item"],
       },
       {
         name: "drop_item",
+        description: "Open one gripper where it stands and release the item that it holds. The action gives no feedback. The result tells whether the release succeeded, and names the gripper and the released item. All other fields except action_time are zero or empty when success is false.",
         goal_service: {
           request_message_format: {
-            // Which gripper releases, named from the implementer's fixed set
-            // of gripper names. Empty means the gripper currently holding an
-            // item; refused in the result when none or more than one holds.
-            // An unknown name is refused in the result, as is a gripper
-            // holding nothing. The item is released where the gripper
-            // already is; place_item carries it somewhere first.
-            gripper_name: "string",
+            gripper_name: { $type: "string", $description: "Which gripper releases, named from the implementer's fixed set of gripper names. Empty means the gripper currently holding an item; refused in the result when none or more than one holds. An unknown name is refused in the result, as is a gripper holding nothing. The item is released where the gripper already is; place_item carries it somewhere first." },
           },
         },
         result_service: {
           response_message_format: {
-            // False when the release was refused, failed, cancelled, or
-            // aborted; message says which. Refused before releasing when
-            // another sequence is running, the named gripper is unknown or
-            // holds nothing, or the name is empty while no gripper or more
-            // than one holds. All other fields except action_time are zero
-            // or empty when success is false.
-            success: "bool",
+            success: { $type: "bool", $description: "False when the release was refused, failed, cancelled, or aborted; message says which. Refused before releasing when another sequence is running, the named gripper is unknown or holds nothing, or the name is empty while no gripper or more than one holds." },
             message: "string",
-            // Gripper that released the item, from the implementer's fixed
-            // set of gripper names.
-            gripper_name: "string",
-            // Identifier of the item that was released, as grab_item
-            // reported it.
-            item_id: { $type: "string", $marks: ["item_id"] },
-            // Wall-clock duration of the action (s), whatever the outcome.
-            action_time: "f64",
+            gripper_name: { $type: "string", $description: "Gripper that released the item, from the implementer's fixed set of gripper names." },
+            item_id: { $type: "string", $marks: ["item_id"], $description: "Identifier of the item that was released, as grab_item reported it." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s), whatever the outcome." },
           },
         },
         marks: ["moves_robot"],
       },
       {
         name: "place_item",
+        description: "Carry the item that one gripper holds to a pose and release it there. The action gives no feedback. The result tells whether the placement succeeded, and gives the gripper, the placed item and the measured grasp-point position where the jaws opened. All other fields except action_time are zero or empty when success is false.",
         goal_service: {
           request_message_format: {
-            // Which gripper carries and releases the item, named from the
-            // implementer's fixed set of gripper names. Empty means the
-            // gripper currently holding an item; refused in the result when
-            // none or more than one holds. An unknown name is refused in the
-            // result, as is a gripper holding nothing.
-            gripper_name: "string",
-            // Grasp-point position when the jaws open, robot frame:
-            // x, y, z (m). It is where the gripper lets go, not a waypoint
-            // on the way there. The implementer lowers the item to it and,
-            // when the item comes to rest on something on the way, may let
-            // go there instead: final_position says where the jaws opened.
-            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
-            // Grasp-point orientation when the jaws open, quaternion
-            // [x, y, z, w]. Absent leaves it to the implementer, which is
-            // what a caller means when it cares where the item ends up and
-            // not which way it faces.
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"] },
+            gripper_name: { $type: "string", $description: "Which gripper carries and releases the item, named from the implementer's fixed set of gripper names. Empty means the gripper currently holding an item; refused in the result when none or more than one holds. An unknown name is refused in the result, as is a gripper holding nothing." },
+            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Grasp-point position when the jaws open, robot frame: x, y, z (m). It is where the gripper lets go, not a waypoint on the way there. The implementer lowers the item to it and, when the item comes to rest on something on the way, may let go there instead: final_position says where the jaws opened." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"], $description: "Grasp-point orientation when the jaws open, quaternion [x, y, z, w]. Absent leaves it to the implementer, which is what a caller means when it cares where the item ends up and not which way it faces." },
           },
         },
         result_service: {
           response_message_format: {
-            // False when the placement was refused, failed, cancelled, or
-            // aborted; message says which. Refused before carrying when
-            // another sequence is running, the named gripper is unknown or
-            // holds nothing, the name is empty while no gripper or more than
-            // one holds, or the target is one the implementer cannot reach,
-            // which it refuses rather than approximates. All other fields
-            // except action_time are zero or empty when success is false.
-            success: "bool",
+            success: { $type: "bool", $description: "False when the placement was refused, failed, cancelled, or aborted; message says which. Refused before carrying when another sequence is running, the named gripper is unknown or holds nothing, the name is empty while no gripper or more than one holds, or the target is one the implementer cannot reach, which it refuses rather than approximates." },
             message: "string",
-            // Gripper that placed the item, from the implementer's fixed set
-            // of gripper names.
-            gripper_name: "string",
-            // Identifier of the item that was placed, as grab_item reported
-            // it.
-            item_id: { $type: "string", $marks: ["item_id"] },
-            // Measured grasp-point position when the jaws opened, robot
-            // frame: x, y, z (m).
-            final_position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
-            // Wall-clock duration of the action (s), whatever the outcome.
-            action_time: "f64",
+            gripper_name: { $type: "string", $description: "Gripper that placed the item, from the implementer's fixed set of gripper names." },
+            item_id: { $type: "string", $marks: ["item_id"], $description: "Identifier of the item that was placed, as grab_item reported it." },
+            final_position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Measured grasp-point position when the jaws opened, robot frame: x, y, z (m)." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s), whatever the outcome." },
           },
         },
         marks: ["moves_robot"],
       },
       {
         name: "abort",
+        description: "Stop the sequence that runs now, whoever started it, and return once the robot has come to rest, standing where the stop left it. The action gives no feedback. The result names the action that was stopped, empty when no sequence was running.",
         goal_service: {
           request_message_format: {
-            // Why the sequence is being stopped, recorded by the implementer
-            // alongside the abort. Empty is accepted.
-            reason: "string",
+            reason: { $type: "string", $description: "Why the sequence is being stopped, recorded by the implementer alongside the abort. Empty is accepted." },
           },
         },
         result_service: {
           response_message_format: {
-            // False only when the abort itself could not be carried out;
-            // message says why. An abort with no sequence running succeeds.
-            success: "bool",
+            success: { $type: "bool", $description: "False only when the abort itself could not be carried out; message says why. An abort with no sequence running succeeds." },
             message: "string",
-            // Name of the action that was stopped, as it appears in this
-            // contract. Empty when no sequence was running.
-            aborted_action: "string",
-            // Wall-clock duration of the action (s), whatever the outcome.
-            action_time: "f64",
+            aborted_action: { $type: "string", $description: "Name of the action that was stopped, as it appears in this contract. Empty when no sequence was running." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s), whatever the outcome." },
           },
         },
       },
     ],
     services: [
       {
-        // What the implementer is doing and what it is holding, as of this
-        // call. It answers "is action X being performed?" by comparing X
-        // against current_action, "is the robot holding an item?" from the
-        // held flags, and "are the jaws still on it?" from the measured
-        // openings.
         name: "get_state",
+        description: "Give what the implementer is doing and what it is holding, as of this call. It answers \"is action X being performed?\" by comparing X against current_action, \"is the robot holding an item?\" from the held flags, and \"are the jaws still on it?\" from the measured openings.",
         response_message_format: {
-          // Name of the sequence running now, as it appears in this contract
-          // (e.g. "grab_item"). Empty when no sequence is running, which is
-          // also when a new goal is accepted.
-          current_action: "string",
-          // How long the running sequence has been going (s). 0 when none is
-          // running.
-          current_action_elapsed_s: "f64",
-          // The implementer's fixed set of gripper names, in a stable order.
-          // The arrays below carry one entry per gripper in this order.
-          gripper_names: { $type: "array", $items: "string" },
-          // True where that gripper holds an item.
-          holding: { $type: "array", $items: "bool" },
-          // Identifier of the item that gripper holds, addressable by
-          // drop_item and place_item. Empty where holding is false.
-          held_item_ids: { $type: "array", $items: "string", $marks: ["item_id"] },
-          // Measured opening fraction of that gripper (0 = closed, 1 = fully
-          // open), as the implementer last measured it: what the jaws do now,
-          // whatever the held flag says. Empty, not one entry per gripper,
-          // while the implementer has no measurement of every gripper.
-          gripper_openings: { $type: "array", $items: "f64" },
+          current_action: { $type: "string", $description: "Name of the sequence running now, as it appears in this contract (e.g. \"grab_item\"). Empty when no sequence is running, which is also when a new goal is accepted." },
+          current_action_elapsed_s: { $type: "f64", $description: "How long the running sequence has been going (s). 0 when none is running." },
+          gripper_names: { $type: "array", $items: "string", $description: "The implementer's fixed set of gripper names, in a stable order. holding, held_item_ids and gripper_openings carry one entry per gripper in this order." },
+          holding: { $type: "array", $items: "bool", $description: "True where that gripper holds an item." },
+          held_item_ids: { $type: "array", $items: "string", $marks: ["item_id"], $description: "Identifier of the item that gripper holds, addressable by drop_item and place_item. Empty where holding is false." },
+          gripper_openings: { $type: "array", $items: "f64", $description: "Measured opening fraction of that gripper (0 = closed, 1 = fully open), as the implementer last measured it: what the jaws do now, whatever the held flag says. Empty, not one entry per gripper, while the implementer has no measurement of every gripper." },
         },
       },
     ],

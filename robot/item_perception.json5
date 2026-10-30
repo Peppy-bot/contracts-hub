@@ -1,67 +1,19 @@
-// Finding items for a multi-limb robot to act on: a scan that reports every
-// item the implementer can see and act on, and a search that reports the one
-// item best matching a description. The implementer looks with whatever
-// perception it has and mints an item identifier for each item it reports,
-// the identifier item_manipulation's grab_item accepts, so a caller can hand
-// what was found straight to a grasp without restating where it is. Each
-// action is a whole sequence the implementer carries out and returns a result
-// for when it ends.
-//
-// Every position reported is in the robot frame, in meters, and an
-// orientation, where an action reports one, is a unit quaternion
-// [x, y, z, w]. An item's pose is the pose the implementer would drive a
-// gripper's grasp point to in order to take it, the same convention
-// item_manipulation commands by.
-//
-// The robot frame is fixed to the robot's base: its origin is the point
-// the base stands on, +X points the way the robot faces, +Y to its left
-// and +Z up. It moves with the robot, and it is not a frame of the room or
-// of a simulated world.
-//
-// Each result also reports where each item is in the picture the
-// implementer looked at: a region in the pixels of the colour frame of the
-// camera the result names, x to the right and y down, at the frame's size,
-// with the capture time of that frame. An implementer without a picture
-// reports no region and names no camera.
-//
-// A position says where and is always reported. An orientation says how and
-// is optional where it appears: absent means the implementer never resolved
-// it, which is the honest answer for a symmetric item and for a detector that
-// reports position alone, so a caller can tell a resolved orientation from
-// one that was merely filled in. A scan reports positions alone; a caller
-// that needs how an item is turned asks identify_item for it, or hands the
-// item to grab_item and leaves the approach to the implementer.
-//
-// An item identifier names that one item for as long as the implementer can
-// still account for it; item_manipulation refuses one the implementer no
-// longer recognises. Identifiers are opaque: callers compare them and pass
-// them back, and read nothing into their text. Both actions mint from one
-// set: an identifier from either is valid wherever an item_id is taken, and
-// a later scan or search that recognises an item it already reported keeps
-// that item's identifier rather than minting another, so the handles a
-// caller holds survive looking again.
-//
-// One search at a time, scan and identify alike. A goal that arrives while a
-// search is running is refused with `precondition_failed`, and the running
-// search continues untouched; a goal that meets another search only once it
-// started fails with `precondition_failed`. A goal is refused with
-// `resource_unavailable` when no perception source is available, and a
-// search that finds its source gone when it looks fails with
-// `resource_unavailable`. A search fails with `timeout` when its upper bound
-// passes before it has an answer, and with `attempt_failed` when it cannot
-// look for another reason. A failed goal gives no result.
-//
-// The fields that hold an item identifier have the mark `item_id`, and the
-// positions and orientations in the robot frame the mark `robot_frame`
-// (marks.json5). The workflow side reads them: a workflow passes the value of
-// such a field only from a field with the same mark of a result or an
-// observation, an item identifier of the same node instance and a position
-// or an orientation of the same role, never as a literal.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "item_perception",
     tag: "v1",
+    description: [
+      "Finding items for a multi-limb robot to act on: a scan that reports every item the implementer can see and act on, and a search that reports the one item best matching a description.",
+      "The implementer looks with whatever perception it has and mints an item identifier for each item it reports, the identifier item_manipulation's grab_item accepts, so a caller can hand what was found straight to a grasp without restating where it is. Each action is a whole sequence the implementer carries out and returns a result for when it ends.",
+      "Every position reported is in the robot frame, in meters, and an orientation, where an action reports one, is a unit quaternion [x, y, z, w]. An item's pose is the pose the implementer would drive a gripper's grasp point to in order to take it, the same convention item_manipulation commands by.",
+      "The robot frame is fixed to the robot's base: its origin is the point the base stands on, +X points the way the robot faces, +Y to its left and +Z up. It moves with the robot, and it is not a frame of the room or of a simulated world.",
+      "Each result also reports where each item is in the picture the implementer looked at: a region in the pixels of the colour frame of the camera the result names, x to the right and y down, at the frame's size, with the capture time of that frame. An implementer without a picture reports no region and names no camera.",
+      "A position says where and is always reported. An orientation says how and is optional where it appears: absent means the implementer never resolved it, which is the honest answer for a symmetric item and for a detector that reports position alone, so a caller can tell a resolved orientation from one that was merely filled in. A scan reports positions alone; a caller that needs how an item is turned asks identify_item for it, or hands the item to grab_item and leaves the approach to the implementer.",
+      "An item identifier names that one item for as long as the implementer can still account for it; item_manipulation refuses one the implementer no longer recognises. Identifiers are opaque: callers compare them and pass them back, and read nothing into their text. Both actions mint from one set: an identifier from either is valid wherever an item_id is taken, and a later scan or search that recognises an item it already reported keeps that item's identifier rather than minting another, so the handles a caller holds survive looking again.",
+      "One search at a time, scan and identify alike. A goal that arrives while a search is running is refused with `precondition_failed`, and the running search continues untouched; a goal that meets another search only once it started fails with `precondition_failed`. A goal is refused with `resource_unavailable` when no perception source is available, and a search that finds its source gone when it looks fails with `resource_unavailable`. A search fails with `timeout` when its upper bound passes before it has an answer, and with `attempt_failed` when it cannot look for another reason. A failed goal gives no result.",
+      "The fields that hold an item identifier have the mark `item_id`, and the positions and orientations in the robot frame the mark `robot_frame` (marks.json5). The workflow side reads them: a workflow passes the value of such a field only from a field with the same mark of a result or an observation, an item identifier of the same node instance and a position or an orientation of the same role, never as a literal.",
+    ],
   },
   failure_kinds: {
     not_found: "No item matches the description",
@@ -70,109 +22,49 @@
     actions: [
       {
         name: "scan_items",
+        description: "Look at the scene and report every item that the implementer can see and act on, with an identifier minted for each. The action gives no feedback. The result gives, for each item, its identifier, label, position, confidence and region in the picture, and the camera and the frame that the scan looked at. A scene with no items completes the scan with empty arrays. A cancelled scan gives the reason of the cancel, and all its arrays are empty.",
         goal_service: {
           request_message_format: {
-            // Upper bound on the scan (s); the implementer returns as soon
-            // as it has looked. 0 = the implementer's default.
-            timeout_s: "f64",
+            timeout_s: { $type: "f64", $description: "Upper bound on the scan (s); the implementer returns as soon as it has looked. 0 = the implementer's default." },
           },
         },
         result_service: {
           response_message_format: {
-            // A scene with no items completes the scan with empty arrays.
-            // A cancelled scan gives the reason of the cancel, and all its
-            // arrays are empty.
-            //
-            // One entry per item found, in the implementer's order; the
-            // arrays below are index aligned with this one. Identifiers are
-            // the ones identify_item and item_manipulation address.
-            item_ids: { $type: "array", $items: "string", $marks: ["item_id"] },
-            // What the implementer recognised each item as, in whatever
-            // vocabulary it uses; empty where it has no name for the item.
-            // Labels may repeat: two items of one kind get one label each
-            // and distinct identifiers, and callers tell them apart by
-            // position.
-            labels: { $type: "array", $items: "string" },
-            // Item positions, robot frame: 3 entries (x, y, z, m) per item,
-            // in item_ids order.
-            positions: { $type: "array", $items: "f64", $marks: ["robot_frame"] },
-            // How sure the implementer is of each identification, 0 to 1.
-            // 0 where the implementer reports no confidence of its own.
-            confidences: { $type: "array", $items: "f64" },
-            // Where each item is in the picture: 4 entries (x0, y0, x1, y1,
-            // pixels) per item, in item_ids order, the corners of the
-            // region that holds the item. Four zeros for an item this scan
-            // did not see and reports from an earlier look. Empty when the
-            // implementer has no picture.
-            regions: { $type: "array", $items: "f64" },
-            // The name the camera the regions belong to runs under; empty
-            // when the implementer has no picture.
-            camera: "string",
-            // The size of that camera's colour frame, pixels; 0 when the
-            // implementer has no picture.
-            image_width: "u32",
-            image_height: "u32",
-            // The capture time of the frame the scan looked at.
-            frame_timestamp: "time",
-            // Wall-clock duration of the action (s).
-            action_time: "f64",
+            item_ids: { $type: "array", $items: "string", $marks: ["item_id"], $description: "One entry per item found, in the implementer's order; labels, positions, confidences and regions are index aligned with this array. Identifiers are the ones identify_item and item_manipulation address." },
+            labels: { $type: "array", $items: "string", $description: "What the implementer recognised each item as, in whatever vocabulary it uses; empty where it has no name for the item. Labels may repeat: two items of one kind get one label each and distinct identifiers, and callers tell them apart by position." },
+            positions: { $type: "array", $items: "f64", $marks: ["robot_frame"], $description: "Item positions, robot frame: 3 entries (x, y, z, m) per item, in item_ids order." },
+            confidences: { $type: "array", $items: "f64", $description: "How sure the implementer is of each identification, 0 to 1. 0 where the implementer reports no confidence of its own." },
+            regions: { $type: "array", $items: "f64", $description: "Where each item is in the picture: 4 entries (x0, y0, x1, y1, pixels) per item, in item_ids order, the corners of the region that holds the item. Four zeros for an item this scan did not see and reports from an earlier look. Empty when the implementer has no picture." },
+            camera: { $type: "string", $description: "The name the camera the regions belong to runs under; empty when the implementer has no picture." },
+            image_width: { $type: "u32", $description: "The width of that camera's colour frame, pixels; 0 when the implementer has no picture." },
+            image_height: { $type: "u32", $description: "The height of that camera's colour frame, pixels; 0 when the implementer has no picture." },
+            frame_timestamp: { $type: "time", $description: "The capture time of the frame the scan looked at." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
           },
         },
       },
       {
         name: "identify_item",
+        description: "Search for the one item that best matches description, and mint an identifier for it. The action gives no feedback. The result gives the identifier, label, position, orientation where the implementer resolved one, confidence and region of the item, and the camera and the frame that the search looked at. A cancelled search gives the reason of the cancel, and all its fields except action_time are zero, empty or absent.",
         goal_service: {
           request_message_format: {
-            // What to look for, in the caller's own words. Empty asks the
-            // implementer for the item it judges most prominent among those
-            // it can act on. A search that finds no item matching the
-            // description, or no item at all for an empty description, fails
-            // with `not_found`; it is not refused. When several items match,
-            // the implementer reports the one it judges best; one item per
-            // result.
-            description: "string",
-            // Upper bound on the search (s); the implementer returns as soon
-            // as it has an answer. 0 = the implementer's default.
-            timeout_s: "f64",
+            description: { $type: "string", $description: "What to look for, in the caller's own words. Empty asks the implementer for the item it judges most prominent among those it can act on. A search that finds no item matching the description, or no item at all for an empty description, fails with `not_found`; it is not refused. When several items match, the implementer reports the one it judges best; one item per result." },
+            timeout_s: { $type: "f64", $description: "Upper bound on the search (s); the implementer returns as soon as it has an answer. 0 = the implementer's default." },
           },
         },
         result_service: {
           response_message_format: {
-            // A cancelled search gives the reason of the cancel, and all
-            // its fields except action_time are zero, empty or absent.
-            //
-            // Identifier minted for the item that was found, to be passed to
-            // item_manipulation's grab_item.
-            item_id: { $type: "string", $marks: ["item_id"] },
-            // What the implementer recognised the item as, in whatever
-            // vocabulary it uses. Empty when it has no name for the item.
-            label: "string",
-            // Item position, robot frame: x, y, z (m).
-            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
-            // Item orientation, quaternion [x, y, z, w]. Absent when the
-            // implementer located the item without resolving how it is
-            // turned. A caller that passes item_id to grab_item leaves the
-            // approach to the implementer; one that grasps by pose supplies
-            // its own.
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"] },
-            // How sure the implementer is of this identification, 0 to 1.
-            // 0 when the implementer reports no confidence of its own.
-            confidence: "f64",
-            // Where the item is in the picture: x0, y0, x1, y1 (pixels),
-            // the corners of the region that holds it. Absent when the
-            // implementer has no picture.
-            region: { $type: "array", $items: "f64", $length: 4, $optional: true },
-            // The name the camera the region belongs to runs under; empty
-            // when the implementer has no picture.
-            camera: "string",
-            // The size of that camera's colour frame, pixels; 0 when the
-            // implementer has no picture.
-            image_width: "u32",
-            image_height: "u32",
-            // The capture time of the frame the search looked at.
-            frame_timestamp: "time",
-            // Wall-clock duration of the action (s).
-            action_time: "f64",
+            item_id: { $type: "string", $marks: ["item_id"], $description: "Identifier minted for the item that was found, to be passed to item_manipulation's grab_item." },
+            label: { $type: "string", $description: "What the implementer recognised the item as, in whatever vocabulary it uses. Empty when it has no name for the item." },
+            position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Item position, robot frame: x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"], $description: "Item orientation, quaternion [x, y, z, w]. Absent when the implementer located the item without resolving how it is turned. A caller that passes item_id to grab_item leaves the approach to the implementer; one that grasps by pose supplies its own." },
+            confidence: { $type: "f64", $description: "How sure the implementer is of this identification, 0 to 1. 0 when the implementer reports no confidence of its own." },
+            region: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "Where the item is in the picture: x0, y0, x1, y1 (pixels), the corners of the region that holds it. Absent when the implementer has no picture." },
+            camera: { $type: "string", $description: "The name the camera the region belongs to runs under; empty when the implementer has no picture." },
+            image_width: { $type: "u32", $description: "The width of that camera's colour frame, pixels; 0 when the implementer has no picture." },
+            image_height: { $type: "u32", $description: "The height of that camera's colour frame, pixels; 0 when the implementer has no picture." },
+            frame_timestamp: { $type: "time", $description: "The capture time of the frame the search looked at." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
           },
         },
         failure_kinds: ["not_found"],

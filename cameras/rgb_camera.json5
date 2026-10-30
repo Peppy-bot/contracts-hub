@@ -2,20 +2,25 @@
   peppy_schema: "contract/v1",
   manifest: {
     name: "rgb_camera",
-    tag: "v1"
+    tag: "v1",
+    description: [
+      "A color camera: a device or a simulated camera that streams color frames and takes the usual image controls, exposure, white balance, gain, brightness and contrast. A camera that also streams depth implements rgbd_camera.",
+      "Each control value is in the unit and the range of the device. Where the camera also implements camera_profile, get_camera_profile gives the unit, the range and the default of each control. A camera gives an error reply to a control that its device does not have. Each setter answers with the value that the camera applies after the call, which can differ from the requested value: the device can clamp it. A setter answers -1 when the camera has no value of the control to report, as some devices do in auto mode.",
+    ],
   },
   interfaces: {
     topics: [
       {
         name: "video_stream",
+        description: "The color frames of the camera, as it captures them. frame holds one image of width by height pixels in encoding.",
         qos_profile: "sensor_data",
         message_format: {
           header: {
             $type: "object",
             timestamp: "time",
-            frame_id: "u32",   // capture counter, not a coordinate frame
+            frame_id: { $type: "u32", $description: "The capture counter of the frame, not a coordinate frame." },
           },
-          encoding: "string",   // e.g. "rgb8" | "bgr8" | "yuyv" | "mjpeg"
+          encoding: { $type: "string", $description: "The encoding of frame, for example \"rgb8\", \"bgr8\", \"yuyv\" or \"mjpeg\"." },
           width: "u32",
           height: "u32",
           frame: {
@@ -28,6 +33,7 @@
     services: [
       {
         name: "video_stream_info",
+        description: "Give the stream that video_stream carries: its width and height in pixels, its frame rate and its encoding.",
         response_message_format: {
           width: "u32",
           height: "u32",
@@ -37,6 +43,7 @@
       },
       {
         name: "set_exposure",
+        description: "Set the exposure of the camera. mode is \"auto\" or \"manual\". value is the manual exposure in the unit of the device, and the camera ignores it in auto mode. current_value is the exposure that the camera applies after the call.",
         request_message_format: {
           mode: "string",
           value: "i32",
@@ -47,6 +54,7 @@
       },
       {
         name: "set_white_balance",
+        description: "Set the white balance of the camera. mode is \"auto\" or \"manual\". temperature is the manual color temperature in kelvin, and the camera ignores it in auto mode. current_temperature is the temperature that the camera applies after the call.",
         request_message_format: {
           mode: "string",
           temperature: "i32",
@@ -57,6 +65,7 @@
       },
       {
         name: "set_gain",
+        description: "Set the gain of the camera, in the unit of the device. current_value is the gain that the camera applies after the call.",
         request_message_format: {
           value: "i32",
         },
@@ -66,6 +75,7 @@
       },
       {
         name: "set_brightness",
+        description: "Set the brightness of the camera, in the unit of the device. current_value is the brightness that the camera applies after the call.",
         request_message_format: {
           value: "i32",
         },
@@ -75,6 +85,7 @@
       },
       {
         name: "set_contrast",
+        description: "Set the contrast of the camera, in the unit of the device. current_value is the contrast that the camera applies after the call.",
         request_message_format: {
           value: "i32",
         },

@@ -1,42 +1,25 @@
-// The guide to one robot: facts about this robot that a caller needs to
-// drive it well and that no other contract gives. The launcher that brings
-// the robot up measures them and writes them for its model, so the facts
-// belong to the robot: a caller that drives robots of many models, such as a
-// chat agent, asks each robot and keeps no list of models.
-//
-// The guide holds the park pose of each arm that the launcher gives one
-// for: a joint configuration that holds the arm up, above the surface it
-// works on and out of the view of the perception camera (workspace defines
-// it). An arm that starts a move down to the surface from its park pose
-// comes from above, over what stands on the surface, and not through it. A
-// caller parks an arm with move_arm_joints of limb_motion.
-//
-// Slicing rule for the arrays: park_joint_positions concatenates the joints
-// of each arm of park_arm_names in that order; arm i's vector starts at the
-// sum of park_joints_per_arm[0..i] and runs park_joints_per_arm[i] entries,
-// in the arm's joint order of limb_motion.
-//
-// Joints are in radians (meters for a prismatic joint). Arm names are the
-// names limb_motion addresses the arms by. An empty guide is a valid answer:
-// the launcher gave no park pose for this robot.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "robot_guide",
     tag: "v1",
+    description: [
+      "The guide to one robot: facts about this robot that a caller needs to drive it well and that no other contract gives.",
+      "The launcher that brings the robot up measures them and writes them for its model, so the facts belong to the robot: a caller that drives robots of many models, such as a chat agent, asks each robot and keeps no list of models.",
+      "The guide holds the park pose of each arm that the launcher gives one for: a joint configuration that holds the arm up, above the surface it works on and out of the view of the perception camera (workspace defines it). An arm that starts a move down to the surface from its park pose comes from above, over what stands on the surface, and not through it. A caller parks an arm with move_arm_joints of limb_motion.",
+      "Slicing rule for the arrays: park_joint_positions concatenates the joints of each arm of park_arm_names in that order; arm i's vector starts at the sum of park_joints_per_arm[0..i] and runs park_joints_per_arm[i] entries, in the arm's joint order of limb_motion.",
+      "Joints are in radians (meters for a prismatic joint). Arm names are the names limb_motion addresses the arms by.",
+    ],
   },
   interfaces: {
     services: [
       {
         name: "get_guide",
+        description: "Give the guide of this robot. An empty guide is a valid answer: the launcher gave no park pose for this robot.",
         response_message_format: {
-          // The arms that have a park pose, in the robot's arm order.
-          park_arm_names: { $type: "array", $items: "string" },
-          // Joint count of each arm, index-aligned with park_arm_names.
-          park_joints_per_arm: { $type: "array", $items: "u32" },
-          // The joints of each park pose, each arm's vector concatenated in
-          // park_arm_names order.
-          park_joint_positions: { $type: "array", $items: "f64" },
+          park_arm_names: { $type: "array", $items: "string", $description: "The arms that have a park pose, in the robot's arm order." },
+          park_joints_per_arm: { $type: "array", $items: "u32", $description: "Joint count of each arm, index-aligned with park_arm_names." },
+          park_joint_positions: { $type: "array", $items: "f64", $description: "The joints of each park pose, each arm's vector concatenated in park_arm_names order." },
         },
       },
     ],

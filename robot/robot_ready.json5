@@ -1,16 +1,17 @@
 {
-  // Robot-level readiness. `ready` is true once the whole robot is ready for
-  // motion, meaning every one of its components reports component_ready,
-  // false otherwise.
   peppy_schema: "contract/v1",
   manifest: {
     name: "robot_ready",
-    tag: "v1"
+    tag: "v1",
+    description: [
+      "Robot-level readiness. `ready` is true once the whole robot is ready for motion, meaning every one of its components reports component_ready, false otherwise.",
+    ],
   },
   interfaces: {
     services: [
       {
         name: "is_ready",
+        description: "Tell whether the whole robot is ready for motion.",
         response_message_format: {
           ready: "bool"
         }

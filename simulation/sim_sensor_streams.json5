@@ -1,69 +1,35 @@
-// The sensor streams of a simulation's robots and the holds on them: which
-// sensors each standing robot streams, at which rate, and which holders need
-// them at their own rate. A sensor is a stream of a robot's rig that a relay
-// carries to the stack (a camera); a sensor of the rig without a pair streams
-// nothing and is not listed.
-//
-// A paired sensor streams at 1 Hz (idle) while no holder holds it, and at its
-// own rate (live) while one does, from its next period. A hold names a robot
-// by the name it stands under, a holder, and some sensors of the robot by
-// their names on the robot, or no sensor to hold every sensor the robot has
-// now and pairs later. A hold lasts hold_ms from the call: the holder renews
-// it with the same hold call before it lapses, about every third of hold_ms.
-// A hold of a robot replaces the previous hold of the same holder on that
-// robot. A release ends the hold of its holder on the robot at once. When the
-// last hold of a sensor ends or lapses, the sensor goes back to 1 Hz. A robot
-// that leaves the world takes its holds with it.
-//
-// Every service answers the state after the call, in the same fields. sensors
-// has one entry for each paired sensor of each standing robot, in the order
-// the robots stand. The specification of a sensor is in the array of its
-// kind, matched by robot and name: rgb_cameras for kind "rgb_camera",
-// rgbd_cameras for kind "rgbd_camera". A call that gets an error reply
-// changes nothing.
-//
-// Holds change what a simulation spends on its sensors, not what they show:
-// this contract has no counterpart on a physical robot, whose sensors stream
-// at their own rate all the time.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "sim_sensor_streams",
     tag: "v1",
+    description: [
+      "The sensor streams of a simulation's robots and the holds on them: which sensors each standing robot streams, at which rate, and which holders need them at their own rate.",
+      "A sensor is a stream of a robot's rig that a relay carries to the stack (a camera); a sensor of the rig without a pair streams nothing and is not listed.",
+      "A paired sensor streams at 1 Hz (idle) while no holder holds it, and at its own rate (live) while one does, from its next period. A hold names a robot by the name it stands under, a holder, and some sensors of the robot by their names on the robot, or no sensor to hold every sensor the robot has now and pairs later. A hold lasts hold_ms from the call: the holder renews it with the same hold call before it lapses, about every third of hold_ms. A hold of a robot replaces the previous hold of the same holder on that robot. A release ends the hold of its holder on the robot at once. When the last hold of a sensor ends or lapses, the sensor goes back to 1 Hz. A robot that leaves the world takes its holds with it.",
+      "Every service answers the state after the call, in the same fields. sensors has one entry for each paired sensor of each standing robot, in the order the robots stand. The specification of a sensor is in the array of its kind, matched by robot and name: rgb_cameras for kind \"rgb_camera\", rgbd_cameras for kind \"rgbd_camera\". A call that gets an error reply changes nothing.",
+      "Holds change what a simulation spends on its sensors, not what they show: this contract has no counterpart on a physical robot, whose sensors stream at their own rate all the time.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // The sensors of the standing robots, their modes, holders, rates
-        // and health.
         name: "get_state",
+        description: "Give the sensors of the standing robots, their modes, holders, rates and health.",
         response_message_format: {
-          // How long a hold lasts from the call that made or renewed it (ms).
-          hold_ms: "u32",
+          hold_ms: { $type: "u32", $description: "How long a hold lasts from the call that made or renewed it (ms)." },
           sensors: {
             $type: "array",
             $items: {
               $type: "object",
-              // The robot, by the name it stands under.
-              robot: "string",
-              // The sensor's name on the robot (wrist_left, chest).
-              name: "string",
-              // "rgb_camera" or "rgbd_camera": the array that holds the
-              // sensor's specification.
-              kind: "string",
-              // "idle" (1 Hz) or "live" (the sensor's own rate).
-              mode: "string",
-              // The holders whose holds hold this sensor, in the order they
-              // first held it; empty while idle.
-              holders: { $type: "array", $items: "string" },
-              // The rate of the mode (Hz).
-              requested_hz: "f32",
-              // The rate of the frames the sensor delivered in its mode, over
-              // the last few seconds (Hz); 0 before a second frame.
-              measured_hz: "f32",
-              // "ok", or "no_data" when the sensor delivered nothing for three
-              // periods of its requested rate.
-              health: "string",
+              robot: { $type: "string", $description: "The robot, by the name it stands under." },
+              name: { $type: "string", $description: "The sensor's name on the robot (wrist_left, chest)." },
+              kind: { $type: "string", $description: "\"rgb_camera\" or \"rgbd_camera\": the array that holds the sensor's specification." },
+              mode: { $type: "string", $description: "\"idle\" (1 Hz) or \"live\" (the sensor's own rate)." },
+              holders: { $type: "array", $items: "string", $description: "The holders whose holds hold this sensor, in the order they first held it; empty while idle." },
+              requested_hz: { $type: "f32", $description: "The rate of the mode (Hz)." },
+              measured_hz: { $type: "f32", $description: "The rate of the frames the sensor delivered in its mode, over the last few seconds (Hz); 0 before a second frame." },
+              health: { $type: "string", $description: "\"ok\", or \"no_data\" when the sensor delivered nothing for three periods of its requested rate." },
             },
           },
           rgb_cameras: {
@@ -72,11 +38,9 @@
               $type: "object",
               robot: "string",
               name: "string",
-              // The colour stream (pixels).
-              width: "u32",
-              height: "u32",
-              // The camera's own rate, the rate while live.
-              frames_per_second: "u8",
+              width: { $type: "u32", $description: "The width of the colour stream (pixels)." },
+              height: { $type: "u32", $description: "The height of the colour stream (pixels)." },
+              frames_per_second: { $type: "u8", $description: "The camera's own rate, the rate while live." },
             },
           },
           rgbd_cameras: {
@@ -85,29 +49,20 @@
               $type: "object",
               robot: "string",
               name: "string",
-              // The colour stream (pixels).
-              width: "u32",
-              height: "u32",
-              // The depth stream (pixels), aligned to the colour stream.
-              depth_width: "u32",
-              depth_height: "u32",
-              // The depths the camera measures (m).
-              min_depth_m: "f32",
-              max_depth_m: "f32",
-              // The camera's own rate, the rate while live.
-              frames_per_second: "u8",
+              width: { $type: "u32", $description: "The width of the colour stream (pixels)." },
+              height: { $type: "u32", $description: "The height of the colour stream (pixels)." },
+              depth_width: { $type: "u32", $description: "The width of the depth stream (pixels), aligned to the colour stream." },
+              depth_height: { $type: "u32", $description: "The height of the depth stream (pixels), aligned to the colour stream." },
+              min_depth_m: { $type: "f32", $description: "The least depth the camera measures (m)." },
+              max_depth_m: { $type: "f32", $description: "The greatest depth the camera measures (m)." },
+              frames_per_second: { $type: "u8", $description: "The camera's own rate, the rate while live." },
             },
           },
         },
       },
       {
-        // Holds sensors of a robot for holder, or renews that hold, for
-        // hold_ms. sensors names some sensors of the robot; empty holds every
-        // sensor it has now and pairs later. The hold gets an error reply
-        // with `rejected` when holder is empty or a name is not a sensor of
-        // the robot's rig, and with `resource_unavailable` when no robot
-        // stands under robot.
         name: "hold",
+        description: "Hold sensors of a robot for holder, or renews that hold, for hold_ms. sensors names some sensors of the robot; empty holds every sensor it has now and pairs later. The hold gets an error reply with `rejected` when holder is empty or a name is not a sensor of the robot's rig, and with `resource_unavailable` when no robot stands under robot.",
         request_message_format: {
           robot: "string",
           holder: "string",
@@ -158,10 +113,8 @@
         },
       },
       {
-        // Ends the hold of holder on the robot. A release with no such hold
-        // changes nothing and answers the state, as every release does. A
-        // release with an empty holder gets an error reply with `rejected`.
         name: "release",
+        description: "End the hold of holder on the robot. A release with no such hold changes nothing and answers the state, as every release does. A release with an empty holder gets an error reply with `rejected`.",
         request_message_format: {
           robot: "string",
           holder: "string",

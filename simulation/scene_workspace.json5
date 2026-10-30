@@ -1,123 +1,39 @@
-// Where a robot standing in a simulated world can work, measured in that
-// world: the work surfaces its arms reach and its perception camera sees,
-// with what stands in the way, whether given objects are workable where
-// they stand, where on a work surface the objects of a task fit, and the
-// stand of a robot at a work surface of the scene. It is for a caller that
-// sets a simulated world up and checks its setup; it moves nothing but the
-// robot that stand_at stands, and a robot's task still finds its items
-// through the robot's own perception. get_objects_list of
-// scene_manipulation says where objects stand; this contract says whether
-// a robot can work them there, and where on a surface it could. The
-// workspace contract of a robot answers the same questions from the
-// robot's design alone, in the robot frame, with the same definitions.
-// name_location keeps a place of the task under a name, for the setup
-// record of the simulation (simulation_world).
-//
-// Positions are world-frame x, y, z in metres, headings a yaw in radians
-// about the world's +z, orientations unit quaternions [x, y, z, w] in the
-// world frame. Robot names come from get_robots_list, object ids from
-// get_objects_list, asset ids from get_assets_list. A robot's own frame
-// has its origin where its base stands, +x the way it faces and +y to its
-// left.
-//
-// A work surface is a level face on which items can rest: the top of a
-// table, one level of a shelf, a belt, one step of a stair, the floor. It
-// belongs to an object of the world, or to the world's own geometry: its
-// floor plane and the fixed parts of the scene that are not objects.
-// Nothing in a measurement depends on what the face is. The loaded scene
-// declares some work surfaces (get_assets_list lists them for the scene);
-// a request names any other by a reference, an object with two fields of
-// which it gives exactly one, the other empty:
-// - object_id: the highest face of the object, the top of its bounding
-//   box. "" gives no object.
-// - point: [x, y, z], the first face that a ray cast straight down from
-//   0.01 m above the point meets, on the object or the part of the world
-//   that it meets. The ray passes through robots, and through what it meets
-//   from inside. A point on a face names that face: the second step of a
-//   stair, the lower level of a shelf, the floor in front of the robot. An
-//   empty point gives no point.
-// A reference that gives both fields or neither, a point that does not
-// hold 3 numbers, an object id that does not exist, a point that is not
-// finite and a point whose ray meets nothing get an error reply with
-// `rejected`.
-//
-// The definitions, the same as the workspace contract's:
-// - Grasp point. The gripper's grasp point, on the jaw closing axis midway
-//   between the pads.
-// - Reachable. Some arm brings its grasp point within 0.01 m of the point
-//   with its gripper's approach axis within 0.05 rad (about 3 degrees) of
-//   straight down or straight forward (along the world's -z, or the robot's
-//   +x). The reach is tried at eight rolls about that direction, a 45 degree
-//   step apart, solved with the arm and finger joints at the pose the
-//   robot's model starts in and each other joint of the robot (a lift, a
-//   torso, a head) where it stands, and the roll the gripper ends at is not
-//   checked. What stands in the way of the arm is not asked.
-// - Perception camera. The robot's one camera that gives depth and that no
-//   arm carries. A robot without one is judged on reach alone.
-// - In view. Inside the perception camera's field of view, where its depth
-//   stream reads a depth, and with nothing that stays where it is between
-//   the camera and the point.
-//   Robots and objects that move do not hide a point of a surface; anything
-//   but the robot's own body hides an object.
-// - Workable. Reachable and in view; reachable alone for a robot without a
-//   perception camera.
-// - A surface is measured where rays cast straight down find its face, on a
-//   grid in the robot's own frame 0.0 to 1.0 m ahead of the robot every
-//   0.02 m and 0.30 m to either side every 0.05 m. The rays meet what the
-//   cameras draw and the colliding parts of the world they do not draw, such
-//   as the pieces of a backdrop, and pass through robots and through the
-//   free objects other than the one the face belongs to. They look for a
-//   declared surface's face within 0.1 m of the height the scene declares
-//   for it, and for a face a request names at the height the reference gives
-//   it; the top is the median height they find it at, and the grid points
-//   measured are those within 0.01 m of it, each at a target 0.04 m above
-//   it. A declared surface whose object was raised or lowered further than
-//   0.1 m is not found there: name its object in surfaces. A surface is
-//   workable when its workable points cover at least 0.03 m^2, each point
-//   standing for 0.001 m^2.
-// - A part of a robot. An arm or a gripper, by the name the robot's limbs
-//   answer to (limb_motion and limb_state), or "body" for each other part
-//   of the robot: its base, a torso, a head. The current pose of the robot
-//   is where its joints stand now; its start pose has its arm and finger
-//   joints at the pose its model starts in and each other joint where it
-//   stands.
-// - An object stands at the centre of its bounding box, and the target an
-//   arm reaches for is that centre.
-//
-// A question of describe_workspace, check_objects or find_places gets an
-// error reply: with `resource_unavailable` for a robot that does not stand
-// in the world; with `rejected` for a robot model whose arms or perception
-// camera cannot be measured (a model without arms, an arm that declares no
-// grasp point, two cameras that could each be the perception camera, a
-// perception camera whose field of view a sensor size sets), an object id
-// that does not exist, an object without a bounding box (one with neither
-// colliding geometry nor a soft surface), a reference that names no face,
-// and every question to an implementer that lets no caller inspect its
-// world; and with `precondition_failed` from an implementer that cannot
-// read its scene now. stand_at says how it is refused or fails.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "scene_workspace",
     tag: "v1",
+    description: [
+      "Where a robot standing in a simulated world can work, measured in that world: the work surfaces its arms reach and its perception camera sees, with what stands in the way, whether given objects are workable where they stand, where on a work surface the objects of a task fit, and the stand of a robot at a work surface of the scene.",
+      "It is for a caller that sets a simulated world up and checks its setup; it moves nothing but the robot that stand_at stands, and a robot's task still finds its items through the robot's own perception. get_objects_list of scene_manipulation says where objects stand; this contract says whether a robot can work them there, and where on a surface it could. The workspace contract of a robot answers the same questions from the robot's design alone, in the robot frame, with the same definitions. name_location keeps a place of the task under a name, for the setup record of the simulation (simulation_world).",
+      "Positions are world-frame x, y, z in metres, headings a yaw in radians about the world's +z, orientations unit quaternions [x, y, z, w] in the world frame. Robot names come from get_robots_list, object ids from get_objects_list, asset ids from get_assets_list. A robot's own frame has its origin where its base stands, +x the way it faces and +y to its left.",
+      "A work surface is a level face on which items can rest: the top of a table, one level of a shelf, a belt, one step of a stair, the floor. It belongs to an object of the world, or to the world's own geometry: its floor plane and the fixed parts of the scene that are not objects. Nothing in a measurement depends on what the face is. The loaded scene declares some work surfaces (get_assets_list lists them for the scene); a request names any other by a reference, an object with two fields of which it gives exactly one, the other empty:",
+      "object_id: the highest face of the object, the top of its bounding box. \"\" gives no object.",
+      "point: [x, y, z], the first face that a ray cast straight down from 0.01 m above the point meets, on the object or the part of the world that it meets. The ray passes through robots, and through what it meets from inside. A point on a face names that face: the second step of a stair, the lower level of a shelf, the floor in front of the robot. An empty point gives no point.",
+      "A reference that gives both fields or neither, a point that does not hold 3 numbers, an object id that does not exist, a point that is not finite and a point whose ray meets nothing get an error reply with `rejected`.",
+      "The definitions, the same as the workspace contract's:",
+      "Grasp point. The gripper's grasp point, on the jaw closing axis midway between the pads.",
+      "Reachable. Some arm brings its grasp point within 0.01 m of the point with its gripper's approach axis within 0.05 rad (about 3 degrees) of straight down or straight forward (along the world's -z, or the robot's +x). The reach is tried at eight rolls about that direction, a 45 degree step apart, solved with the arm and finger joints at the pose the robot's model starts in and each other joint of the robot (a lift, a torso, a head) where it stands, and the roll the gripper ends at is not checked. What stands in the way of the arm is not asked.",
+      "Perception camera. The robot's one camera that gives depth and that no arm carries. A robot without one is judged on reach alone.",
+      "In view. Inside the perception camera's field of view, where its depth stream reads a depth, and with nothing that stays where it is between the camera and the point. Robots and objects that move do not hide a point of a surface; anything but the robot's own body hides an object.",
+      "Workable. Reachable and in view; reachable alone for a robot without a perception camera.",
+      "A surface is measured where rays cast straight down find its face, on a grid in the robot's own frame 0.0 to 1.0 m ahead of the robot every 0.02 m and 0.30 m to either side every 0.05 m. The rays meet what the cameras draw and the colliding parts of the world they do not draw, such as the pieces of a backdrop, and pass through robots and through the free objects other than the one the face belongs to. They look for a declared surface's face within 0.1 m of the height the scene declares for it, and for a face a request names at the height the reference gives it; the top is the median height they find it at, and the grid points measured are those within 0.01 m of it, each at a target 0.04 m above it. A declared surface whose object was raised or lowered further than 0.1 m is not found there: name its object in surfaces. A surface is workable when its workable points cover at least 0.03 m^2, each point standing for 0.001 m^2.",
+      "A part of a robot. An arm or a gripper, by the name the robot's limbs answer to (limb_motion and limb_state), or \"body\" for each other part of the robot: its base, a torso, a head. The current pose of the robot is where its joints stand now; its start pose has its arm and finger joints at the pose its model starts in and each other joint where it stands.",
+      "An object stands at the centre of its bounding box, and the target an arm reaches for is that centre.",
+      "A question of describe_workspace, check_objects or find_places gets an error reply: with `resource_unavailable` for a robot that does not stand in the world; with `rejected` for a robot model whose arms or perception camera cannot be measured (a model without arms, an arm that declares no grasp point, two cameras that could each be the perception camera, a perception camera whose field of view a sensor size sets), an object id that does not exist, an object without a bounding box (one with neither colliding geometry nor a soft surface), a reference that names no face, and every question to an implementer that lets no caller inspect its world; and with `precondition_failed` from an implementer that cannot read its scene now. stand_at says how it is refused or fails.",
+    ],
   },
   interfaces: {
     services: [
       {
-        // Where the robot can work each surface: the loaded scene's declared
-        // work surfaces whose objects stand, as get_assets_list lists them
-        // for the scene, and the faces the request names besides.
         name: "describe_workspace",
+        description: "Tell where the robot can work each surface: the loaded scene's declared work surfaces whose objects stand, as get_assets_list lists them for the scene, and the faces the request names besides.",
         request_message_format: {
-          // The robot, by the name get_robots_list gives.
-          robot: "string",
-          // Faces to measure as surfaces besides the scene's declared ones,
-          // for example a table the caller spawned or the floor in front of
-          // the robot, each by a reference (the header). Absent, or empty,
-          // measures the declared ones alone.
+          robot: { $type: "string", $description: "The robot, by the name get_robots_list gives." },
           surfaces: {
             $type: "array",
             $optional: true,
+            $description: "Faces to measure as surfaces besides the scene's declared ones, for example a table the caller spawned or the floor in front of the robot, each by a reference (see the contract description). Absent, or empty, measures the declared ones alone.",
             $items: {
               $type: "object",
               object_id: "string",
@@ -126,216 +42,86 @@
           },
         },
         response_message_format: {
-          // The robot, as asked.
-          robot: "string",
-          // The name the perception camera runs under on the robot, or ""
-          // for a robot without one.
-          perception_camera: "string",
-          // Where the robot's base stands, and the heading it faces.
-          robot_position: { $type: "array", $items: "f64", $length: 3 },
-          robot_yaw: "f64",
-          // The declared surfaces in the scene's order, then the requested
-          // ones in the request's order.
+          robot: { $type: "string", $description: "The robot, as asked." },
+          perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot, or \"\" for a robot without one." },
+          robot_position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot's base stands." },
+          robot_yaw: { $type: "f64", $description: "The heading the robot's base faces." },
           surfaces: {
             $type: "array",
+            $description: "The declared surfaces in the scene's order, then the requested ones in the request's order.",
             $items: {
               $type: "object",
-              // The declared label; for a face the request names, the asset
-              // id of its object, or "world" for a face of the world.
-              label: "string",
-              // The object the face belongs to; "" for a face of the
-              // world.
-              object_id: "string",
-              // Whether the scene declares the surface.
-              declared: "bool",
-              // Whether the rays found its top; top is 0 when they did not.
-              top_found: "bool",
-              // Height of its top as the rays found it (m).
-              top: "f64",
-              // Whether the robot can work it.
-              workable: "bool",
-              // Area of its workable part (m^2).
-              area: "f64",
-              // The centre of the largest rectangle of workable grid points,
-              // on the top: x, y, z. Empty when no point is workable.
-              center: { $type: "array", $items: "f64" },
-              // The rectangle's four corners on the top, 3 entries each (x,
-              // y, z), counter-clockwise seen from above from the one nearest
-              // the robot on its right: put objects inside them. Empty when
-              // no point is workable.
-              corners: { $type: "array", $items: "f64" },
-              // The parts of the robot that stand over the top or rest on
-              // it, at its current pose and at its start pose: each part
-              // with a piece of colliding geometry over the cell of a
-              // measured grid point of the top that reaches more than 0.005
-              // m above the top, whose lowest point is less than 0.30 m
-              // above it and no more than 0.005 m below it. A piece that
-              // reaches further below stands beside the face, as the body of
-              // a robot that stands at a table does. A part at both poses is
-              // one entry when its corners and its clearance at the two
-              // poses differ by less than 0.001 m, and one entry per pose
-              // otherwise. Each part of the robot in the order the robot's
-              // limbs come in, its arms first, then its grippers, then
-              // "body"; at each part, the current pose first. Empty when the
-              // rays found no top.
+              label: { $type: "string", $description: "The declared label; for a face the request names, the asset id of its object, or \"world\" for a face of the world." },
+              object_id: { $type: "string", $description: "The object the face belongs to; \"\" for a face of the world." },
+              declared: { $type: "bool", $description: "Whether the scene declares the surface." },
+              top_found: { $type: "bool", $description: "Whether the rays found its top; top is 0 when they did not." },
+              top: { $type: "f64", $description: "Height of its top as the rays found it (m)." },
+              workable: { $type: "bool", $description: "Whether the robot can work it." },
+              area: { $type: "f64", $description: "Area of its workable part (m^2)." },
+              center: { $type: "array", $items: "f64", $description: "The centre of the largest rectangle of workable grid points, on the top: x, y, z. Empty when no point is workable." },
+              corners: { $type: "array", $items: "f64", $description: "The rectangle's four corners on the top, 3 entries each (x, y, z), counter-clockwise seen from above from the one nearest the robot on its right: put objects inside them. Empty when no point is workable." },
               robot_parts_over_top: {
                 $type: "array",
+                $description: "The parts of the robot that stand over the top or rest on it, at its current pose and at its start pose: each part with a piece of colliding geometry over the cell of a measured grid point of the top that reaches more than 0.005 m above the top, whose lowest point is less than 0.30 m above it and no more than 0.005 m below it. A piece that reaches further below stands beside the face, as the body of a robot that stands at a table does. A part at both poses is one entry when its corners and its clearance at the two poses differ by less than 0.001 m, and one entry per pose otherwise. Each part of the robot in the order the robot's limbs come in, its arms first, then its grippers, then \"body\"; at each part, the current pose first. Empty when the rays found no top.",
                 $items: {
                   $type: "object",
-                  // The part (the header).
-                  part: "string",
-                  // The poses it stands there at: ["current"], ["start"] or
-                  // ["current", "start"].
-                  poses: { $type: "array", $items: "string" },
-                  // The four corners on the top, 3 entries each (x, y, z),
-                  // of the smallest rectangle seen from above that holds the
-                  // part's pieces of colliding geometry over the top. Its
-                  // sides run along the robot's x and y, and the corners come
-                  // in the order of the surface's.
-                  corners: { $type: "array", $items: "f64", $length: 12 },
-                  // The height of the lowest point of those pieces above the
-                  // top (m); 0 for a part that rests on the top, within 0.001
-                  // m of it or below it.
-                  clearance: "f64",
+                  part: { $type: "string", $description: "The part (see the contract description)." },
+                  poses: { $type: "array", $items: "string", $description: "The poses it stands there at: [\"current\"], [\"start\"] or [\"current\", \"start\"]." },
+                  corners: { $type: "array", $items: "f64", $length: 12, $description: "The four corners on the top, 3 entries each (x, y, z), of the smallest rectangle seen from above that holds the part's pieces of colliding geometry over the top. Its sides run along the robot's x and y, and the corners come in the order of the surface's." },
+                  clearance: { $type: "f64", $description: "The height of the lowest point of those pieces above the top (m); 0 for a part that rests on the top, within 0.001 m of it or below it." },
                 },
               },
-              // One line that says why it is workable or not, and, when a
-              // part of the robot stands over the top, which part stands
-              // lowest and what fits under it.
-              message: "string",
+              message: { $type: "string", $description: "One line that says why it is workable or not, and, when a part of the robot stands over the top, which part stands lowest and what fits under it." },
             },
           },
         },
       },
       {
-        // Whether the robot can work each of the given objects where it
-        // stands: whether an arm reaches it and the perception camera sees
-        // it, and, for an object it cannot work, a workable point on the
-        // surface the object rests on to move it to.
         name: "check_objects",
+        description: "Tell whether the robot can work each of the given objects where it stands: whether an arm reaches it and the perception camera sees it, and, for an object it cannot work, a workable point on the surface the object rests on to move it to.",
         request_message_format: {
-          // The robot, by the name get_robots_list gives.
-          robot: "string",
-          // The objects, by the ids get_objects_list gives. An empty list
-          // gets an error reply with `rejected`.
-          object_ids: { $type: "array", $items: "string" },
+          robot: { $type: "string", $description: "The robot, by the name get_robots_list gives." },
+          object_ids: { $type: "array", $items: "string", $description: "The objects, by the ids get_objects_list gives. An empty list gets an error reply with `rejected`." },
         },
         response_message_format: {
-          // As in describe_workspace.
-          perception_camera: "string",
-          // Whether the robot can work every object.
-          all_workable: "bool",
-          // One entry per object, in the request's order.
+          perception_camera: { $type: "string", $description: "As in describe_workspace." },
+          all_workable: { $type: "bool", $description: "Whether the robot can work every object." },
           objects: {
             $type: "array",
+            $description: "One entry per object, in the request's order.",
             $items: {
               $type: "object",
               object_id: "string",
-              // The "object/<id>" asset the object is an instance of.
-              asset_id: "string",
-              // The centre of its bounding box: x, y, z.
-              position: { $type: "array", $items: "f64", $length: 3 },
-              // The object it rests on: followed down through the free
-              // objects it rests on, the first that stands fixed or that the
-              // scene declares as a work surface (a book on a book on a table
-              // rests on the table). When that chain reaches a floor first
-              // (the world's floor, which is the scene's ground, or an object
-              // that stands fixed where it is touched within 0.01 m of z = 0,
-              // the height of the rooms' floors, such as a room's floor slab
-              // or a doorway's threshold), the lowest object of the chain
-              // above the floor (a cup on a side table that can move rests on
-              // the side table); "" for an object that rests on a floor itself
-              // or on nothing, and for one that stands fixed, part of the
-              // furniture.
-              resting_on: "string",
-              // Whether the robot can work it.
-              workable: "bool",
-              // Whether an arm reaches it.
-              reachable: "bool",
-              // The arm that reaches it, by the name limb_motion addresses
-              // it under; "" when none does.
-              arm: "string",
-              // How far short of it the closest arm's grasp point stops (m),
-              // whichever way the gripper points; 0 when an arm reaches it.
-              // At most 0.01 with reachable false: the arms come that close,
-              // but none reaches it with its gripper pointing down or forward.
-              short_by: "f64",
-              // Whether the perception camera sees it.
-              in_view: "bool",
-              // "seen", "outside_field", "out_of_depth", "hidden", or
-              // "no_camera" for a robot without a perception camera.
-              view: "string",
-              // What stands in the way when view is "hidden"; "" otherwise.
-              hidden_by: "string",
-              // A workable point on the top of the object it rests on, the
-              // nearest to it in plan: x, y, z. That top is the work surface
-              // the scene declares on that object nearest below the object
-              // (the nearest one when none lies below), or the top of that
-              // object's bounding box when the scene declares none on it. Empty when the object is workable, rests
-              // on no object, or that top has no workable point; empty too
-              // when the nearest workable point is the one under the object
-              // on the top it stands on, since what keeps it from being
-              // workable then (what hides it, or the height of its centre)
-              // stays where it is.
-              suggested_position: { $type: "array", $items: "f64" },
-              // One line that says why it is workable or not, and where to
-              // move it.
-              message: "string",
+              asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "The centre of its bounding box: x, y, z." },
+              resting_on: { $type: "string", $description: "The object it rests on: followed down through the free objects it rests on, the first that stands fixed or that the scene declares as a work surface (a book on a book on a table rests on the table). When that chain reaches a floor first (the world's floor, which is the scene's ground, or an object that stands fixed where it is touched within 0.01 m of z = 0, the height of the rooms' floors, such as a room's floor slab or a doorway's threshold), the lowest object of the chain above the floor (a cup on a side table that can move rests on the side table); \"\" for an object that rests on a floor itself or on nothing, and for one that stands fixed, part of the furniture." },
+              workable: { $type: "bool", $description: "Whether the robot can work it." },
+              reachable: { $type: "bool", $description: "Whether an arm reaches it." },
+              arm: { $type: "string", $description: "The arm that reaches it, by the name limb_motion addresses it under; \"\" when none does." },
+              short_by: { $type: "f64", $description: "How far short of it the closest arm's grasp point stops (m), whichever way the gripper points; 0 when an arm reaches it. At most 0.01 with reachable false: the arms come that close, but none reaches it with its gripper pointing down or forward." },
+              in_view: { $type: "bool", $description: "Whether the perception camera sees it." },
+              view: { $type: "string", $description: "\"seen\", \"outside_field\", \"out_of_depth\", \"hidden\", or \"no_camera\" for a robot without a perception camera." },
+              hidden_by: { $type: "string", $description: "What stands in the way when view is \"hidden\"; \"\" otherwise." },
+              suggested_position: { $type: "array", $items: "f64", $description: "A workable point on the top of the object it rests on, the nearest to it in plan: x, y, z. That top is the work surface the scene declares on that object nearest below the object (the nearest one when none lies below), or the top of that object's bounding box when the scene declares none on it. Empty when the object is workable, rests on no object, or that top has no workable point; empty too when the nearest workable point is the one under the object on the top it stands on, since what keeps it from being workable then (what hides it, or the height of its centre) stays where it is." },
+              message: { $type: "string", $description: "One line that says why it is workable or not, and where to move it." },
             },
           },
         },
       },
       {
-        // Where each item of a task fits on one work surface, for the robot
-        // to work it: a place for every item, found in one call. It moves
-        // and spawns nothing. At its place, an item:
-        // - rests on the top, inside the rectangle of workable grid points
-        //   that describe_workspace gives for the surface (center and
-        //   corners);
-        // - sinks into nothing that the placement rule of spawn_object and
-        //   move_object checks: not into the robot at its current pose or
-        //   at its start pose, not into an object or a fixed part of the
-        //   world, and not into the other items of the request, from which
-        //   it stands at least margin apart seen from above;
-        // - is reachable, as check_objects measures it;
-        // - is in view of the perception camera, as check_objects measures
-        //   it, and no item of the request at its place hides it; a robot
-        //   without a perception camera is judged on reach alone.
-        // The room an item takes, and the room what stands around it takes,
-        // is the box seen from above in the robot's own frame that holds
-        // each piece of their colliding geometry, so a place can leave more
-        // room than the exact shapes need. An item
-        // may be turned about the vertical to fit. An item in the world that
-        // stands on the top already keeps its place when that place meets
-        // every condition. The same world and the same request always give
-        // the same answer. Besides the error replies of the header, a
-        // request gets an error reply with `rejected` for an asset id that
-        // is not an object of the catalogue, an item that is not one of the
-        // two forms below, a near that does not hold 0 or 2 numbers, an
-        // object named twice, the object the surface belongs to named as an
-        // item, an empty items and a margin that is not a finite number from
-        // 0, and with `attempt_failed` when the implementer cannot fetch the
-        // files of an asset it places.
         name: "find_places",
+        description: "Find where each item of a task fits on one work surface, for the robot to work it: a place for every item, found in one call. It moves and spawns nothing. At its place, an item rests on the top, inside the rectangle of workable grid points that describe_workspace gives for the surface (center and corners); sinks into nothing that the placement rule of spawn_object and move_object checks: not into the robot at its current pose or at its start pose, not into an object or a fixed part of the world, and not into the other items of the request, from which it stands at least margin apart seen from above; is reachable, as check_objects measures it; and is in view of the perception camera, as check_objects measures it, and no item of the request at its place hides it; a robot without a perception camera is judged on reach alone. The room an item takes, and the room what stands around it takes, is the box seen from above in the robot's own frame that holds each piece of their colliding geometry, so a place can leave more room than the exact shapes need. An item may be turned about the vertical to fit. An item in the world that stands on the top already keeps its place when that place meets every condition. The same world and the same request always give the same answer. Besides the error replies of the contract description, a request gets an error reply with `rejected` for an asset id that is not an object of the catalogue, an item that is not one of the two forms of items, a near that does not hold 0 or 2 numbers, an object named twice, the object the surface belongs to named as an item, an empty items and a margin that is not a finite number from 0, and with `attempt_failed` when the implementer cannot fetch the files of an asset it places.",
         request_message_format: {
-          // The robot, by the name get_robots_list gives.
-          robot: "string",
-          // The work surface, by a reference (the header).
+          robot: { $type: "string", $description: "The robot, by the name get_robots_list gives." },
           surface: {
             $type: "object",
+            $description: "The work surface, by a reference (see the contract description).",
             object_id: "string",
             point: { $type: "array", $items: "f64" },
           },
-          // The items of the task, each in one of two forms:
-          // - an object in the world: object_id, with asset_id "" and scale
-          //   0;
-          // - an object to spawn: asset_id, an "object/<id>" asset, and
-          //   scale, a uniform scale that is a finite number above zero,
-          //   with object_id "".
-          // near is a world-frame [x, y] where the caller prefers the item
-          // to stand, or empty for no preference.
           items: {
             $type: "array",
+            $description: "The items of the task, each in one of two forms: an object in the world, which gives object_id, with asset_id \"\" and scale 0; or an object to spawn, which gives asset_id, an \"object/<id>\" asset, and scale, a uniform scale that is a finite number above zero, with object_id \"\". near is a world-frame [x, y] where the caller prefers the item to stand, or empty for no preference.",
             $items: {
               $type: "object",
               object_id: "string",
@@ -344,133 +130,62 @@
               near: { $type: "array", $items: "f64" },
             },
           },
-          // The least gap seen from above between two items (m), for
-          // example 0.02.
-          margin: "f64",
+          margin: { $type: "f64", $description: "The least gap seen from above between two items (m), for example 0.02." },
         },
         response_message_format: {
-          // The items that have a place, in the request's order.
           places: {
             $type: "array",
+            $description: "The items that have a place, in the request's order.",
             $items: {
               $type: "object",
-              // The item's index in the request's items, from 0.
-              item: "u32",
-              // The object, for an object in the world; "" for an asset.
-              object_id: "string",
-              // The "object/<id>" asset the item is an instance of.
-              asset_id: "string",
-              // Where the item's origin stands when it rests on the top at
-              // its place, as spawn_object and move_object take a position.
-              position: { $type: "array", $items: "f64", $length: 3 },
-              // The turn about the world's +z (rad) from the orientation the
-              // item has: as authored for an asset, as it stands for an
-              // object in the world.
-              yaw: "f64",
-              // The item's whole orientation at its place, as spawn_object
-              // and move_object take it.
-              orientation: { $type: "array", $items: "f64", $length: 4 },
-              // The arm that reaches it, by the name limb_motion addresses
-              // it under.
-              arm: "string",
-              // Whether the item keeps the place it stands at: position and
-              // orientation are then where it stands, and yaw is 0.
-              stays: "bool",
+              item: { $type: "u32", $description: "The item's index in the request's items, from 0." },
+              object_id: { $type: "string", $description: "The object, for an object in the world; \"\" for an asset." },
+              asset_id: { $type: "string", $description: "The \"object/<id>\" asset the item is an instance of." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "Where the item's origin stands when it rests on the top at its place, as spawn_object and move_object take a position." },
+              yaw: { $type: "f64", $description: "The turn about the world's +z (rad) from the orientation the item has: as authored for an asset, as it stands for an object in the world." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "The item's whole orientation at its place, as spawn_object and move_object take it." },
+              arm: { $type: "string", $description: "The arm that reaches it, by the name limb_motion addresses it under." },
+              stays: { $type: "bool", $description: "Whether the item keeps the place it stands at: position and orientation are then where it stands, and yaw is 0." },
             },
           },
-          // The items that have no place, in the request's order.
           unplaced: {
             $type: "array",
+            $description: "The items that have no place, in the request's order.",
             $items: {
               $type: "object",
-              // As in places.
-              item: "u32",
+              item: { $type: "u32", $description: "As in places." },
               object_id: "string",
               asset_id: "string",
-              // One line that says why the item has no place.
-              reason: "string",
+              reason: { $type: "string", $description: "One line that says why the item has no place." },
             },
           },
         },
       },
       {
-        // Keeps a place of the task under a name, for the setup record of
-        // the simulation: a landmark of an object, a work surface, a named
-        // pose or a named region of the loaded scene, one of the four. A
-        // name is lowercase letters, digits and "_"; a name given again
-        // replaces its location. An empty field counts as absent. The call
-        // gets an error reply with `rejected`, and nothing changes, for a
-        // name of another form, for a request that names none of the four or
-        // more than one, for an object, landmark, surface, pose or region
-        // the world does not hold, for an object that a feeder spawned (it
-        // is no part of the setup), and from an implementer that lets no
-        // caller inspect its world.
         name: "name_location",
+        description: "Keep a place of the task under a name, for the setup record of the simulation: a landmark of an object, a work surface, a named pose or a named region of the loaded scene, one of the four. A name is lowercase letters, digits and \"_\"; a name given again replaces its location. An empty field counts as absent. The call gets an error reply with `rejected`, and nothing changes, for a name of another form, for a request that names none of the four or more than one, for an object, landmark, surface, pose or region the world does not hold, for an object that a feeder spawned (it is no part of the setup), and from an implementer that lets no caller inspect its world.",
         request_message_format: {
           name: "string",
-          // A landmark of an object: the object by the name get_objects_list
-          // of scene_manipulation gives, the landmark by the name its asset
-          // declares.
-          object: { $type: "string", $optional: true },
-          landmark: { $type: "string", $optional: true },
-          // A work surface, by the label get_assets_list gives it in the
-          // loaded scene's entry.
-          surface: { $type: "string", $optional: true },
-          // A named pose of the loaded scene.
-          at: { $type: "string", $optional: true },
-          // A named region of the loaded scene.
-          region: { $type: "string", $optional: true },
+          object: { $type: "string", $optional: true, $description: "For a landmark of an object: the object, by the name get_objects_list of scene_manipulation gives." },
+          landmark: { $type: "string", $optional: true, $description: "For a landmark of an object: the landmark, by the name the asset of the object declares." },
+          surface: { $type: "string", $optional: true, $description: "A work surface, by the label get_assets_list gives it in the loaded scene's entry." },
+          at: { $type: "string", $optional: true, $description: "A named pose of the loaded scene." },
+          region: { $type: "string", $optional: true, $description: "A named region of the loaded scene." },
         },
       },
     ],
     actions: [
       {
-        // Stands the robot at a work surface that the loaded scene declares,
-        // by the robot's stance, wherever it stands now, and ends once it
-        // stands there. A robot that rests on its own base goes to the
-        // joining spot in front of the surface (the robot_position and
-        // robot_yaw that get_assets_list gives for the surface), facing the
-        // way the spot faces, and settles there. A robot whose base is fixed
-        // where it is placed is clamped on the edge of the surface's top
-        // nearest that spot: on the first point of the top along the spot's
-        // heading, found in the world as it stands, facing across the top
-        // along that heading, at the height of the top plus the height that
-        // keeps the robot, in the pose it holds, clear of the top. An offset
-        // in the request moves either robot from that place, the joining
-        // spot or the point on the edge, on the robot's own axes. The
-        // implementer reads the robot's stance and geometry, never its
-        // model: two models of one stance and one geometry stand at one
-        // place. The robot keeps its joint positions and the targets its
-        // limbs last received, as move_robot of scene_manipulation keeps
-        // them. Every implementer refuses an offset that is not finite with
-        // `rejected`, and an implementer that lets no caller inspect its
-        // world refuses the stand with `rejected`. The other checks read the
-        // world as it stands when the stand runs, so a stand that does not
-        // pass them fails once it started: with `resource_unavailable` for a
-        // robot that does not stand in the world; with `rejected` for a
-        // surface that the loaded scene does not declare, and for a robot
-        // whose base is fixed where it is placed at a surface whose top has
-        // no point along the spot's heading; and with `precondition_failed`
-        // for a surface whose object no longer stands, and for a place that
-        // the implementer's placement rules refuse (another robot too near,
-        // or the robot sinking into what stands around it). A refused or
-        // failed stand moves nothing.
         name: "stand_at",
+        description: "Stand the robot at a work surface that the loaded scene declares, by the robot's stance, wherever it stands now, and end once it stands there. A robot that rests on its own base goes to the joining spot in front of the surface (the robot_position and robot_yaw that get_assets_list gives for the surface), facing the way the spot faces, and settles there. A robot whose base is fixed where it is placed is clamped on the edge of the surface's top nearest that spot: on the first point of the top along the spot's heading, found in the world as it stands, facing across the top along that heading, at the height of the top plus the height that keeps the robot, in the pose it holds, clear of the top. An offset in the request moves either robot from that place, the joining spot or the point on the edge, on the robot's own axes. The implementer reads the robot's stance and geometry, never its model: two models of one stance and one geometry stand at one place. The robot keeps its joint positions and the targets its limbs last received, as move_robot of scene_manipulation keeps them. Every implementer refuses an offset that is not finite with `rejected`, and an implementer that lets no caller inspect its world refuses the stand with `rejected`. The other checks read the world as it stands when the stand runs, so a stand that does not pass them fails once it started: with `resource_unavailable` for a robot that does not stand in the world; with `rejected` for a surface that the loaded scene does not declare, and for a robot whose base is fixed where it is placed at a surface whose top has no point along the spot's heading; and with `precondition_failed` for a surface whose object no longer stands, and for a place that the implementer's placement rules refuse (another robot too near, or the robot sinking into what stands around it). A refused or failed stand moves nothing. The action gives no feedback. The result gives where the robot stands at the end, by robot_position and robot_yaw.",
         goal_service: {
           request_message_format: {
-            // The robot, by the name get_robots_list gives.
-            robot: "string",
-            // The work surface, by the label get_assets_list gives it in
-            // the loaded scene's entry.
-            surface: "string",
-            // Where the robot stands relative to the place stand_at gives
-            // it (the joining spot for a robot that rests on its own base,
-            // the point on the edge of the top for a robot whose base is
-            // fixed), on its own axes: ahead of that place and to its left,
-            // in metres. Absent, the robot stands at that place.
+            robot: { $type: "string", $description: "The robot, by the name get_robots_list gives." },
+            surface: { $type: "string", $description: "The work surface, by the label get_assets_list gives it in the loaded scene's entry." },
             offset: {
               $type: "object",
               $optional: true,
+              $description: "Where the robot stands relative to the place stand_at gives it (the joining spot for a robot that rests on its own base, the point on the edge of the top for a robot whose base is fixed), on its own axes: ahead of that place and to its left, in metres. Absent, the robot stands at that place.",
               ahead_m: "f64",
               side_m: "f64",
             },
@@ -478,11 +193,8 @@
         },
         result_service: {
           response_message_format: {
-            // Where the robot's base now stands: for a robot that rests on
-            // its own base, the point it settles from.
-            robot_position: { $type: "array", $items: "f64", $length: 3 },
-            // The heading the base now faces.
-            robot_yaw: "f64",
+            robot_position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot's base now stands: for a robot that rests on its own base, the point it settles from." },
+            robot_yaw: { $type: "f64", $description: "The heading the base now faces." },
           },
         },
       },
