@@ -76,6 +76,11 @@
         path: "robot/locations.json5"
       }
     },
+    motion_planning: {
+      v1: {
+        path: "robot/motion_planning.json5"
+      }
+    },
     motor_health: {
       v1: {
         path: "robot/motor_health.json5"

@@ -1,0 +1,154 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "motion_planning",
+    tag: "v1",
+    description: [
+      "Plans joint paths for the robot's arms that avoid, where the implementer reads a depth camera, what the camera has seen, and checks paths from other sources. Nothing moves: run a path with limb_motion's execute_joint_path. Every plan and check covers the path that move runs, its corners cut as it cuts them. Poses are in the robot frame of limb_motion, positions in meters, orientations unit quaternions [x, y, z, w]; an orientation whose norm lies within 0.001 of 1 is normalized, and any other is refused with rejected. Joint names, their order and their limits are limb_state's and limb_motion's; joint positions are in rad, or m for a prismatic joint. Every joint of the arms the call does not name, the grippers' included, stays at its measured position. A joint vector left empty is not given.",
+      "The voxel map: a depth ray frees the space it passes through and marks the cube it ends in occupied; space never seen counts as empty; points on the robot's own body mark nothing. With a camera, plans and checks are refused with precondition_failed until a depth frame arrives, at start and after clear_occupancy_map.",
+      "Each state keeps the implementer's clearance from the map and the robot's own body. A pair of the robot's own links that its model exempts, such as two adjacent links, is never checked. A start closer than the clearance is valid when, until the clearance is reached, the most by which the robot falls short of it, over the map and its own body, never grows, to the rounding of the arithmetic; a plan that cannot keep this fails with no_path. A path from a start less than 0.2 mm above the clearance from the map, or 0.4 mm above it from its own body, may come up to 0.1 mm, or 0.2 mm, below it, and a path from a start nearer than the clearance may come up to half its distance nearer between checked states. A plan whose start is in contact fails with start_in_collision. A start outside a joint limit by no more than the implementer's start tolerance is moved inside it; a plan whose start lies farther out is refused with precondition_failed. limb_motion's guard checks the robot's own body with margins of its own, so execute_joint_path may still refuse a planned path with unreachable. Every tolerance and allowed_planning_time_s is above 0, and allowed_planning_time_s is at most 60. Other values out of range, a name the robot does not have or that lies outside the named arms, more than one arm, a name given twice in one list of constraints, and a goal whose position and orientation constraints name more than one link, are refused with rejected.",
+    ],
+  },
+  failure_kinds: {
+    unreachable: "No joint positions that meet the goal without a collision were found in the time allowed",
+    no_path: "Goal positions were found, but no path joined them in the time allowed",
+    start_in_collision: "The start touches an obstacle or the robot's own body in a pair that is checked; the message names the pair",
+  },
+  interfaces: {
+    actions: [
+      {
+        name: "plan_joint_path",
+        description: "Plans a joint path from the start to a goal, choosing a route that avoids collisions. The goal is joint constraints alone, or position and orientation constraints alone, at least one; a goal that mixes them, or whose position and orientation constraints name more than one link, is refused with rejected. A joint or link the goal leaves free may end anywhere.",
+        goal_service: {
+          request_message_format: {
+            arms: {
+              $type: "array",
+              $description: "The arm to plan for: one.",
+              $items: {
+                $type: "object",
+                arm_name: { $type: "string", $description: "The limb name." },
+                start_joint_positions: { $type: "array", $items: "f64", $description: "Where the arm's path starts; empty: where the arm stands." },
+              },
+            },
+            goal_joint_constraints: {
+              $type: "array",
+              $description: "Targets for any of the joints of the arms; each joint may end tolerance_above above and tolerance_below below its target. A target outside the joint limits is refused with rejected.",
+              $items: {
+                $type: "object",
+                joint_name: { $type: "string", $description: "As describe_arms names it." },
+                position: "f64",
+                tolerance_above: "f64",
+                tolerance_below: "f64",
+              },
+            },
+            goal_position_constraints: {
+              $type: "array",
+              $description: "Where the origin of a link of the arms must end, within tolerance_m (m).",
+              $items: {
+                $type: "object",
+                link_name: { $type: "string", $description: "As describe_arms names it, such as its grasp_link." },
+                position: { $type: "array", $items: "f64", $length: 3 },
+                tolerance_m: "f64",
+              },
+            },
+            goal_orientation_constraints: {
+              $type: "array",
+              $description: "How a link of the arms must end up turned.",
+              $items: {
+                $type: "object",
+                link_name: "string",
+                orientation: { $type: "array", $items: "f64", $length: 4 },
+                tolerance_rad: { $type: "f64", $description: "The largest angle (rad) of the rotation from orientation to the link's orientation." },
+                free_axis: { $type: "string", $enum: ["none", "x", "y", "z"], $description: "An axis of the link's frame that is held, with the link free to turn about it, such as a gripper's approach axis; tolerance_rad then bounds the angle between that axis and its direction in orientation." },
+              },
+            },
+            objective: { $type: "string", $enum: ["any", "shortest"], $description: "\"any\": the first valid path found. \"shortest\": keeps shortening the path's joint-space length until the time limit." },
+            allowed_planning_time_s: { $type: "f64", $description: "The time (s) the plan's search may take from when the implementer takes the goal: more than 0, and at most 60. The check of the path the robot runs follows it." },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            arms: {
+              $type: "array",
+              $description: "Each arm's path, in the order of the goal's arms: where it starts, and its waypoints after the start, at least one; the last one meets the goal.",
+              $items: {
+                $type: "object",
+                arm_name: "string",
+                start_joint_positions: { $type: "array", $items: "f64" },
+                waypoints: {
+                  $type: "array",
+                  $items: {
+                    $type: "object",
+                    joint_positions: { $type: "array", $items: "f64" },
+                    position: { $type: "array", $items: "f64", $length: 3, $description: "The arm's grasp-point pose here, as in limb_state." },
+                    orientation: { $type: "array", $items: "f64", $length: 4 },
+                  },
+                },
+              },
+            },
+            map_stamp: { $type: "time", $optional: true, $description: "The time of the newest depth frame the plan used; absent with no camera." },
+          },
+        },
+        failure_kinds: ["unreachable", "no_path", "start_in_collision"],
+      },
+    ],
+    services: [
+      {
+        name: "check_joint_path",
+        description: "Checks the path execute_joint_path would run from the start through the waypoints, for collisions and joint limits, as a plan is checked. Moves nothing. A start in contact, a start outside a joint limit by more than the start tolerance, a waypoint outside a joint limit, and a path that breaks the start rule each give clear false.",
+        request_message_format: {
+          arms: {
+            $type: "array",
+            $description: "The arm whose path to check: one, with its waypoints, as execute_joint_path takes them.",
+            $items: {
+              $type: "object",
+              arm_name: "string",
+              start_joint_positions: { $type: "array", $items: "f64", $description: "Where the arm's path starts; empty: where the arm stands." },
+              waypoints: {
+                $type: "array",
+                $description: "The positions after the start, at least one.",
+                $items: {
+                  $type: "object",
+                  joint_positions: { $type: "array", $items: "f64" },
+                },
+              },
+            },
+          },
+        },
+        response_message_format: {
+          clear: { $type: "bool", $description: "True when the whole path passes: no collision, every joint within its limits." },
+          clear_waypoints: { $type: "u32", $description: "The most waypoints, from the first, whose path, run on its own, passes; all of them when clear, and 0 when the start fails or the path to the first waypoint fails." },
+          reason: { $type: "string", $description: "What fails, and how close it comes; empty when clear." },
+          map_stamp: { $type: "time", $optional: true },
+        },
+      },
+      {
+        name: "describe_arms",
+        description: "Each arm's joints and links, by the names that constraints use.",
+        response_message_format: {
+          arms: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              name: { $type: "string", $description: "The limb name." },
+              gripper_name: { $type: "string", $description: "The limb name of the arm's gripper." },
+              joint_names: { $type: "array", $items: "string", $description: "In limb_state's order, which is the order of a waypoint." },
+              joint_lower_limits: { $type: "array", $items: "f64", $description: "Each joint's limits, as limb_motion enforces them, in the order of joint_names." },
+              joint_upper_limits: { $type: "array", $items: "f64" },
+              link_names: { $type: "array", $items: "string", $description: "Every link of the arm, its gripper's included." },
+              grasp_link: { $type: "string", $description: "The link at the grasp point." },
+              approach_axis: { $type: "string", $enum: ["+x", "-x", "+y", "-y", "+z", "-z"], $description: "The axes of grasp_link's frame along which the gripper approaches an item and along which its jaws close." },
+              closing_axis: { $type: "string", $enum: ["+x", "-x", "+y", "-y", "+z", "-z"] },
+              gripper_links: { $type: "array", $items: "string", $description: "The gripper's links, which a held object may touch." },
+            },
+          },
+          body_link_names: { $type: "array", $items: "string", $description: "The robot's links outside its arms, such as the torso." },
+        },
+      },
+      {
+        name: "clear_occupancy_map",
+        description: "Empties the map; plans and checks are then refused until the next depth frame.",
+      },
+    ],
+  },
+}
