@@ -1,84 +1,3 @@
-// Runs workflows on the robots of a stack. A workflow (workflow/v1) says what
-// the robots do, a run (run/v1) binds its roles to robots, and a workflow
-// bundle (workflow_bundle/v1) carries a workflow with the digest of each of
-// its files and the lock of the versions it ran with. The library
-// workflow_documents of public-peppy-libs defines these documents and the
-// JSON texts of the results here. A document, the roles of a run and
-// caller_data cross as JSON5 text, and a bundle as the files of its
-// directory, each path relative to it, so `peppy node call
-// workflow_director_inst run --file bundle=@<dir>` sends one.
-//
-// The director checks a workflow against the contracts of the fleet listing.
-// A run reads a fresh fleet listing, refuses a halted stack, binds each role
-// to a robot of the listing, checks the workflow against the contracts of
-// those robots, compares the lock of a bundle, takes the leases of the bound
-// robots, each under the name `run <id>` of its run, lists the locations of
-// the skills of each role and refuses a run that names a location a skill of
-// its role does not know (locations:v1, which the director calls whatever the
-// allowed contracts), refuses a run whose bound physical robot has an
-// alert:v1 alert of severity 2 or 3, checks the assumptions, then runs the
-// initialization of each role and its lane. A run calls only the members of the allowed
-// contracts of the director. No member here has the mark `moves_robot`: the
-// director asks the daemon (robot_leases.check_move) before each call of a
-// member with that mark, under its own leases. A read of an observation ends
-// with the bound of the step that reads it. A read of a topic before its
-// first message waits for it, up to the max_age_s of the observation past
-// the start of the run, and is stale after. A check outside a step (an
-// assumption, each check of a resume, success and minimum) has a bound of
-// 30 s on the run clock, and a read in it that leader_streaming refuses goes
-// again every second.
-//
-// A caller that offers leases to the director (robot_leases.offer) before it
-// calls run lends them to that run: the run takes the leases of the robots
-// it binds, and gives each back, closed, before it ends. A run binds a robot
-// with no robot commander of its own, and never a robot that another run of
-// the director binds.
-//
-// run, resume and abort report progress at each event of the run and at
-// least every 5 s of wall time. The first progress of run is run_starts,
-// which names the run (`r<N>`) and gives its run/v1 document. A cancel of run
-// or resume, and the loss of its sender, aborts the run. The goal completes
-// only for a completed run, with the run result; it ends cancelled for an
-// aborted run, with the run and its result; and it fails for each other end
-// with the kind that names it, its last progress giving the run result or,
-// for a suspended run, the suspension. A suspended run has no running goal
-// and waits for resume or abort. run_events gives the events of every run,
-// and the end of a run (run_ends) only after the director released each
-// lease of the run. A request that does not parse, or that gives both a
-// run_document and roles, or neither or both of a workflow and a bundle, is
-// refused with rejected and starts no run; every other run starts, and a
-// check that refuses it ends it with run_refused.
-//
-// The fields of an event are empty where they do not apply: step names
-// `<role>.<id>` (an item of a for_each adds `#<index>`), failure_kind is the
-// kind of a failed step, an incident, a failed lane and the end of the run,
-// and details is JSON of the types of workflow_documents: the run document
-// at run_starts, the assumptions to confirm at to_confirm, the differences
-// from the lock at differences, the named result at step_ends, the incident
-// record at incident, the lane state at lane_suspends, lane_resumes and
-// lane_ends, the suspension at run_suspends, the run result at run_ends, and
-// the state of the run at progress.
-//
-// A failed step gives a failure kind: a kind of peppy, a kind of the
-// contract of its call, or a kind that only the director gives:
-// condition_failed (a fail_when is true), bound_reached (a loop hit its
-// bound first), invariant_violated (an invariant is false), breaker_open (a
-// repeat_until reached the max_failures of its breaker), stale_observation
-// (a topic read is older than its max_age_s, or the topic has given no
-// message in its max_age_s since the run started), stopped (another client
-// stopped the goal), anomaly (the anomaly monitor gives an anomaly), alert
-// (a bound physical robot raised an alert:v1 alert of severity 2 or 3, or an
-// alert set of its nodes went stale), signal_unreachable (every lane that can
-// emit a signal that a wait_for awaits has ended) and clock_stopped (the
-// simulation clock stood still for 10 s of wall time while a lane ran).
-//
-// The anomaly monitor of a run is a service of an allowed contract whose
-// request is { robot: string, step: string } and whose response is
-// { anomaly: bool, kind: string, severity: low | medium | high, description:
-// string, frame: bytes }. A member that names a run the director does not
-// know gets an error reply, or a refusal, with rejected; one that the state
-// of the run does not admit, with precondition_failed.
-//
 // The mcp_exposure/v1 document workflow_controls:v1 of mcp-hub selects
 // every member but replay, which reads a journal for a program, locations,
 // which teaches the skills of a robot, and the topic run_events, whose
@@ -88,6 +7,16 @@
   manifest: {
     name: "workflow_director",
     tag: "v1",
+    description: [
+      "Runs workflows on the robots of a stack. A workflow (workflow/v1) says what the robots do, a run (run/v1) binds its roles to robots, and a workflow bundle (workflow_bundle/v1) carries a workflow with the digest of each of its files and the lock of the versions it ran with.",
+      "The library workflow_documents of public-peppy-libs defines these documents and the JSON texts of the results here. A document, the roles of a run and caller_data cross as JSON5 text, and a bundle as the files of its directory, each path relative to it, so `peppy node call workflow_director_inst run --file bundle=@<dir>` sends one.",
+      "The director checks a workflow against the contracts of the fleet listing. A run reads a fresh fleet listing, refuses a halted stack, binds each role to a robot of the listing, checks the workflow against the contracts of those robots, compares the lock of a bundle, takes the leases of the bound robots, each under the name `run <id>` of its run, lists the locations of the skills of each role and refuses a run that names a location a skill of its role does not know (locations:v1, which the director calls whatever the allowed contracts), refuses a run whose bound physical robot has an alert:v1 alert of severity 2 or 3, checks the assumptions, then runs the initialization of each role and its lane. A run calls only the members of the allowed contracts of the director. No member here has the mark `moves_robot`: the director asks the daemon (robot_leases.check_move) before each call of a member with that mark, under its own leases. A read of an observation ends with the bound of the step that reads it. A read of a topic before its first message waits for it, up to the max_age_s of the observation past the start of the run, and is stale after. A check outside a step (an assumption, each check of a resume, success and minimum) has a bound of 30 s on the run clock, and a read in it that leader_streaming refuses goes again every second.",
+      "A caller that offers leases to the director (robot_leases.offer) before it calls run lends them to that run: the run takes the leases of the robots it binds, and gives each back, closed, before it ends. A run binds a robot with no robot commander of its own, and never a robot that another run of the director binds.",
+      "run, resume and abort report progress at each event of the run and at least every 5 s of wall time. The first progress of run is run_starts, which names the run (`r<N>`) and gives its run/v1 document. A cancel of run or resume, and the loss of its sender, aborts the run. The goal completes only for a completed run, with the run result; it ends cancelled for an aborted run, with the run and its result; and it fails for each other end with the kind that names it, its last progress giving the run result or, for a suspended run, the suspension. A suspended run has no running goal and waits for resume or abort. run_events gives the events of every run, and the end of a run (run_ends) only after the director released each lease of the run. A request that does not parse, or that gives both a run_document and roles, or neither or both of a workflow and a bundle, is refused with rejected and starts no run; every other run starts, and a check that refuses it ends it with run_refused.",
+      "The fields of an event are empty where they do not apply: step names `<role>.<id>` (an item of a for_each adds `#<index>`), failure_kind is the kind of a failed step, an incident, a failed lane and the end of the run, and details is JSON of the types of workflow_documents: the run document at run_starts, the assumptions to confirm at to_confirm, the differences from the lock at differences, the named result at step_ends, the incident record at incident, the lane state at lane_suspends, lane_resumes and lane_ends, the suspension at run_suspends, the run result at run_ends, and the state of the run at progress.",
+      "A failed step gives a failure kind: a kind of peppy, a kind of the contract of its call, or a kind that only the director gives: condition_failed (a fail_when is true), bound_reached (a loop hit its bound first), invariant_violated (an invariant is false), breaker_open (a repeat_until reached the max_failures of its breaker), stale_observation (a topic read is older than its max_age_s, or the topic has given no message in its max_age_s since the run started), stopped (another client stopped the goal), anomaly (the anomaly monitor gives an anomaly), alert (a bound physical robot raised an alert:v1 alert of severity 2 or 3, or an alert set of its nodes went stale), signal_unreachable (every lane that can emit a signal that a wait_for awaits has ended) and clock_stopped (the simulation clock stood still for 10 s of wall time while a lane ran).",
+      "The anomaly monitor of a run is a service of an allowed contract whose request is { robot: string, step: string } and whose response is { anomaly: bool, kind: string, severity: low | medium | high, description: string, frame: bytes }. A member that names a run the director does not know gets an error reply, or a refusal, with rejected; one that the state of the run does not admit, with precondition_failed.",
+    ],
   },
   failure_kinds: {
     run_degraded: "The run ended degraded: its lanes ended, success is false and minimum is true",
@@ -100,11 +29,8 @@
   interfaces: {
     services: [
       {
-        // The fleet listing within the allowed contracts: each robot with
-        // only its allowed contracts, and the pinned document of each of
-        // those contracts. Refused with resource_unavailable before the
-        // director has read the fleet listing.
         name: "robots",
+        description: "The fleet listing within the allowed contracts: each robot with only its allowed contracts, and the pinned document of each of those contracts. Refused with resource_unavailable before the director has read the fleet listing.",
         response_message_format: {
           halted: "bool",
           robots: {
@@ -113,17 +39,12 @@
               $type: "object",
               name: "string",
               kind: { $type: "string", $enum: ["simulated", "physical"] },
-              // The model that robot_identity:v1 of the robot reports; empty
-              // until it answers, or without robot_identity:v1.
-              model: "string",
-              // The robot commander of the robot; empty when it has none.
-              robot_commander: "string",
+              model: { $type: "string", $description: "The model that robot_identity:v1 of the robot reports; empty until it answers, or without robot_identity:v1." },
+              robot_commander: { $type: "string", $description: "The robot commander of the robot; empty when it has none." },
               software: { $type: "string", $enum: ["running", "stopped"] },
-              // The holder and the name of the lease of the robot, and
-              // whether it is open; empty and false with no lease.
-              lease_holder: "string",
-              lease_name: "string",
-              lease_open: "bool",
+              lease_holder: { $type: "string", $description: "The holder of the lease of the robot; empty with no lease." },
+              lease_name: { $type: "string", $description: "The name of the lease of the robot; empty with no lease." },
+              lease_open: { $type: "bool", $description: "Whether the lease of the robot is open; false with no lease." },
               contracts: {
                 $type: "array",
                 $items: {
@@ -131,9 +52,7 @@
                   name: "string",
                   tag: "string",
                   sha256: "string",
-                  // The name in the robot of each instance that implements
-                  // the contract.
-                  instances: { $type: "array", $items: "string" },
+                  instances: { $type: "array", $items: "string", $description: "The name in the robot of each instance that implements the contract." },
                 },
               },
             },
@@ -145,16 +64,8 @@
         },
       },
       {
-        // Checks a workflow by every rule of the checker. Without roles, the
-        // check reads each pinned document of each of its contracts in the
-        // fleet listing. With roles, a JSON5 object from each role to a
-        // robot name of the listing, it also checks the binding. Each error
-        // names its step as `<role>.<id>` or its field by its path; a
-        // workflow that does not parse gives one error with an empty `at`.
-        // Refused with rejected for roles that do not parse or that name
-        // "auto", and before the first fleet listing with
-        // resource_unavailable, as robots is.
         name: "check",
+        description: "Checks a workflow by every rule of the checker. Without roles, the check reads each pinned document of each of its contracts in the fleet listing. With roles, a JSON5 object from each role to a robot name of the listing, it also checks the binding. Each error names its step as `<role>.<id>` or its field by its path; a workflow that does not parse gives one error with an empty `at`. Refused with rejected for roles that do not parse or that name \"auto\", and before the first fleet listing with resource_unavailable, as robots is.",
         request_message_format: {
           workflow: "string",
           roles: { $type: "string", $optional: true },
@@ -165,26 +76,18 @@
         },
       },
       {
-        // Confirms an assumption without a check of a run that waits for
-        // its confirmations. Refused with rejected for an assumption the
-        // run does not have, and with precondition_failed for one with a
-        // check, one confirmed already, or a run that does not wait for
-        // confirmations.
         name: "confirm",
+        description: "Confirms an assumption without a check of a run that waits for its confirmations. Refused with rejected for an assumption the run does not have, and with precondition_failed for one with a check, one confirmed already, or a run that does not wait for confirmations.",
         request_message_format: { run: "string", assumption: "string" },
       },
       {
-        // Asks a running run to suspend: the director cancels each running
-        // goal of the run and runs the safe_state of each running lane. The
-        // progress of the run reports each suspension. Refused with
-        // precondition_failed for a run that does not run.
         name: "suspend",
+        description: "Asks a running run to suspend: the director cancels each running goal of the run and runs the safe_state of each running lane. The progress of the run reports each suspension. Refused with precondition_failed for a run that does not run.",
         request_message_format: { run: "string" },
       },
       {
-        // The runs that the director keeps, newest first, those of earlier
-        // processes of the director included.
         name: "runs",
+        description: "The runs that the director keeps, newest first, those of earlier processes of the director included.",
         response_message_format: {
           runs: {
             $type: "array",
@@ -207,9 +110,8 @@
         },
       },
       {
-        // The state of one run, and its details as JSON: the run status of
-        // workflow_documents, with the run result of an ended run.
         name: "status",
+        description: "The state of one run, and its details as JSON: the run status of workflow_documents, with the run result of an ended run.",
         request_message_format: { run: "string" },
         response_message_format: {
           state: {
@@ -220,17 +122,14 @@
         },
       },
       {
-        // The journal of one run, as JSON Lines.
         name: "journal",
+        description: "The journal of one run, as JSON Lines.",
         request_message_format: { run: "string" },
         response_message_format: { journal: "string" },
       },
       {
-        // Replays a journal with no robot, by the run that wrote it or as
-        // its text, and compares each decision with the journal: `same`
-        // when each matches, else `difference` gives the first that does
-        // not, as JSON of what the journal holds and what the replay gives.
         name: "replay",
+        description: "Replays a journal with no robot, by the run that wrote it or as its text, and compares each decision with the journal: `same` when each matches, else `difference` gives the first that does not, as JSON of what the journal holds and what the replay gives.",
         request_message_format: {
           run: { $type: "string", $optional: true },
           journal: { $type: "string", $optional: true },
@@ -240,21 +139,8 @@
     ],
     actions: [
       {
-        // Teaches or lists the locations of the skills of `robot`: each
-        // instance of the robot that implements locations:v1, as the fleet
-        // listing names them. With teach, the director teaches each of them
-        // the locations given, each as teach of locations:v1 takes it, and
-        // gives the locations each knows after; without, it gives the
-        // locations each knows. A teach on a robot with a lease is refused
-        // with precondition_failed, naming the holder and the name of the
-        // lease, so no teach changes the locations of a robot of a run or of
-        // an apply; a teach holds the robot while it runs, under a lease
-        // named `locations`, and no run of the director binds the robot until
-        // the teach ends. Refused with rejected for a robot the listing does
-        // not hold, with resource_unavailable before the first fleet listing
-        // and for a robot with no instance of locations:v1, and with the kind
-        // of a refusal of a skill, naming the instance.
         name: "locations",
+        description: "Teaches or lists the locations of the skills of `robot`: each instance of the robot that implements locations:v1, as the fleet listing names them. With teach, the director teaches each of them the locations given, each as teach of locations:v1 takes it, and gives the locations each knows after; without, it gives the locations each knows. A teach on a robot with a lease is refused with precondition_failed, naming the holder and the name of the lease, so no teach changes the locations of a robot of a run or of an apply; a teach holds the robot while it runs, under a lease named `locations`, and no run of the director binds the robot until the teach ends. Refused with rejected for a robot the listing does not hold, with resource_unavailable before the first fleet listing and for a robot with no instance of locations:v1, and with the kind of a refusal of a skill, naming the instance. The action gives no feedback, and the result gives the locations that each skill of the robot knows.",
         goal_service: {
           request_message_format: {
             robot: "string",
@@ -274,10 +160,9 @@
         },
         result_service: {
           response_message_format: {
-            // One entry per instance of the robot that implements
-            // locations:v1, each with the locations it knows.
             skills: {
               $type: "array",
+              $description: "One entry per instance of the robot that implements locations:v1, each with the locations it knows.",
               $items: {
                 $type: "object",
                 instance: "string",
@@ -298,13 +183,8 @@
         },
       },
       {
-        // Runs a workflow, given as workflow or in a bundle, by a run/v1
-        // document or by roles (a JSON5 object from roles to robot names;
-        // each role it leaves out takes "auto", and the run is attended),
-        // until the run ends or suspends. started_by labels the run in the
-        // list of runs, and the journal and the run result keep
-        // caller_data, JSON5 text that the director reads no field of.
         name: "run",
+        description: "Runs a workflow, given as workflow or in a bundle, by a run/v1 document or by roles (a JSON5 object from roles to robot names; each role it leaves out takes \"auto\", and the run is attended), until the run ends or suspends. started_by labels the run in the list of runs, and the journal and the run result keep caller_data, JSON5 text that the director reads no field of. The feedback gives the events of the run and its progress, and the result gives the run and its run result.",
         goal_service: {
           request_message_format: {
             workflow: { $type: "string", $optional: true },
@@ -340,15 +220,8 @@
         failure_kinds: ["run_degraded", "run_failed", "run_refused", "run_halted", "run_interrupted", "run_suspended"],
       },
       {
-        // Resumes a suspended run: it closes the open lease of each robot of
-        // the suspended lanes, refuses while an alert:v1 alert of severity 2
-        // or 3 stands on one of those robots, checks the done_when of each
-        // cancelled or failed call, the invariant of each enclosing step and
-        // the reach checks of the roles, then goes on until the run ends or
-        // suspends. A refused resume fails with run_suspended after a
-        // run_suspends event whose suspension names the alert or the false
-        // check, and opens those leases again.
         name: "resume",
+        description: "Resumes a suspended run: it closes the open lease of each robot of the suspended lanes, refuses while an alert:v1 alert of severity 2 or 3 stands on one of those robots, checks the done_when of each cancelled or failed call, the invariant of each enclosing step and the reach checks of the roles, then goes on until the run ends or suspends. A refused resume fails with run_suspended after a run_suspends event whose suspension names the alert or the false check, and opens those leases again. The feedback gives the events of the run and its progress, and the result gives the run and its run result.",
         goal_service: {
           request_message_format: { run: "string" },
         },
@@ -373,12 +246,8 @@
         failure_kinds: ["run_degraded", "run_failed", "run_refused", "run_halted", "run_interrupted", "run_suspended"],
       },
       {
-        // Aborts a run: it closes each open lease of the run, cancels each
-        // running goal, runs the safe_state of each running lane and no
-        // safe_state of a suspended lane, and completes once the run ended
-        // aborted and its leases are released, with the run result. For a
-        // run that has ended, it completes at once with its result.
         name: "abort",
+        description: "Aborts a run: it closes each open lease of the run, cancels each running goal, runs the safe_state of each running lane and no safe_state of a suspended lane, and completes once the run ended aborted and its leases are released, with the run result. For a run that has ended, it completes at once with its result. The feedback gives the events of the run and its progress, and the result gives the run and its run result.",
         goal_service: {
           request_message_format: { run: "string" },
         },
@@ -404,9 +273,8 @@
     ],
     topics: [
       {
-        // Every event of every run, as the progress of run, resume and abort
-        // gives the events of its run.
         name: "run_events",
+        description: "Every event of every run, as the progress of run, resume and abort gives the events of its run.",
         qos_profile: "reliable",
         message_format: {
           run: "string",

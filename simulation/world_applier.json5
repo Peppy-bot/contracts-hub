@@ -1,66 +1,20 @@
-// The applier of worlds of a simulation that implements simulation_world: it
-// reads the live world as a world document (world/v1), checks one, applies a
-// concrete world, runs a workflow run (run/v1) in a world with the workflow
-// director, and judges the live world. One node of a stack with a
-// simulation implements it, on the machine that coordinates the stack.
-// Documents cross as JSON5 text, and the bases of a world as the files that
-// `peppy node call --file bases=@<dir>` gives. No member has the mark
-// `moves_robot`: the applier asks the daemon (robot_leases.check_move)
-// before each move it sends.
-//
-// An apply has five steps.
-// 1. Check: the world parses and is concrete; its catalogue release is the
-//    simulation's and holds what it names; each location names an object, a
-//    surface, a named pose or a named region of the world, under a name of
-//    `locations` of workflow/v1 (the name a workflow declares it by); the
-//    robot_membership scope of the applier allows each join, of a simulated
-//    option. The applier then takes the setup claim (claim of
-//    simulation_world) and the lease of each simulated robot of the stack,
-//    and calls start_apply.
-// 2. Stack: each simulated robot that the world does not name, names with
-//    another join, or whose software stopped leaves the stack; the missing
-//    ones join in name order, each leased to the applier. A join under the
-//    name of a robot that left waits until the simulation lets go of the
-//    name. A physical robot never leaves.
-// 3. Robots: with the clock running, each robot that implements limb_motion
-//    closes each gripper that its limb_state names, and each robot that
-//    implements postures goes home. A refused goal goes again after a short
-//    wait, up to three tries; then the step fails and names the robot.
-// 4. Setup: build of simulation_world.
-// 5. Locations: each robot of the world that implements locations:v1 learns
-//    the locations of the world (teach), each as the world frame holds it:
-//    a landmark at the centre of the landmark of its object (get_object of
-//    scene_manipulation), a surface as the rectangle of it the robot can
-//    work, as describe_workspace of scene_workspace measures it for the
-//    robot; a surface that the robot cannot work, which describe_workspace
-//    answers with workable false, is left out of its teach. A robot that
-//    implements no locations:v1 learns none, and the applier measures
-//    nothing for it.
-//
-// After a restart, apply and run are refused with precondition_failed and the
-// message "the applier settles the leases of its earlier life; call again in
-// a moment" until the applier has aborted each run of the director that holds
-// a lease it gave and released each lease it still holds. Apart from that,
-// only step 1 refuses, before any robot moves, and nothing changes: a world
-// that does not hold is refused with world_refused; the setup claim held for
-// another apply or run with claimed, naming that call, its started_by and its
-// run; a robot that another client leases with leased, naming the holder and
-// the lease name; the halt with halted. A later failure fails the goal with
-// apply_failed and names what failed; the setup record stays as the steps
-// left it. A halt during an apply ends its leases, and the apply fails. A
-// cancel, and a sender that is gone, end the goal cancelled before the next
-// change. At its end, an apply releases its leases, then the setup claim.
-//
-// The applier holds the setup claim for one apply or one run at a time,
-// suspensions included. When the simulation ends the claim, as it does when
-// it restarts, an apply fails with apply_failed before its next change, a
-// run fails with apply_failed once run of the director was cancelled, which
-// aborts the run, and a suspended run is aborted with abort of the director.
 {
   peppy_schema: "contract/v1",
   manifest: {
     name: "world_applier",
     tag: "v1",
+    description: [
+      "The applier of worlds of a simulation that implements simulation_world: it reads the live world as a world document (world/v1), checks one, applies a concrete world, runs a workflow run (run/v1) in a world with the workflow director, and judges the live world. One node of a stack with a simulation implements it, on the machine that coordinates the stack.",
+      "Documents cross as JSON5 text, and the bases of a world as the files that `peppy node call --file bases=@<dir>` gives. No member has the mark `moves_robot`: the applier asks the daemon (robot_leases.check_move) before each move it sends.",
+      "An apply has five steps.",
+      "1. Check: the world parses and is concrete; its catalogue release is the simulation's and holds what it names; each location names an object, a surface, a named pose or a named region of the world, under a name of `locations` of workflow/v1 (the name a workflow declares it by); the robot_membership scope of the applier allows each join, of a simulated option. The applier then takes the setup claim (claim of simulation_world) and the lease of each simulated robot of the stack, and calls start_apply.",
+      "2. Stack: each simulated robot that the world does not name, names with another join, or whose software stopped leaves the stack; the missing ones join in name order, each leased to the applier. A join under the name of a robot that left waits until the simulation lets go of the name. A physical robot never leaves.",
+      "3. Robots: with the clock running, each robot that implements limb_motion closes each gripper that its limb_state names, and each robot that implements postures goes home. A refused goal goes again after a short wait, up to three tries; then the step fails and names the robot.",
+      "4. Setup: build of simulation_world.",
+      "5. Locations: each robot of the world that implements locations:v1 learns the locations of the world (teach), each as the world frame holds it: a landmark at the centre of the landmark of its object (get_object of scene_manipulation), a surface as the rectangle of it the robot can work, as describe_workspace of scene_workspace measures it for the robot; a surface that the robot cannot work, which describe_workspace answers with workable false, is left out of its teach. A robot that implements no locations:v1 learns none, and the applier measures nothing for it.",
+      "After a restart, apply and run are refused with precondition_failed and the message \"the applier settles the leases of its earlier life; call again in a moment\" until the applier has aborted each run of the director that holds a lease it gave and released each lease it still holds. Apart from that, only step 1 refuses, before any robot moves, and nothing changes: a world that does not hold is refused with world_refused; the setup claim held for another apply or run with claimed, naming that call, its started_by and its run; a robot that another client leases with leased, naming the holder and the lease name; the halt with halted. A later failure fails the goal with apply_failed and names what failed; the setup record stays as the steps left it. A halt during an apply ends its leases, and the apply fails. A cancel, and a sender that is gone, end the goal cancelled before the next change. At its end, an apply releases its leases, then the setup claim.",
+      "The applier holds the setup claim for one apply or one run at a time, suspensions included. When the simulation ends the claim, as it does when it restarts, an apply fails with apply_failed before its next change, a run fails with apply_failed once run of the director was cancelled, which aborts the run, and a suspended run is aborted with abort of the director.",
+    ],
   },
   failure_kinds: {
     world_refused: "Step 1 of an apply refused the world before any robot moved; the message names the cause",
@@ -78,21 +32,8 @@
   interfaces: {
     actions: [
       {
-        // The live world as a world document with the manifest that name and
-        // revision give: the setup record with each robot of a simulated
-        // option, joined as the stack lists it and, with a body, standing as
-        // the record says. With start, the setup the simulation started with
-        // and the copies that the launch started, each with a body where it
-        // first joined. A robot whose join the scope cannot express, or of a
-        // physical option, is in no world: left_out names it. claim names
-        // the call that holds the setup claim of the applier, when one does.
-        // Fails with precondition_failed when the live setup makes no world
-        // document, naming why; with rejected when the simulation or the
-        // daemon refuses a read, which fails the same way at each try; and
-        // with attempt_failed when a read failed otherwise; refused with
-        // rejected for a blank name and for a revision of 0. Changes
-        // nothing.
         name: "get",
+        description: "The live world as a world document with the manifest that name and revision give: the setup record with each robot of a simulated option, joined as the stack lists it and, with a body, standing as the record says. With start, the setup the simulation started with and the copies that the launch started, each with a body where it first joined. A robot whose join the scope cannot express, or of a physical option, is in no world: left_out names it. claim names the call that holds the setup claim of the applier, when one does. Fails with precondition_failed when the live setup makes no world document, naming why; with rejected when the simulation or the daemon refuses a read, which fails the same way at each try; and with attempt_failed when a read failed otherwise; refused with rejected for a blank name and for a revision of 0. Changes nothing. The action gives no feedback.",
         goal_service: {
           request_message_format: { start: "bool", name: "string", revision: "u32" },
         },
@@ -106,20 +47,14 @@
               $optional: true,
               call: { $type: "string", $enum: ["apply", "run"] },
               started_by: "string",
-              // The run of the workflow director; empty before it starts and
-              // for an apply.
-              run: "string",
+              run: { $type: "string", $description: "The run of the workflow director; empty before it starts and for an apply." },
             },
           },
         },
       },
       {
-        // The checks of step 1 on the world, with no claim, no lease and no
-        // start_apply: completes when the world holds, and fails with
-        // world_refused naming the first thing that the simulation, the
-        // catalogue or the stack does not hold. A halt, a claim or a lease
-        // does not refuse it. Changes nothing.
         name: "check",
+        description: "The checks of step 1 on the world, with no claim, no lease and no start_apply: completes when the world holds, and fails with world_refused naming the first thing that the simulation, the catalogue or the stack does not hold. A halt, a claim or a lease does not refuse it. Changes nothing. The action gives no feedback and no result.",
         goal_service: {
           request_message_format: {
             world: "string",
@@ -129,12 +64,8 @@
         failure_kinds: ["world_refused"],
       },
       {
-        // The five steps. started_by labels the apply in the setup claim, as
-        // the refusal of another call names it; blank, it is refused with
-        // rejected. The feedback names each step
-        // as it starts and passes on the log lines of each join and removal
-        // and the progress of the build.
         name: "apply",
+        description: "The five steps. started_by labels the apply in the setup claim, as the refusal of another call names it; blank, it is refused with rejected. The feedback names each step as it starts and passes on the log lines of each join and removal and the progress of the build. The result gives the apply id of the world.",
         goal_service: {
           request_message_format: {
             started_by: "string",
@@ -155,36 +86,8 @@
         failure_kinds: ["world_refused", "claimed", "leased", "halted", "apply_failed"],
       },
       {
-        // Runs a run/v1 document in a world with run of workflow_director,
-        // until the run ends or suspends. The applier takes the claim and the
-        // leases as step 1 does. With a world, it applies it; without one, it
-        // teaches the locations of the live world (step 5 of an apply), runs
-        // the clock and calls no start_apply. It holds the sensors of
-        // each robot it leases, under its own instance as the holder, offers
-        // its leases to the director, and once offer returns calls run with
-        // started_by and, as caller_data, the name, revision and apply id of
-        // the world, or the apply id of the live world. While the lease of a
-        // robot of the run is open for a take-over, it names that robot with
-        // allow_hand_teleop. Refused with rejected for a run that does not
-        // parse, for neither or both of workflow and bundle, and for a blank
-        // started_by; with run_refused for a role bound to a physical robot,
-        // and an "auto" role when the run leases no robot: its world names
-        // none, or with no world the stack holds no simulated robot; with
-        // world_refused for a world that does not parse or is not concrete;
-        // and, as step 1 of an apply, with claimed, leased and halted before
-        // any change. A step of the apply that fails after its check fails
-        // the goal with apply_failed. The feedback gives
-        // the apply id once start_apply returned, the steps of the apply,
-        // then the progress of the director as JSON (director) with its run.
-        // The goal ends as run of the director ends: it completes only for a
-        // completed run, ends cancelled for an aborted run with the run and
-        // its result, and fails with the kind of each other end. A suspended
-        // run keeps the claim and the sensor holds until it ends. A cancel
-        // before run starts ends the goal cancelled before the next change;
-        // after, it cancels run, which aborts the run. At the end, the
-        // applier holds again each lease it offered, then releases the
-        // holds, its leases and the claim.
         name: "run",
+        description: "Runs a run/v1 document in a world with run of workflow_director, until the run ends or suspends. The applier takes the claim and the leases as step 1 does. With a world, it applies it; without one, it teaches the locations of the live world (step 5 of an apply), runs the clock and calls no start_apply. It holds the sensors of each robot it leases, under its own instance as the holder, offers its leases to the director, and once offer returns calls run with started_by and, as caller_data, the name, revision and apply id of the world, or the apply id of the live world. While the lease of a robot of the run is open for a take-over, it names that robot with allow_hand_teleop. Refused with rejected for a run that does not parse, for neither or both of workflow and bundle, and for a blank started_by; with run_refused for a role bound to a physical robot, and an \"auto\" role when the run leases no robot: its world names none, or with no world the stack holds no simulated robot; with world_refused for a world that does not parse or is not concrete; and, as step 1 of an apply, with claimed, leased and halted before any change. A step of the apply that fails after its check fails the goal with apply_failed. The feedback gives the apply id once start_apply returned, the steps of the apply, then the progress of the director as JSON (director) with its run. The goal ends as run of the director ends: it completes only for a completed run, ends cancelled for an aborted run with the run and its result, and fails with the kind of each other end. A suspended run keeps the claim and the sensor holds until it ends. A cancel before run starts ends the goal cancelled before the next change; after, it cancels run, which aborts the run. At the end, the applier holds again each lease it offered, then releases the holds, its leases and the claim.",
         goal_service: {
           request_message_format: {
             run_document: "string",
@@ -223,10 +126,8 @@
         ],
       },
       {
-        // The verdicts of judges in the live world, JSON5 text as judge of
-        // simulation_world takes and gives them, with its refusals. Changes
-        // nothing.
         name: "judge",
+        description: "The verdicts of judges in the live world, JSON5 text as judge of simulation_world takes and gives them, with its refusals. Changes nothing. The action gives no feedback.",
         goal_service: {
           request_message_format: { judges: "string" },
         },
