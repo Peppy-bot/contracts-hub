@@ -134,7 +134,7 @@
       },
       {
         name: "status",
-        description: "The state of one run or one trial, and its details as JSON: for a run (r<N>), the run status of workflow_documents, with the run result of an ended run; for a trial (t<N>), its report so far.",
+        description: "The state of one run or one trial, and its details as JSON: for a run (r<N>), the run status of workflow_documents, with the run result of an ended run; for a trial (t<N>), its report so far: while the trial runs, each of its runs without its journal, which journal gives; once the trial ended, with the journal of each run.",
         request_message_format: { run: { $type: "string", $description: "The id of a run, r<N>, or of a trial, t<N>." } },
         response_message_format: {
           state: {
