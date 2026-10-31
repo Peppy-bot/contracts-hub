@@ -4,7 +4,7 @@
     name: "scene_view",
     tag: "v1",
     description: [
-      "Pictures of the simulated world, for a caller that sets the world up and looks at what it builds: a view of the world from a free viewpoint, the preview of an asset of the catalogue scene_manipulation lists, to pick an asset before placing it, and what a region or points of a picture of the world show, found in the world.",
+      "Pictures of the simulated world, for a caller that sets the world up and looks at what it builds: a view of the world from a free viewpoint, the preview of an asset of the catalogue scene_manipulation lists, to pick an asset before placing it, the spin sheet of a robot model, to show the model turning before it joins, and what a region or points of a picture of the world show, found in the world.",
       "Only a simulation can give them: no robot sees these pictures, and the cameras a robot carries publish through the camera contracts. A view is rendered on request from the world as it stands at that instant, with the lighting and materials the scene renders under; a preview is the picture the catalogue holds for the asset, the same whatever the world holds.",
       "A camera, in render_view's answer and in the requests of locate_in_view and locate_points, takes a picture of width x height pixels from position, a world-frame point in metres, turned by orientation, a unit quaternion [x, y, z, w] in the world frame. The camera looks along its own -Z axis, with its own +X to the right of the picture and its own +Y up. vertical_fov_deg is the angle from the top edge of the picture to its bottom edge, and the picture's aspect sets the angle across. A pixel coordinate (u, v) counts u pixels from the left edge and v pixels from the top edge, so that (0, 0) is the top-left corner of the picture and (width, height) its bottom-right corner; (u, v) lies on the ray from position along ((2u / width - 1) * t * width / height, (1 - 2v / height) * t, -1) in the camera's frame, t being the tangent of half of vertical_fov_deg. sim_time_s is the simulated instant the picture shows, in seconds on the implementer's own clock of simulated time, which never runs back.",
     ],
@@ -47,6 +47,22 @@
           width: "u32",
           height: "u32",
           frame: { $type: "array", $items: "u8", $description: "The picture, width x height pixels, rows from the top, each pixel three bytes." },
+        },
+      },
+      {
+        name: "spin_sheet",
+        description: "Give the spin sheet the catalogue holds for the robot model `asset_id` names: one picture of the model standing alone at its start pose, seen from `views` viewpoints around the vertical axis through the base of the robot, at the height and under the lighting of the model's preview, at one distance from the axis at which each view holds the whole robot, over a transparent background. The viewpoints stand 360 / views degrees apart: the first one is in the direction of the viewpoint of the preview, and each next one turns by one step counterclockwise around the axis, as seen from above, so that the views in their order show the robot turning clockwise. The views stand in one row, the first one on the left, each view_width x view_height pixels: the picture is views x view_width pixels wide and view_height pixels high. It shows the model, not the world as it stands. An id that is no robot model of the catalogue, and a model the catalogue holds no spin sheet for, get an error reply with `rejected`; a sheet the implementer cannot fetch gets one with `attempt_failed`.",
+        request_message_format: {
+          asset_id: { $type: "string", $description: "The robot model, \"robot/<model>\", by the model id that get_robots_list of scene_manipulation reports." },
+        },
+        response_message_format: {
+          encoding: { $type: "string", $description: "The file format of sheet: \"webp\"." },
+          width: { $type: "u32", $description: "The width of the picture in pixels: views x view_width." },
+          height: { $type: "u32", $description: "The height of the picture in pixels: view_height." },
+          views: { $type: "u32", $description: "How many views the picture holds, 2 or more." },
+          view_width: { $type: "u32", $description: "The width of one view in pixels." },
+          view_height: { $type: "u32", $description: "The height of one view in pixels." },
+          sheet: { $type: "array", $items: "u8", $description: "The picture, the bytes of a WebP file with an alpha channel, as the catalogue holds it." },
         },
       },
       {
