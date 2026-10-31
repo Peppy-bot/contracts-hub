@@ -163,14 +163,14 @@
       },
       {
         name: "name_location",
-        description: "Keep a place of the task under a name, for the setup record of the simulation: a landmark of an object, a work surface, a named pose or a named region of the loaded scene, one of the four. A name is lowercase letters, digits and \"_\"; a name given again replaces its location. An empty field counts as absent. The call gets an error reply with `rejected`, and nothing changes, for a name of another form, for a request that names none of the four or more than one, for an object, landmark, surface, pose or region the world does not hold, for an object that a feeder spawned (it is no part of the setup), and from an implementer that lets no caller inspect its world.",
+        description: "Keep a place of the task under a name, for the setup record of the simulation: a landmark of an object, a work surface, a named pose of the loaded scene or a region of the world, one of the four; the regions of the world are those of the world that build of simulation_world built. A name is lowercase letters, digits and \"_\"; a name given again replaces its location. An empty field counts as absent. The call gets an error reply with `rejected`, and nothing changes, for a name of another form, for a request that names none of the four or more than one, for an object, landmark, surface, pose or region the world does not hold, for an object that a feeder spawned (it is no part of the setup), and from an implementer that lets no caller inspect its world.",
         request_message_format: {
           name: "string",
           object: { $type: "string", $optional: true, $description: "For a landmark of an object: the object, by the name get_objects_list of scene_manipulation gives." },
           landmark: { $type: "string", $optional: true, $description: "For a landmark of an object: the landmark, by the name the asset of the object declares." },
           surface: { $type: "string", $optional: true, $description: "A work surface, by the label get_assets_list gives it in the loaded scene's entry." },
           at: { $type: "string", $optional: true, $description: "A named pose of the loaded scene." },
-          region: { $type: "string", $optional: true, $description: "A named region of the loaded scene." },
+          region: { $type: "string", $optional: true, $description: "A region of the world." },
         },
       },
     ],

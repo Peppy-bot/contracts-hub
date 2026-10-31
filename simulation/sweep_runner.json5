@@ -1,0 +1,88 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "sweep_runner",
+    tag: "v1",
+    description: [
+      "The sweeps of a simulation: one workflow revision run in many simulated worlds, each drawn from a world pattern with a seed, with faults injected into some runs, to measure how often the workflow completes. A test engineer starts a sweep, reads its report, and takes the bundle of a signed-off sweep to the trials on the real robots. The node that implements world_applier implements it, and runs each sweep on its own stack: it never launches a stack.",
+      "A sweep (sweep/v1), its workflow (workflow/v1) and its world patterns with their bases (world/v1) cross as JSON5 text, the world documents as files, so `peppy node call sim_harness_inst start --file worlds=@<dir>` sends them. The simulation documents of the simulation side define the sweep and its report, and the workflow documents define the bundle.",
+      "start reads each world pattern that the sweep names from the file of worlds of its name and revision, with its bases among the other files; a file that is not a world document is refused, and a file that no world pattern of the sweep extends stays out of the bundle. start checks the sweep alone and against its workflow and its world patterns, checks each world pattern as check of world_applier does, and checks the workflow with check of the workflow director, each role bound to its robot in each world pattern whose robots the stack lists, and with no binding for a world pattern whose robots join only when its world is applied; the director checks each run again when it starts. It refuses a sweep whose launcher the stack listing does not name; a fault that removes a robot that a role binds, since the director ends a run interrupted when the lease of a robot of the run ends; a world document of the name and revision of the sweep, whose file in the bundle would be that of the sweep; and a rate threshold that the confidence bound of its rate cannot pass over the runs of the sweep that count, even when each completes with its task done: the bound of the share that complete stays below 1, and that of the false successes above 0, so completed_at_least 1 and false_successes_at_most 0 are refused. It then takes the setup claim of the simulation and the lease of each simulated robot of the stack, as an apply of world_applier does, and holds them until the sweep ends, so a stack runs one sweep at a time, with no other apply, run or setup call.",
+      "For each seed of each world pattern, the sweep first brings the stack to the robots of the pattern as the pattern joins them, under its claim, so that the expansion reads the models of those robots. It then expands the pattern with the seed, applies the drawn world under its claim, measures its work cell parameters (measure of simulation_world) and evaluates the judges of the assumptions. A seed whose robots do not join, a seed that gives no world, and a failed apply, count as a seed that cannot be built. The sweep then offers its leases to the workflow director and calls run with an unattended run/v1 document: the roles, incidents and watch of the sweep, and as confirmed each assumption without a check whose judge holds, so the director refuses the run, naming the first assumption without a check whose judge does not hold; started_by is the sweep, and caller_data names the world, the seed and the apply id. It follows the events of the run, and starts each fault of the seed at the first step_starts or step_ends event that the fault names: a push is apply_force of scene_manipulation under the claim, and a robot removal takes the robot out of the stack. A push that apply_force refuses, such as one on an object with a fixed base, is a fault that does not start. At the end of the run, it evaluates the judges of success, minimum and unsafe, and records the ending, the measured values, the watch values and the verdicts. A sweep runs one world at a time. It first runs every seed of the world patterns that do not expect completed and every seed of a fault, then samples the world patterns that expect completed until the confidence bound of each rate decides it, or one rate fails.",
+      "A sweep that runs every seed that it needs ends completed. It signs off its workflow revision when it meets its thresholds and the rules of a sweep, and its locked nodes each have a commit, its peppy build has a release tag and its simulation runs a catalogue release: the node then writes the bundle of the sweep, with the workflow, the world patterns and their bases, the sweep and its report, the thresholds, the work cell parameters that the runs of the world patterns that expect completed, with no fault, measured, the envelope of their values and the lock of the versions that the sweep tested. abort ends a sweep aborted. A suspend or an abort of its run by another client, and a stop of the simulation, the director or the stack, end it interrupted, and a halt ends it halted. A sweep that ends otherwise than completed signs off nothing, and its report keeps the runs that ended. At its end, a sweep releases its leases, then the setup claim.",
+      "The records and the reports of the sweeps stay on the disk of the node, so list and status survive a restart. When the node starts again, each sweep that its records give as running ends interrupted. When the node stops, the director aborts the run of the sweep, since its sender is gone. A member that names a sweep the node does not keep gets an error reply, or a refusal, with rejected.",
+    ],
+  },
+  failure_kinds: {
+    sweep_refused: "A check of start refused the sweep before it held anything; the message names each error",
+    claimed: "The node holds the setup claim for an apply, a run or another sweep; the message names that call, its started_by, its sweep and its run",
+    leased: "Another client holds the lease of a robot of the stack; the message names the holder and the lease name",
+    halted: "The stack is halted",
+  },
+  interfaces: {
+    services: [
+      {
+        name: "status",
+        description: "The state of one sweep, whether it signed off its workflow revision, and report, JSON of the report of the sweep: for a running sweep, each run that ended, without its journal, and the seed that runs now; for an ended sweep, each run with its world, seed, ending, journal, measured values and verdicts, the four measures, the seeds that cannot be built, the faults that did not start, the unexpected endings, and why the sweep signs off or not. bundle gives the files of the bundle of a signed-off sweep, each path relative to the bundle directory, and is empty otherwise. Changes nothing.",
+        request_message_format: {
+          sweep: "string",
+        },
+        response_message_format: {
+          state: { $type: "string", $enum: ["running", "completed", "aborted", "interrupted", "halted"] },
+          signed_off: "bool",
+          report: "string",
+          bundle: { $type: "array", $items: { $type: "object", path: "string", content: "string" } },
+        },
+      },
+      {
+        name: "list",
+        description: "The sweeps that the node keeps, newest first, those of earlier processes of the node included: each with its id, the name and revision of the sweep and of its workflow, its state, whether it signed off, its started_by, and the number of its runs that ended. Changes nothing.",
+        response_message_format: {
+          sweeps: {
+            $type: "array",
+            $items: {
+              $type: "object",
+              sweep: { $type: "string", $description: "The id of the sweep, s<N>." },
+              name: "string",
+              revision: "u32",
+              workflow: "string",
+              workflow_revision: "u32",
+              state: { $type: "string", $enum: ["running", "completed", "aborted", "interrupted", "halted"] },
+              signed_off: "bool",
+              started_by: "string",
+              runs: "u32",
+            },
+          },
+        },
+      },
+    ],
+    actions: [
+      {
+        name: "start",
+        description: "Checks a sweep and starts it, as the contract description says. sweep is the sweep/v1 document, workflow its workflow, worlds the files of its world patterns and their bases, each path relative to their directory, and started_by labels the sweep in list and in the setup claim; a blank started_by is refused with rejected. Fails with sweep_refused for a check that refuses the sweep, naming each error, and with claimed, leased and halted, as step 1 of an apply of world_applier, before the sweep holds anything. The goal completes once the sweep holds the setup claim and the leases, with the id of the sweep; the sweep then runs on its own, and neither the loss of the sender of start nor a later cancel stops it. A cancel before then ends the goal cancelled, and no sweep starts. The action gives no feedback.",
+        goal_service: {
+          request_message_format: {
+            sweep: "string",
+            workflow: "string",
+            worlds: { $type: "array", $items: { $type: "object", path: "string", content: "string" } },
+            started_by: "string",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            sweep: { $type: "string", $description: "The id of the sweep, s<N>." },
+          },
+        },
+        failure_kinds: ["sweep_refused", "claimed", "leased", "halted"],
+      },
+      {
+        name: "abort",
+        description: "Aborts a running sweep: it aborts the run of the sweep with abort of the workflow director, and ends the sweep aborted. The goal completes once the sweep has ended and has released its leases and the setup claim. For a sweep that has ended, it completes at once. The action gives no feedback and no result.",
+        goal_service: {
+          request_message_format: {
+            sweep: "string",
+          },
+        },
+      },
+    ],
+  },
+}
