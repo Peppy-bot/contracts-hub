@@ -35,7 +35,12 @@
     {
       name: "reaches_for_item",
       owner: "workflow",
-      meaning: "The member reaches for an item, so the workflow director refuses a workflow whose lane calls it without a `kind: \"reach\"` assumption whose check reads an observation of its role.",
+      meaning: "The member reaches for an item, so the workflow director refuses a workflow whose lane calls it without a `kind: \"reach\"` assumption whose check reads an observation of its role, and without a call of a member with the mark `checks_reach` before it on every path of the lane.",
+    },
+    {
+      name: "checks_reach",
+      owner: "workflow",
+      meaning: "The member tells whether the robot reaches the positions it gets, so the workflow director takes a call of it, with `as` and a `done_when` that reads its result, before a member with the mark `reaches_for_item` on every path of the lane, as the check that the robot reaches the item: the call fails its step when the robot does not reach.",
     },
     {
       name: "location",
