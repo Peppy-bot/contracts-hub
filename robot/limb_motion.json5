@@ -4,19 +4,19 @@
     name: "limb_motion",
     tag: "v1",
     description: [
-      "Discrete, planned moves of one limb of a multi-arm manipulator: a joint-space arm move, a Cartesian arm move, and a gripper move, each addressed by a limb name from the implementer's fixed set of names.",
+      "Discrete, planned moves of the limbs of a multi-arm manipulator: a joint-space arm move, a joint-space path of one or more arms, a Cartesian arm move, and a gripper move, each addressing its limbs by names from the implementer's fixed set.",
       "Each goal is planned and executed by the implementer and returns a result; they are distinct from the streamed setpoints on the joint_link / gripper_link / pose_link pairings.",
       "Every Cartesian pose, commanded or reported, is the gripper's grasp point, in the robot frame, position in meters and orientation as a unit quaternion [x, y, z, w]. On a gripper whose jaws close symmetrically, it is on the jaw closing axis midway between the pads. The SO-101 gripper has one moving jaw, so the midpoint of its pads moves with the opening. Thus, the SO-101 takes and reports a fixed point near its jaws.",
       "The robot frame is fixed to the robot's base: its origin is the point the base stands on, +X points the way the robot faces, +Y to its left and +Z up. It moves with the robot, and it is not a frame of the room or of a simulated world.",
       "Every move settles from the planned end of its motion on, and its caller's settle_timeout_s bounds how long that may take. An arm move completes as soon as the arm stands within the tolerance the caller names, and fails if it does not by the timeout. A gripper move completes as soon as the jaws stand still, on the target or stopped short of it by what they hold, and at the timeout it completes wherever they stand: a grasp is expected to stop short, so a gripper move never fails on its settle. Any move ends early when its caller cancels it or the stop service ends every move in flight, whoever started them. check_arm_move asks whether a Cartesian move has a plan, and moves nothing.",
-      "move_arm_joints, move_arm and move_gripper have the mark `moves_robot`, and stop and check_arm_move have no mark: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls a move, so a stop never waits for a lease.",
+      "move_arm_joints, execute_joint_path, move_arm and move_gripper have the mark `moves_robot`, and stop and check_arm_move have no mark: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls a move, so a stop never waits for a lease.",
       "Every tolerance a goal carries is a positive number in its unit, and every duration and timeout a number of seconds from 0 to 60: an arm move with a timeout of 0 fails at its planned end unless the arm already stands within tolerance. A goal that names other values is refused with `rejected`.",
       "A move goal is refused with `leader_streaming` while a leader streams its limb, and with `precondition_failed` while the limb executes another move. A leader is a robot commander, such as a leader arm or the browser panel, or the headset. An arm move that does not settle by its timeout fails with `timeout`, and the message says how far the arm still stands from the target and how long after the planned end. A move fails with `resource_unavailable` when its limb stops answering, and with `attempt_failed` when it cannot go on for another reason. A cancelled goal gives the reason of the cancel and its result, measured when the move ended. A failed goal gives no result.",
       "The positions and orientations in the robot frame have the mark `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a position or an orientation only from a field with this mark of a result or an observation of the same role, never as a literal.",
     ],
   },
   failure_kinds: {
-    unreachable: "No plan to the target",
+    unreachable: "No plan to the target, or a path the collision guard would hold short",
     leader_streaming: "A leader streams a limb of the goal",
   },
   interfaces: {
@@ -40,6 +40,50 @@
           },
         },
         failure_kinds: ["leader_streaming"],
+        marks: ["moves_robot"],
+      },
+      {
+        name: "execute_joint_path",
+        description: "Moves arms smoothly through joint waypoints, on one timing: each arm runs in straight joint-space legs from where it measures when the move starts (the implementer moves its command there) toward each of its waypoints in turn, and the arms pass their k-th waypoints together. Each inner corner is cut by the largest circular arc, tangent to both legs, whose midpoint lies at most 0.1 from the corner (Euclidean, over the joints of every arm) and whose tangent points lie at most half of each leg from it: the arms pass near the inner waypoints and reach the last ones. The arms stop at their last waypoints, where the path turns back on itself (the cosine of the angle between one leg and the next is -0.99999 or less, a turn of about 179.74 degrees), and where each arm's waypoint lies within 0.001 of its waypoint before in every joint. Joint positions are in rad, or m for a prismatic joint, each arm's in its joint order of limb_state. Where it models the robot's body, the implementer checks the whole path against it, at points at most 0.01 rad apart, before any arm moves, and a path its guard would hold short at one of them fails with unreachable. An unknown or repeated arm name, arms with different numbers of waypoints, a waypoint outside the joint limits, and an array whose length does not match its arm's joints are refused with rejected; a path the joint limits cannot run within 60 s fails with rejected before any arm moves, and the message gives its time. The message of a precondition_failed names its cause.",
+        goal_service: {
+          request_message_format: {
+            arms: {
+              $type: "array",
+              $description: "The arms to move, at least one, each with its own waypoints.",
+              $items: {
+                $type: "object",
+                arm_name: { $type: "string", $description: "The limb name (e.g. \"left_arm\")." },
+                waypoints: {
+                  $type: "array",
+                  $description: "The positions to pass through, at least one; every arm has as many.",
+                  $items: {
+                    $type: "object",
+                    joint_positions: { $type: "array", $items: "f64" },
+                  },
+                },
+                expected_start_joint_positions: { $type: "array", $items: "f64", $description: "If not empty, the move fails with precondition_failed before any arm moves unless each of the arm's measured joints stands within the implementer's start tolerance of its value here. Pass the arm's start_joint_positions of a plan." },
+                settle_tolerances_rad: { $type: "array", $items: "f64", $description: "The move completes once, at or after its planned end, the arms have run the path to its end and each measured joint of the arm stands within its tolerance (above 0) of the arm's last waypoint; one per joint." },
+              },
+            },
+            duration_s: { $type: "f64", $description: "Requested duration of the whole path (s), up to 60; floored at the duration the joint limits allow. 0 = fastest." },
+            settle_timeout_s: { $type: "f64", $description: "How long (s, 0 to 60) after the planned end the joints may stand outside their tolerances before the move fails. The arms then hold where they stand either way: at their last waypoints, or where the implementer's collision guard held them short." },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            arms: {
+              $type: "array",
+              $description: "Each arm's measured joint positions when the move ended, in the order of the goal's arms.",
+              $items: {
+                $type: "object",
+                arm_name: "string",
+                final_joint_positions: { $type: "array", $items: "f64" },
+              },
+            },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
+          },
+        },
+        failure_kinds: ["unreachable", "leader_streaming"],
         marks: ["moves_robot"],
       },
       {
