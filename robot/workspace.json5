@@ -16,7 +16,7 @@
       "A surface is measured on a grid of points 0.0 to 1.0 m ahead of the robot every 0.02 m and 0.30 m to either side every 0.05 m, each at a target 0.04 m above the surface. It is workable when its workable points cover at least 0.03 m^2, each point standing for 0.001 m^2.",
       "A request the implementer refuses gets an error reply with `rejected`. An implementer that cannot read its perception camera's geometry gives an error reply with `precondition_failed`.",
       "The positions in the robot frame have the mark `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a position only from a field with this mark of a result or an observation of the same role, never as a literal.",
-      "check_positions has the mark `checks_reach` (marks.json5). The workflow side reads it: a lane that calls check_positions on the position of an item, with a `done_when` that reads its result, before it reaches for that item, checks in the run that the robot reaches the item.",
+      "The field all_workable of check_positions has the mark `checks_reach` (marks.json5). The workflow side reads it: a lane that calls check_positions with `positions` read from the same result as the item that it reaches for, with `as` and a `done_when` that is all_workable of its result, before it reaches for that item, checks in the run that the robot reaches the item.",
     ],
   },
   interfaces: {
@@ -44,7 +44,7 @@
         },
         response_message_format: {
           perception_camera: { $type: "string", $description: "As in describe_workspace." },
-          all_workable: { $type: "bool", $description: "Whether the robot can work every point." },
+          all_workable: { $type: "bool", $marks: ["checks_reach"], $description: "Whether the robot can work every point." },
           results: {
             $type: "array",
             $description: "One entry per point, in the request's order.",
@@ -61,7 +61,6 @@
             },
           },
         },
-        marks: ["checks_reach"],
       },
     ],
   },
