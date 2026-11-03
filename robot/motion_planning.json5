@@ -62,8 +62,8 @@
                 free_axis: { $type: "string", $enum: ["none", "x", "y", "z"], $description: "An axis of the link's frame that is held, with the link free to turn about it, such as a gripper's approach axis; tolerance_rad then bounds the angle between that axis and its direction in orientation." },
               },
             },
-            objective: { $type: "string", $enum: ["any", "shortest"], $description: "\"any\": the first valid path found. \"shortest\": keeps shortening the path's joint-space length until the time limit." },
-            allowed_planning_time_s: { $type: "f64", $description: "The time (s) the plan's search may take from when the implementer takes the goal: more than 0, and at most 60. The check of the path the robot runs follows it." },
+            objective: { $type: "string", $enum: ["any"], $description: "\"any\": the first valid path found, simplified in the time left." },
+            allowed_planning_time_s: { $type: "f64", $description: "The time (s) the plan may take from when the implementer takes the goal: more than 0, and at most 60. The simplifier's first pass and the check of the path the robot runs run to their end, past it when the plan leaves them none." },
           },
         },
         result_service: {
