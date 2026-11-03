@@ -20,11 +20,12 @@
           kind: { $type: "string", $optional: true, $description: "\"scene\" or \"object\". Another value gets an error reply with `rejected`." },
           category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. An unknown one lists nothing." },
           query: { $type: "string", $optional: true, $description: "Text an entry's asset_id, display_name or description must contain, compared without regard to case." },
+          work_surface_kind: { $type: "string", $optional: true, $description: "A kind of work surface, such as \"table\" or \"shelf\": lists the objects that carry a work surface of that kind alone, and no scene. An unknown one lists nothing." },
         },
         response_message_format: {
           assets_json: {
             $type: "string",
-            $description: "The catalogue as a JSON array. Every entry carries at least asset_id, display_name, description, kind (\"scene\" or \"object\") and category; implementers may add engine-specific fields.",
+            $description: "The catalogue as a JSON array. Every entry carries at least asset_id, display_name, description, kind (\"scene\" or \"object\") and category; implementers may add engine-specific fields. An implementer that keeps landmarks gives an object's landmarks (landmarks: each with its name, use, shape, body, centre, normal, axis and size, in the frame of its body at scale 1) and its work surfaces (work_surfaces: each with its landmark, its kind and the sides a robot works it from, as scene_workspace defines a work surface). It gives a scene's work surfaces, those of the objects the scene places, in work_surfaces: each with the placement id of its object (an object id exists only once the scene loads), the display_name of the object's asset, its landmark, its kind, the height of its top and, for each of its sides, the centre of the side's edge, in the world with the scene loaded at scale 1.",
           },
         },
       },
