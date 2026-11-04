@@ -7,6 +7,7 @@
       "Plans joint paths for the robot's arms that avoid the objects of the planning scene and, where the implementer reads a depth camera, what the camera has seen; checks paths from other sources; and holds the planning scene. Nothing moves: run a path with limb_motion's execute_joint_path. Every plan and check covers the path that move runs, its corners cut as it cuts them. Poses are in the robot frame of limb_motion, positions in meters, orientations unit quaternions [x, y, z, w]; an orientation whose norm lies within 0.001 of 1 is normalized, and any other is refused with rejected. Joint names, their order and their limits are limb_state's and limb_motion's; joint positions are in rad, or m for a prismatic joint. A position where an arm stands is the newest that limb_state reported. The joints of the arms the call does not name, and every gripper's joints, stay where they stand. A joint vector left empty is not given.",
       "The voxel map: a depth ray frees the space it passes through and marks the cube it ends in occupied; space never seen counts as empty; a point on the robot's own body, or inside an object or an attached object, each grown by the implementer's padding, marks nothing and clears the cube it ends in, even when another point of the same frame ends there; adding, moving or attaching an object clears every cube it intersects where the call leaves it. With a camera, plans and checks are refused with precondition_failed until a depth frame arrives after the implementer starts, and again after each clear_occupancy_map.",
       "Each state keeps the clearance get_planning_scene reports from the map, the objects and the robot's own body; a state nearer than it is in collision, and one at a distance of 0 or less is in contact. Between an attached object and the links of the arm that carries it, outside its touch_links, the clearance is 0: they keep out of contact; from the rest of the robot, an attached object keeps the clearance as from an object. Objects one arm carries are never checked against each other. A pair allowed to touch is never checked, and its members may overlap; so is a pair of the robot's own links that its model exempts, such as two adjacent links. A start closer than the clearance is valid when, until the clearance is reached, the most by which the robot falls short of it, over the map, the objects and its own body, never grows, to the rounding of the arithmetic; a plan that cannot keep this fails with no_path. Between checked states, a path from a start less than 0.2 mm above the clearance from the map and the objects, or 0.4 mm above it from its own body, may come up to 0.1 mm or 0.2 mm below it respectively, and a path from a start nearer than the clearance stays above half the greatest distance it has reached, from the map and the objects, and from its own body, each. A plan whose start is in contact fails with start_in_collision. A start outside a joint limit by no more than the implementer's start tolerance is moved inside it; a plan whose start lies farther out is refused with precondition_failed. execute_joint_path runs a planned path from where the arm stands: given the plan's start_joint_positions as its expected_start_joint_positions, it refuses the path with precondition_failed unless the arm stands within limb_motion's start tolerance of them, and with rejected when the joint limits cannot run it within 60 s. limb_motion's guard checks the robot's own body with margins of its own, so execute_joint_path may still refuse a planned path with unreachable. Every tolerance and allowed_planning_time_s is above 0, and allowed_planning_time_s is at most 60. Any other value out of range, a start aside, which the start rule above judges, a name the robot or the scene does not have or that lies outside the named arms, more than one arm, a name given twice in one list of constraints, and a goal whose position and orientation constraints name more than one link, are refused with rejected.",
+      "The positions and orientations in the robot frame have the mark `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a position or an orientation only from a field with this mark of a result or an observation of the same role, never as a literal.",
     ],
   },
   failure_kinds: {
@@ -47,7 +48,7 @@
               $items: {
                 $type: "object",
                 link_name: { $type: "string", $description: "As describe_arms names it, such as its grasp_link." },
-                position: { $type: "array", $items: "f64", $length: 3 },
+                position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
                 tolerance_m: "f64",
               },
             },
@@ -57,7 +58,7 @@
               $items: {
                 $type: "object",
                 link_name: "string",
-                orientation: { $type: "array", $items: "f64", $length: 4 },
+                orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"] },
                 tolerance_rad: { $type: "f64", $description: "The largest angle (rad) of the rotation from orientation to the link's orientation." },
                 free_axis: { $type: "string", $enum: ["none", "x", "y", "z"], $description: "\"none\": tolerance_rad bounds the whole rotation. \"x\", \"y\" or \"z\": that axis of the link's frame is held, either way along it, with the link free to turn about it, such as a gripper's approach axis; tolerance_rad then bounds the angle between that axis and its direction in orientation." },
               },
@@ -80,8 +81,8 @@
                   $items: {
                     $type: "object",
                     joint_positions: { $type: "array", $items: "f64" },
-                    position: { $type: "array", $items: "f64", $length: 3, $description: "The arm's grasp-point position here, and orientation its orientation, as in limb_state." },
-                    orientation: { $type: "array", $items: "f64", $length: 4 },
+                    position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "The arm's grasp-point position here, and orientation its orientation, as in limb_state." },
+                    orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"] },
                   },
                 },
               },
@@ -159,8 +160,8 @@
               $type: "object",
               id: "string",
               operation: { $type: "string", $enum: ["add", "move", "remove"] },
-              position: { $type: "array", $items: "f64", $length: 3 },
-              orientation: { $type: "array", $items: "f64", $length: 4 },
+              position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
+              orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"] },
               shapes: {
                 $type: "array",
                 $items: {
@@ -206,8 +207,8 @@
             $items: {
               $type: "object",
               id: "string",
-              position: { $type: "array", $items: "f64", $length: 3 },
-              orientation: { $type: "array", $items: "f64", $length: 4 },
+              position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
+              orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"] },
               shapes: {
                 $type: "array",
                 $items: {
