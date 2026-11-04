@@ -203,7 +203,7 @@
           response_message_format: {
             robot_position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot's base now stands: for a robot that rests on its own base, the point it settles from." },
             robot_yaw: { $type: "f64", $description: "The heading the base now faces." },
-            side: { $type: "string", $description: "The side of the work surface it stands at: the one the request named, or the one an empty side took." },
+            side: { $type: "string", $description: "The side of the work surface it stands at: the one the request named, or the one an empty side took; empty when the goal ends cancelled before the robot moved." },
           },
         },
       },
