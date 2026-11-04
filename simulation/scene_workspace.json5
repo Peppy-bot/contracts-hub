@@ -4,7 +4,7 @@
     name: "scene_workspace",
     tag: "v1",
     description: [
-      "Where a robot standing in a simulated world can work, measured in that world: the work surfaces its arms reach and its perception camera sees, with what stands in the way, whether given objects are workable where they stand, where on a work surface the objects of a task fit, and the stand of a robot at a work surface of any object of the world.",
+      "Where a robot standing in a simulated world can work, measured in that world: the work surfaces its arms reach and its perception camera sees, with what stands in the way, whether given objects are workable where they stand, where on a work surface the objects of a task fit, the stand of a robot at a work surface of any object of the world, and where the furniture of a room goes for robots to work it.",
       "It is for a caller that sets a simulated world up and checks its setup; it moves nothing but the robot that stand_at stands, and a robot's task still finds its items through the robot's own perception. get_objects_list of scene_manipulation says where objects stand; this contract says whether a robot can work them there, and where on a surface it could. The workspace contract of a robot answers the same questions from the robot's design alone, in the robot frame, with the same definitions. name_location keeps a place of the task under a name, for the setup record of the simulation (simulation_world).",
       "Positions are world-frame x, y, z in metres, headings a yaw in radians about the world's +z, orientations unit quaternions [x, y, z, w] in the world frame. Robot names come from get_robots_list, object ids from get_objects_list, asset ids from get_assets_list. A robot's own frame has its origin where its base stands, +x the way it faces and +y to its left.",
       "A work surface is a level face of an object on which items can rest and that a robot works at: the top of a table, one level of a shelf, a belt. The asset of the object declares it (get_assets_list of scene_manipulation gives the work_surfaces of each object): a landmark of use support and shape rectangle that faces up, what the face is in plain words (its kind) and the sides of the rectangle that a robot works it from, each a side of the frame of the landmark's body, +x, -x, +y or -y. A work surface follows its body, so the top of a desk whose height control raises it stands where the control holds it. Only an object carries a work surface: a face of the world's own geometry (its floor plane and the fixed parts of the scene that are not objects) is no work surface, and a request names it by a point. Nothing in a measurement depends on what the face is.",
@@ -204,6 +204,114 @@
             robot_position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot's base now stands: for a robot that rests on its own base, the point it settles from." },
             robot_yaw: { $type: "f64", $description: "The heading the base now faces." },
             side: { $type: "string", $description: "The side of the work surface it stands at: the one the request named, or the one an empty side took; empty when the goal ends cancelled before the robot moved." },
+          },
+        },
+      },
+      {
+        name: "furnish",
+        description: "Place the furniture of a request in the loaded scene by rules and a seed, and end with where each piece goes, at which scale, where each robot of its stations stands, and the steps that set the layout up. It moves nothing: the caller sets the layout up with spawn_object and stand_at of this contract and scene_manipulation, in the order of the steps. The walls of the scene are those of its entry of get_assets_list, and its free floor is its floor, or, for a scene without one, the open floor on which a robot that joins stands: a square 30 m wide, centred on the origin and entered there. Each piece of the answer stands on the free floor, its box seen from above inside it; sinks into nothing by the placement rule of spawn_object (the walls, the other pieces, every object and each robot that the layout avoids: every robot that stands, but those that the stations name); leaves each doorway clear over its width and 1.0 m into the room; does not enter the zone of a window, the opening along its wall and in height, from the wall's inner face to 0.3 m in front of it; keeps each station of every other piece clear; and has its turn by its rule. Each station is clear of the walls, of every object and of every piece but its own, its base (the robot's base, or the centre of a station of a size) stands at least 1.5 m from that of every other station, from each robot that the layout avoids and from each spot promised to a robot that joins, and a walkway walkway_m wide joins the entry of the free floor to it: a path of cells of a grid of 0.1 m over the free floor, each next to the one before it along x or y, from the cell of the entry to a cell that touches the room of the station, where a square walkway_m wide centred on each cell meets no wall, piece or object between the floor and 2.0 m. Robots block no walkway and no doorway. The robot of each station works its surface from its side at the scale of the piece, as the work surface rule measures it in a world that holds the robot and the piece alone, the robot where stand_at stands it: the scale from the item's min to its max whose smallest workable area, over the robot stations of the piece, is the largest, tried every 0.05 from min, then every 0.01 within 0.04 of the best, a tie going to the scale nearest 1. What each measurement gives is kept for every later call, by the robot's model, the asset, the scale, the landmark, the side and where the robot's joints outside its arms stand. The steps spawn the pieces in the order of the search and stand each robot as soon as the piece of its station stands; a step waits while a robot that a station names and that has not stood yet stands in its way (where the piece of a spawn goes, or in the room of the station of a stand or within 1.5 m of its base), and a layout whose steps wait for each other is not given. The search places the pieces in the order of their rules (a piece after the piece that its beside or its facing names, else in the order of the request, so list the largest first), each at the candidates of its rule (every 0.05 m along a wall, the corners, a grid of 0.1 m over the free floor), in an order that the seed and the piece's name give, backs up to the piece before when a piece has no candidate left, and stops after 20000 candidates; the answer is the first layout found with the most pieces placed. The same world, request and seed always give the same answer. The feedback gives one message when the goal is accepted, then one whenever a field changes: the progress of the files of the pieces, then each measurement of a scale as it starts. A cancel ends the goal cancelled, at the latest after the measurement that runs. The goal fails with `rejected`, before any search, for a request without an item; an asset that is not an object of the catalogue; a name that is not a name (lowercase letters, digits and _), that two items hold, or that an object of the world holds; a rule of another kind, a rule that gives a field its kind does not use, or that names an item the request lacks, the item itself or a wall that the scene lacks; against_wall, in_corner or beside in a scene without walls; beside an item whose rule is not against_wall or in_corner; a rule but free on an object without a front; a cycle of beside and facing; a station on a landmark that is not a work surface of the asset, on a side that it does not list or that is none of the four; a station that names a robot and a size, or neither; two stations that name one robot; a piece with a station whose physics is not static; a scale min above its max, and a scale range of a piece without a robot station whose min and max differ; a near that is neither empty nor two finite numbers; a scale, a size, a distance or a walkway_m that is not a finite number above 0, and a gap that is not a finite number of at least 0. It fails with `resource_unavailable` for a robot of a station that does not stand, and with `attempt_failed` when the files of an asset do not come.",
+        goal_service: {
+          request_message_format: {
+            items: {
+              $type: "array",
+              $description: "The pieces of furniture, largest first. Every field of an item, of its rule and of its stations is present, the fields that its form does not use empty (\"\", 0 or an empty array).",
+              $items: {
+                $type: "object",
+                name: { $type: "string", $description: "The name the piece spawns under: lowercase letters, digits and _, held by no other item and by no object of the world." },
+                asset: { $type: "string", $description: "The piece, an \"object/<id>\" asset of get_assets_list." },
+                scale: {
+                  $type: "object",
+                  $description: "The uniform scales the piece may take, both ends included: min and max the same for a piece without a robot station.",
+                  min: "f64",
+                  max: "f64",
+                },
+                physics: { $type: "string", $description: "The physics the piece spawns with, as spawn_object takes it: static for a piece with a station." },
+                rule: {
+                  $type: "object",
+                  $description: "Where the piece goes, by kind: against_wall, its back (the side opposite its front) against the wall on_wall names, or any wall for an empty on_wall; in_corner, its back against one wall and one side against a wall that meets it; free, walkway room on every side, nearest near ([x, y]) when near is not empty; beside, against the same wall as the item that item names, whose rule is against_wall or in_corner, side by side on either side of it, gap_m apart; facing, front to front with the item that item names, distance_m between the two fronts. against_wall, in_corner and beside turn the front away from the wall at its back, facing turns it toward the other's front, and free takes the four quarter turns about the vertical. The front is the side of the asset's root that get_assets_list gives as its front.",
+                  kind: "string",
+                  on_wall: { $type: "string", $description: "The id of a wall of the scene, for against_wall; else empty." },
+                  near: { $type: "array", $items: "f64", $description: "The world-frame [x, y] a free piece stands nearest; else empty." },
+                  item: { $type: "string", $description: "The name of the other item, for beside and facing; else empty." },
+                  gap_m: { $type: "f64", $description: "The gap between the two pieces, for beside, at least 0; else 0." },
+                  distance_m: { $type: "f64", $description: "The distance between the two fronts, for facing, above 0; else 0." },
+                },
+                stations: {
+                  $type: "array",
+                  $description: "The room that a robot needs to work a work surface of the piece from one side: for a robot that stands in the world, robot names it, with depth_m and width_m 0; for a station of a size, robot is empty and the station is the rectangle depth_m deep out of the edge of the side and width_m wide along it, centred on the centre of the edge. The room of a robot's station is the box seen from above of the robot's colliding geometry at its start pose where stand_at stands it, as the measurement of the scale stands it.",
+                  $items: {
+                    $type: "object",
+                    landmark: { $type: "string", $description: "The landmark of a work surface of the asset." },
+                    side: { $type: "string", $description: "A side the work surface lists: \"+x\", \"-x\", \"+y\" or \"-y\"." },
+                    robot: { $type: "string", $description: "The robot, by the name get_robots_list gives; empty for a station of a size." },
+                    depth_m: "f64",
+                    width_m: "f64",
+                  },
+                },
+              },
+            },
+            seed: { $type: "u32", $description: "The seed of the layout: the same world, request and seed give the same answer." },
+            walkway_m: { $type: "f64", $description: "The width of a walkway, in metres, for example 0.8." },
+          },
+        },
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            bytes_ready: { $type: "u64", $description: "The bytes of the files of the pieces in the store's cache so far." },
+            bytes_total: { $type: "u64", $description: "The bytes of the files of the pieces." },
+            item: { $type: "string", $description: "The piece whose scale is measured now; empty before the first measurement." },
+            robot: { $type: "string", $description: "The robot that the measurement stands at the piece; empty before the first measurement." },
+            scale: { $type: "f64", $description: "The scale measured; 0 before the first measurement." },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            places: {
+              $type: "array",
+              $description: "The pieces that have a place, in the order of the request.",
+              $items: {
+                $type: "object",
+                name: { $type: "string", $description: "The item's name." },
+                asset: { $type: "string", $description: "The item's asset." },
+                position: { $type: "array", $items: "f64", $length: 3, $description: "Where the piece's origin stands, for spawn_object: it rests on the floor there." },
+                yaw: { $type: "f64", $description: "Its turn about the world's +z from the orientation it is authored in, for spawn_object." },
+                scale: { $type: "f64", $description: "The scale it spawns at." },
+                physics: { $type: "string", $description: "The physics it spawns with." },
+                stations: {
+                  $type: "array",
+                  $description: "Its stations, in the order of the request: where the robot of each stands, as stand_at stands it there, or the centre of a station of a size.",
+                  $items: {
+                    $type: "object",
+                    landmark: "string",
+                    side: "string",
+                    robot: { $type: "string", $description: "The robot; empty for a station of a size." },
+                    position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot's base stands, or the centre of the station." },
+                    yaw: { $type: "f64", $description: "The heading the robot faces there, toward the piece." },
+                  },
+                },
+              },
+            },
+            unplaced: {
+              $type: "array",
+              $description: "The pieces that have no place, in the order of the request.",
+              $items: {
+                $type: "object",
+                name: { $type: "string", $description: "The item's name." },
+                reason: { $type: "string", $description: "One line that says why, from the nearest miss of its candidates: larger than every free stretch of wall, a doorway, a window, a walkway, a station of another piece, two robots that stand in the way of each other's steps, or a robot that works the surface at no scale of its range, with the line of the measurement." },
+              },
+            },
+            steps: {
+              $type: "array",
+              $description: "The steps that set the layout up, in order: spawn, the piece of item at its place, at its scale and with its physics (spawn_object, its name item); stand, robot at side of the work surface on landmark of the object that the spawn of item gave (stand_at). The fields a kind does not use are empty.",
+              $items: {
+                $type: "object",
+                action: { $type: "string", $description: "spawn or stand." },
+                item: { $type: "string", $description: "The item the step spawns, or whose work surface the robot stands at." },
+                robot: { $type: "string", $description: "The robot a stand stands; empty for a spawn." },
+                landmark: { $type: "string", $description: "The landmark of the work surface of a stand; empty for a spawn." },
+                side: { $type: "string", $description: "The side of a stand; empty for a spawn." },
+              },
+            },
           },
         },
       },
