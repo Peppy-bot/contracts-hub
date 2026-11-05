@@ -23,12 +23,12 @@
     actions: [
       {
         name: "move_arm_joints",
-        description: "Move one arm to a joint configuration, on a trajectory that the implementer plans, and wait until each measured joint settles within its tolerance of its target. The action gives no feedback. The result gives the measured joint positions when the action ended.",
+        description: "Move one arm to a joint configuration, on a trajectory that the implementer plans, and wait until each measured joint settles within its tolerance of its target. A move the joint limits cannot run within 60 s fails with rejected before the arm moves, and the message gives its time. The action gives no feedback. The result gives the measured joint positions when the action ended.",
         goal_service: {
           request_message_format: {
             arm_name: { $type: "string", $description: "Which arm, named from the implementer's fixed set of limb names (e.g. \"left_arm\"). An unknown name is refused with `rejected`." },
             joint_positions: { $type: "array", $items: "f64", $description: "Target joint positions (rad), one per joint of the arm in its fixed joint order." },
-            duration_s: { $type: "f64", $description: "Requested trajectory duration (s), up to 60; floored at the implementer's velocity-limit duration. 0 = fastest." },
+            duration_s: { $type: "f64", $description: "Requested trajectory duration (s), up to 60; floored at the duration the implementer's joint limits allow. 0 = fastest." },
             settle_tolerances_rad: { $type: "array", $items: "f64", $description: "The move completes once, at or after the planned end of the trajectory, each measured joint stands within its tolerance (rad) of its target: one value per joint of the arm, in its fixed joint order." },
             settle_timeout_s: { $type: "f64", $description: "How long (s) after the planned end the joints may still stand outside their tolerances before the move fails. The arm then holds where it stands either way: on the target, or where the implementer's collision guard held it short." },
           },
@@ -94,7 +94,7 @@
             arm_name: { $type: "string", $description: "Which arm, named from the implementer's fixed set of limb names (e.g. \"left_arm\"). An unknown name is refused with `rejected`." },
             position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Target grasp-point position, robot frame: x, y, z (m)." },
             orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"], $description: "Target grasp-point orientation, quaternion [x, y, z, w]." },
-            duration_s: { $type: "f64", $description: "Requested trajectory duration (s), up to 60; floored at the implementer's velocity-limit duration. 0 = fastest." },
+            duration_s: { $type: "f64", $description: "Requested trajectory duration (s), up to 60; floored at the duration the implementer's joint limits allow. 0 = fastest." },
             plan_position_tolerance_m: { $type: "f64", $description: "Position slack (m): the Euclidean distance between the commanded and planned grasp-point positions." },
             plan_orientation_tolerance_rad: { $type: "f64", $description: "Orientation slack (rad): the geodesic angle between the commanded and planned orientations, q and -q naming one rotation." },
             settle_position_tolerance_m: { $type: "f64", $description: "Position settle tolerance (m): the Euclidean distance between the measured and commanded grasp-point positions. At least plan_position_tolerance_m." },
