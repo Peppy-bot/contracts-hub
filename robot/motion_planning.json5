@@ -6,7 +6,7 @@
     description: [
       "Plans joint paths for the robot's arms that avoid the objects of the planning scene and, where the implementer reads a depth camera, what the camera has seen; checks paths from other sources; and holds the planning scene. Nothing moves: run a path with limb_motion's execute_joint_path. Every plan and check covers the path that move runs, its corners cut as it cuts them. Poses are in the robot frame of limb_motion, positions in meters, orientations unit quaternions [x, y, z, w]; an orientation whose norm lies within 0.001 of 1 is normalized, and any other is refused with rejected. Joint names, their order and their limits are limb_state's and limb_motion's; joint positions are in rad, or m for a prismatic joint. A position where an arm stands is the newest that limb_state reported. The joints of the arms the call does not name, and every gripper's joints, stay where they stand. A joint vector left empty is not given.",
       "The voxel map: a depth ray frees the space it passes through and marks the cube it ends in occupied; space never seen counts as empty; a point on the robot's own body, or inside an object or an attached object, each grown by the implementer's padding, marks nothing and clears the cube it ends in, even when another point of the same frame ends there; adding, moving or attaching an object clears every cube it intersects where the call leaves it. With a camera, plans and checks are refused with precondition_failed until a depth frame arrives after the implementer starts, and again after each clear_occupancy_map.",
-      "Each state keeps the clearance get_planning_scene reports from the map, the objects and the robot's own body; a state nearer than it is in collision, and one at a distance of 0 or less is in contact. Between an attached object and the links of the arm that carries it, outside its touch_links, the clearance is 0: they keep out of contact; from the rest of the robot, an attached object keeps the clearance as from an object. Objects one arm carries are never checked against each other. A pair allowed to touch is never checked, and its members may overlap; so is a pair of the robot's own links that its model exempts, such as two adjacent links. A start closer than the clearance is valid when, until the clearance is reached, the most by which the robot falls short of it, over the map, the objects and its own body, never grows, to the rounding of the arithmetic; a plan that cannot keep this fails with no_path. Between checked states, a path from a start less than 0.2 mm above the clearance from the map and the objects, or 0.4 mm above it from its own body, may come up to 0.1 mm or 0.2 mm below it respectively, and a path from a start nearer than the clearance stays above half the greatest distance it has reached, from the map and the objects, and from its own body, each. A plan whose start is in contact fails with start_in_collision. A start outside a joint limit by no more than the implementer's start tolerance is moved inside it; a plan whose start lies farther out is refused with precondition_failed. execute_joint_path runs a planned path from where the arm stands: given the plan's start_joint_positions as its expected_start_joint_positions, it refuses the path with precondition_failed unless the arm stands within limb_motion's start tolerance of them, and with rejected when the joint limits cannot run it within 60 s. limb_motion's guard checks the robot's own body with margins of its own, so execute_joint_path may still refuse a planned path with unreachable. Every tolerance and allowed_planning_time_s is above 0, and allowed_planning_time_s is at most 60. Any other value out of range, a start aside, which the start rule above judges, a name the robot or the scene does not have or that lies outside the named arms, more than one arm, a name given twice in one list of constraints, and a goal whose position and orientation constraints name more than one link, are refused with rejected.",
+      "A state is the joint positions of the named arms at one instant of the path, the arms at their k-th waypoints together. Each state keeps the clearance get_planning_scene reports from the map, the objects and the robot's own body, the arms' links and objects from one another included; a state nearer than it is in collision, and one at a distance of 0 or less is in contact. Between an attached object and the links of the arm that carries it, outside its touch_links, the clearance is 0: they keep out of contact; from the rest of the robot, an attached object keeps the clearance as from an object. Objects one arm carries are never checked against each other. A pair is checked when one of its bodies moves: a link of an arm the path moves, or an object such a link carries; a pair whose bodies all stand still while another named arm moves, such as an arm that stays where it starts and the torso, is not checked, and when every named arm stays where it starts, the pairs of each are checked. A pair allowed to touch is never checked, and its members may overlap; so is a pair of the robot's own links that its model exempts, such as two adjacent links. A start closer than the clearance is valid when, until the clearance is reached, the most by which the robot falls short of it, over the map, the objects and its own body, never grows, to the rounding of the arithmetic; a plan that cannot keep this fails with no_path. Between checked states, a path from a start less than 0.2 mm above the clearance from the map and the objects, or 0.4 mm above it from its own body, may come up to 0.1 mm or 0.2 mm below it respectively, and a path from a start nearer than the clearance stays above half the greatest distance it has reached, from the map and the objects, and from its own body, each. A plan whose start is in contact fails with start_in_collision. A start outside a joint limit by no more than the implementer's start tolerance is moved inside it; a plan whose start lies farther out is refused with precondition_failed. execute_joint_path runs a planned path from where the arms stand: given each arm's start_joint_positions of the plan as its expected_start_joint_positions, it refuses the path with precondition_failed unless each arm stands within limb_motion's start tolerance of them, and with rejected when the joint limits cannot run it within 60 s. limb_motion's guard checks the robot's own body with margins of its own, so execute_joint_path may still refuse a planned path with unreachable. Every tolerance and allowed_planning_time_s is above 0, and allowed_planning_time_s is at most 60. Any other value out of range, a start aside, which the start rule above judges, a name the robot or the scene does not have or that lies outside the named arms, an empty arms, an arm named twice, a joint vector that does not hold one value per joint of its arm, a goal with no constraint, a name given twice in one list of constraints, an arm whose constraints mix joint constraints with position or orientation constraints or name more than one of its links, and, in a check, arms with different numbers of waypoints or an arm with none, are refused with rejected.",
       "The positions and orientations in the robot frame have the mark `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a position or an orientation only from a field with this mark of a result or an observation of the same role, never as a literal.",
     ],
   },
@@ -19,12 +19,12 @@
     actions: [
       {
         name: "plan_joint_path",
-        description: "Plans a joint path from the start to a goal, choosing a route that avoids collisions. The goal is joint constraints alone, or position and orientation constraints alone, at least one; a goal that mixes them, or whose position and orientation constraints name more than one link, is refused with rejected. A joint or link the goal leaves free may end anywhere. A cancel ends the plan, and the goal ends cancelled.",
+        description: "Plans a joint path for the named arms from their start to a goal, choosing a route that avoids collisions, between the arms included. The goal holds at least one constraint. The constraints on one arm are joint constraints alone, or position and orientation constraints of one of its links alone; different arms may take different kinds. An arm whose constraints mix them, or whose position and orientation constraints name more than one of its links, is refused with rejected. An arm that no constraint names stays where it starts: each of its waypoints is its start. A joint or link the goal leaves free on an arm it constrains may end anywhere. A cancel ends the plan, and the goal ends cancelled.",
         goal_service: {
           request_message_format: {
             arms: {
               $type: "array",
-              $description: "The arm to plan for: one.",
+              $description: "The arms to plan for, at least one.",
               $items: {
                 $type: "object",
                 arm_name: { $type: "string", $description: "The limb name." },
@@ -71,7 +71,7 @@
           response_message_format: {
             arms: {
               $type: "array",
-              $description: "Each arm's path, in the order of the goal's arms: where it starts, and its waypoints after the start, at least one; the last one meets the goal.",
+              $description: "Each arm's path, in the order of the goal's arms: where it starts, and its waypoints after the start, at least one, as many for every arm. The arms pass their k-th waypoints together, and their last ones meet the goal.",
               $items: {
                 $type: "object",
                 arm_name: "string",
@@ -100,14 +100,14 @@
         request_message_format: {
           arms: {
             $type: "array",
-            $description: "The arm whose path to check: one, with its waypoints, as execute_joint_path takes them.",
+            $description: "The arms whose path to check, at least one, each with its own waypoints, as execute_joint_path takes them.",
             $items: {
               $type: "object",
               arm_name: "string",
               start_joint_positions: { $type: "array", $items: "f64", $description: "Where the arm's path starts; empty: where the arm stands." },
               waypoints: {
                 $type: "array",
-                $description: "The positions after the start, at least one.",
+                $description: "The positions after the start, at least one; every arm has as many.",
                 $items: {
                   $type: "object",
                   joint_positions: { $type: "array", $items: "f64" },
@@ -118,7 +118,7 @@
         },
         response_message_format: {
           clear: { $type: "bool", $description: "True when the whole path passes: no collision, every joint within its limits." },
-          clear_waypoints: { $type: "u32", $description: "The most waypoints, from the first, whose path, run on its own, passes; all of them when clear, and 0 when the start fails or the path to the first waypoint fails." },
+          clear_waypoints: { $type: "u32", $description: "The most waypoints, from the first, whose path, every arm run together through them with the last of them as its end, passes; all of them when clear, and 0 when the start fails or the path to the first waypoints fails." },
           reason: { $type: "string", $description: "What fails, and how close it comes; empty when clear." },
           map_stamp: { $type: "time", $optional: true, $description: "The time of the newest depth frame the check used; absent with no camera." },
         },
