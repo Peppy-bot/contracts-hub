@@ -88,17 +88,15 @@
       },
       {
         name: "move_arm",
-        description: "Move the grasp point of one arm to a pose in the robot frame, on a trajectory that the implementer plans, and wait until the measured grasp point settles at the pose. Not every arm can meet a position and an orientation at once. An arm with fewer than six actuated joints cannot generally do both, and even a redundant one runs out of postures near its limits. So rather than let the implementer decide how close is close enough, the caller names the slack it will accept and the goal is planned within it. A goal that no solution reaches inside both plan tolerances fails with `unreachable` rather than being quietly approximated. The plan tolerances bound the plan, not the path taken to it. The move completes once, at or after the planned end of the trajectory, the measured grasp point stands within both settle tolerances of the commanded pose. Each settle tolerance must be at least the plan tolerance of its axis, since the plan may sit that far from the commanded pose. The action gives no feedback. The result gives the measured grasp-point pose when the action ended.",
+        description: "Move the grasp point of one arm to a pose in the robot frame, or to a position with no particular orientation, on a trajectory that the implementer plans, and wait until the measured grasp point settles there. The grasp point travels on a straight line from where it is commanded now, and the plan ends within 1 mm and 0.01 rad of the goal, the default of MoveIt's Cartesian precision. A goal that no such line reaches fails with `unreachable`; a joint path planned for the pose reaches what a line does not, within the slack the planner's goal names. An arm with fewer than six actuated joints ends on few orientations exactly, so it reaches most goals with orientation absent. A line the joint limits cannot run within 60 s fails with `rejected`. The settle tolerances judge arrival, and no plan reads them: the move completes once, at or after the planned end of the trajectory, the measured grasp point stands within them of the commanded goal, so a tolerance tighter than the plan's precision can fail with `timeout`. The action gives no feedback. The result gives the measured grasp-point pose when the action ended.",
         goal_service: {
           request_message_format: {
             arm_name: { $type: "string", $description: "Which arm, named from the implementer's fixed set of limb names (e.g. \"left_arm\"). An unknown name is refused with `rejected`." },
             position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "Target grasp-point position, robot frame: x, y, z (m)." },
-            orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"], $description: "Target grasp-point orientation, quaternion [x, y, z, w]." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"], $description: "Target grasp-point orientation, quaternion [x, y, z, w]. Absent names no orientation: the grasp point aims to keep the turn it starts with. An arm with six or more joints keeps it exactly or has no line to the position; one with fewer ends as near it as its joints allow." },
             duration_s: { $type: "f64", $description: "Requested trajectory duration (s), up to 60; floored at the duration the implementer's joint limits allow. 0 = fastest." },
-            plan_position_tolerance_m: { $type: "f64", $description: "Position slack (m): the Euclidean distance between the commanded and planned grasp-point positions." },
-            plan_orientation_tolerance_rad: { $type: "f64", $description: "Orientation slack (rad): the geodesic angle between the commanded and planned orientations, q and -q naming one rotation." },
-            settle_position_tolerance_m: { $type: "f64", $description: "Position settle tolerance (m): the Euclidean distance between the measured and commanded grasp-point positions. At least plan_position_tolerance_m." },
-            settle_orientation_tolerance_rad: { $type: "f64", $description: "Orientation settle tolerance (rad): the geodesic angle between the measured and commanded orientations. At least plan_orientation_tolerance_rad." },
+            settle_position_tolerance_m: { $type: "f64", $description: "Position settle tolerance (m): the Euclidean distance between the measured and commanded grasp-point positions." },
+            settle_orientation_tolerance_rad: { $type: "f64", $description: "Orientation settle tolerance (rad): the geodesic angle between the measured orientation and the commanded one, the goal's or, with orientation absent, where the plan ends." },
             settle_timeout_s: { $type: "f64", $description: "How long (s) after the planned end the grasp point may still stand outside the settle tolerances before the move fails. The arm then holds where it stands either way: on the target, or where the implementer's collision guard held it short." },
           },
         },
@@ -151,14 +149,12 @@
         request_message_format: {
           arm_name: "string",
           position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"] },
-          orientation: { $type: "array", $items: "f64", $length: 4, $marks: ["robot_frame"] },
+          orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $marks: ["robot_frame"], $description: "As for move_arm: absent names no orientation." },
           duration_s: "f64",
-          plan_position_tolerance_m: "f64",
-          plan_orientation_tolerance_rad: "f64",
         },
         response_message_format: {
           reachable: { $type: "bool", $description: "True when a plan exists." },
-          reason: { $type: "string", $description: "Why no plan exists, in the words that a move_arm failure with the kind `unreachable` gives; empty when reachable." },
+          reason: { $type: "string", $description: "Why no plan exists, in the words that the move_arm failure gives; empty when reachable." },
           duration_s: { $type: "f64", $description: "The time the move would take (s); 0 when not reachable." },
         },
         failure_kinds: ["leader_streaming"],
