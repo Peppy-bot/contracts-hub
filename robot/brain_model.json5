@@ -33,10 +33,11 @@
     services: [
       {
         name: "get_model",
-        description: "Give the active model of each role the brain has.",
+        description: "Give the active model of each role the brain has, and why a role cannot serve a goal yet while the brain starts it.",
         response_message_format: {
-          roles: { $type: "array", $items: "string", $description: "One entry per role, in a stable order. models is index aligned with this array." },
+          roles: { $type: "array", $items: "string", $description: "One entry per role, in a stable order. models and starting are index aligned with this array." },
           models: { $type: "array", $items: "string", $description: "The active model of that role." },
+          starting: { $type: "array", $items: "string", $description: "Why that role cannot serve a goal yet while the brain starts it, such as a model that still loads or a camera that has sent no frame yet; empty once the role can serve a goal. Empty too for a role that does not become able to serve one: its model is \"none\", its model could not load, or a slot that it reads is vacant. The goals of such a role are refused as the contract of the role says." },
         },
       },
       {
