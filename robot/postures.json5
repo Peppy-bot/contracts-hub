@@ -10,7 +10,7 @@
       "ready: the working posture, out in the robot's main workspace and poised to take commands. For an arm, raised out in front.",
       "The exact joint values behind each name are the implementer's business. Distinct from the streamed setpoints on the *_link pairings: these are discrete planned moves with a result.",
       "move_to_ready and move_to_home have the mark `moves_robot`: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls one of them.",
-      "A posture goal is refused with `leader_streaming` while a leader streams a limb of the robot, and with `precondition_failed` while a limb executes another move. A leader is a robot commander, such as a leader arm or the browser panel, or the headset. A posture move fails with `unreachable` when no plan brings an arm to the posture, with `resource_unavailable` when a limb stops answering, and with `attempt_failed` when it cannot go on for another reason. A failed goal gives no result. A cancelled goal, whether its caller or the stop of limb_motion cancelled it, gives the reason of the cancel and its result.",
+      "A posture goal is refused with `leader_streaming` while a leader streams a limb of the robot, and with `precondition_failed` while a limb executes another move. A leader is a robot commander, such as a leader arm or the browser panel, or the headset. A posture move completes once every arm stands at the posture, within the tolerance of the implementer. It fails with `timeout` when an arm does not stand there by the settle timeout of the implementer past the planned end, as when an object that the implementer does not see holds the arm short, and the message names the arm and how far it stands; with `rejected` when the joint limits cannot run it within 60 s, with `unreachable` when no plan brings an arm to the posture, with `resource_unavailable` when a limb stops answering, and with `attempt_failed` when it cannot go on for another reason. A failed goal gives no result. A cancelled goal, whether its caller or the stop of limb_motion cancelled it, gives the reason of the cancel and its result.",
       "Pose rule for the results: a result reports where each arm ended, as limb_state reports it, or no pose:",
       "Each pose is the grasp-point pose of an arm in the robot frame. The description of limb_state defines the grasp point, the robot frame and the slicing of the arrays.",
       "The implementer measures the pose of every arm when the goal completes or ends cancelled, after the moves of all its arms ended.",
@@ -30,7 +30,7 @@
         description: "Bring the arms of the robot to ready, the working posture, on a motion that the implementer plans. The action gives no feedback. The result gives where each arm ended, per the pose rule of this contract.",
         goal_service: {
           request_message_format: {
-            duration_s: { $type: "f64", $description: "Requested move duration (s), up to 60; floored at the implementer's velocity-limit duration. 0 = fastest." },
+            duration_s: { $type: "f64", $description: "Requested move duration (s), up to 60; floored at the duration the implementer's joint limits allow. 0 = fastest." },
           },
         },
         result_service: {
@@ -48,7 +48,7 @@
         description: "Bring the arms of the robot to home, the rest posture, on a motion that the implementer plans. The action gives no feedback. The result gives where each arm ended, per the pose rule of this contract.",
         goal_service: {
           request_message_format: {
-            duration_s: { $type: "f64", $description: "Requested move duration (s), up to 60; floored at the implementer's velocity-limit duration. 0 = fastest." },
+            duration_s: { $type: "f64", $description: "Requested move duration (s), up to 60; floored at the duration the implementer's joint limits allow. 0 = fastest." },
           },
         },
         result_service: {
