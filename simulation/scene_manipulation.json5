@@ -61,7 +61,7 @@
         name: "get_objects_list",
         description: "Give what stands in the scene and where, for a caller that sets the world up and checks its setup: every object the implementer tracks, spawned by a caller or placed by the loaded scene, with its pose as of `timestamp`. A dynamic object can move after that instant. The order is the implementer's object order.",
         request_message_format: {
-          source: { $type: "string", $optional: true, $description: "\"spawned\" lists the objects a caller spawned, \"scene\" the objects the loaded scene placed, \"riser\" the risers that a stand or a raise of scene_workspace placed and that belong to it. Absent, or empty, lists all of them. Another value gets an error reply with `rejected`. An implementer that tracks no scene-placed object as an object answers \"scene\" with an empty list." },
+          source: { $type: "string", $optional: true, $description: "\"spawned\" lists the objects a caller spawned, \"scene\" the objects the loaded scene placed, \"riser\" the risers that a stand or a raise of scene_workspace placed and that belong to it. Absent, or empty, lists all of them. Another value gets an error reply with `rejected`. An implementer that tracks no scene-placed object as an object answers \"scene\" with an empty list, and an implementer that places no riser answers \"riser\" with an empty list." },
           category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. Absent, or empty, lists every category." },
         },
         response_message_format: {
