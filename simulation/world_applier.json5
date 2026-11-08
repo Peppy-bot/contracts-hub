@@ -4,7 +4,7 @@
     name: "world_applier",
     tag: "v1",
     description: [
-      "The applier of worlds of a simulation that implements simulation_world: it reads the live world as a world document (world/v1), checks a world or a world pattern, expands a world pattern with a seed into a world, applies a concrete world, runs a workflow run (run/v1) in a world with the workflow director, and judges the live world. One node of a stack with a simulation implements it, on the machine that coordinates the stack, and the same node runs the sweeps of sweep_runner.",
+      "The applier of worlds of a simulation that implements simulation_world: it reads the live world as a world document (world/v1), checks a world or a world pattern, expands a world pattern with a seed into a world, applies a concrete world, resets the simulation to its start world, runs a workflow run (run/v1) in a world with the workflow director, and judges the live world. One node of a stack with a simulation implements it, on the machine that coordinates the stack, and the same node runs the sweeps of sweep_runner.",
       "Documents cross as JSON5 text, and the bases of a world as the files that `peppy node call --file bases=@<dir>` gives. No member has the mark `moves_robot`: the applier asks the daemon (robot_leases.check_move) before each move it sends.",
       "An apply has six steps.",
       "1. Check: the world parses and is concrete; its catalogue release is the simulation's and holds what it names; each location names a landmark of an object of the world, a named pose or a named region of the world, and each stand at a work surface names a work surface of the asset of its object and a side it lists, under a name of `locations` of workflow/v1 (the name a workflow declares it by); the robot_membership scope of the applier allows each join, of a simulated option. The applier then takes the setup claim (claim of simulation_world) and the lease of each simulated robot of the stack, and calls start_apply.",
@@ -13,15 +13,15 @@
       "4. Setup: build of simulation_world.",
       "5. Locations: each robot of the world that implements locations:v1 learns the locations of the world (teach), each as the world frame holds it: a work surface, a landmark that the asset of its object declares a work surface (get_asset of scene_manipulation), as the rectangle of it the robot can work, as describe_workspace of scene_workspace measures it for the robot, and every other landmark at the centre of the landmark of its object (get_object of scene_manipulation); a work surface that the robot cannot work, which describe_workspace answers with workable false, is left out of its teach. A robot that implements no locations:v1 learns none, and the applier measures nothing for it.",
       "6. Brains: the applier waits until the brain of each robot of the world that implements brain_model:v1 can serve a goal of each of its roles: get_model gives no starting reason. It reads get_model every 3 s, for up to 660 s, then fails the step, naming the robot, the role and the last reason. Each read that finds a brain still starting gives a progress of the step that names the robot, the role and the reason, so the progress of the step never stops for longer than one read. A read of get_model that fails counts as a brain that still starts, with the failure as its reason. A robot without such a brain is not waited for.",
-      "After a restart, apply and run are refused with precondition_failed and the message \"the applier settles the leases of its earlier life; call again in a moment\" until the applier has aborted each run of the director that holds a lease it gave and released each lease it still holds. Apart from that, only step 1 refuses, before any robot moves, and nothing changes: a world that does not hold is refused with world_refused; the setup claim held for another apply or run with claimed, naming that call, its started_by and its run; a robot that another client leases with leased, naming the holder and the lease name; the halt with halted. A later failure fails the goal with apply_failed and names what failed; the setup record stays as the steps left it. A halt during an apply ends its leases, and the apply fails. A cancel, and a sender that is gone, end the goal cancelled before the next change. At its end, an apply releases its leases, then the setup claim.",
+      "After a restart, apply, reset and run are refused with precondition_failed and the message \"the applier settles the leases of its earlier life; call again in a moment\" until the applier has aborted each run of the director that holds a lease it gave and released each lease it still holds. Apart from that, only step 1 refuses, before any robot moves, and nothing changes: a world that does not hold is refused with world_refused; the setup claim held for another apply, reset or run with claimed, naming that call, its started_by and its run; a robot that another client leases with leased, naming the holder and the lease name; the halt with halted. A later failure fails the goal with apply_failed and names what failed; the setup record stays as the steps left it. A halt during an apply ends its leases, and the apply fails. A cancel, and a sender that is gone, end the goal cancelled before the next change. At its end, an apply releases its leases, then the setup claim.",
       "A world pattern is a world/v1 with samplers, which a seed expands into a concrete world (expand of simulation_world). check takes a world pattern as it takes a world, but for concreteness; expand gives the world of a pattern and a seed; run takes a pattern with a seed (expand): it checks the pattern, takes the claim and the leases as step 1 does, brings the stack to the robots of the pattern as the pattern joins them, so that the expansion reads the models of those robots, then expands the pattern (the step expand) and applies the drawn world, and its caller_data then names the seed. A seed that gives no world fails the goal with seed_refused, naming the entry: expand changes nothing, and run then leaves the stack with the robots of the pattern and the world unchanged.",
-      "The applier holds the setup claim for one apply, one run or one sweep (sweep_runner) at a time, suspensions included. When the simulation ends the claim, as it does when it restarts, an apply fails with apply_failed before its next change, a run fails with apply_failed once run of the director was cancelled, which aborts the run, and a suspended run is aborted with abort of the director.",
+      "The applier holds the setup claim for one apply, one reset, one run or one sweep (sweep_runner) at a time, suspensions included. When the simulation ends the claim, as it does when it restarts, an apply and a reset fail with apply_failed before their next change, a run fails with apply_failed once run of the director was cancelled, which aborts the run, and a suspended run is aborted with abort of the director.",
     ],
   },
   failure_kinds: {
     world_refused: "Step 1 of an apply refused the world before any robot moved; the message names the cause",
     seed_refused: "The seed gives no world of the world pattern; the message names the entry",
-    claimed: "The applier holds the setup claim for another apply, run or sweep; the message names that call, its started_by, its sweep and its run",
+    claimed: "The applier holds the setup claim for another apply, reset, run or sweep; the message names that call, its started_by, its sweep and its run",
     leased: "Another client holds the lease of a robot of the stack; the message names the holder and the lease name",
     halted: "The stack is halted",
     apply_failed: "A step of an apply after its check failed; the message names what failed",
@@ -36,7 +36,7 @@
     actions: [
       {
         name: "get",
-        description: "The live world as a world document with the manifest that name and revision give: the setup record with each robot of a simulated option, joined as the stack lists it and, with a body, standing as the record says, its limbs where its last limb_states snapshot of limb_state measures them: the joint positions of each arm and the opening of each gripper. The applier keeps the last snapshot of each robot, since a robot measures its limbs only while the simulation runs. With start, the setup the simulation started with and the copies that the launch started, each with a body where it first joined, at home, without limbs. A robot whose join the scope cannot express, or of a physical option, is in no world: left_out names it. claim names the call that holds the setup claim of the applier, when one does: an apply, a run, or a sweep of sweep_runner. Fails with precondition_failed when the live setup makes no world document, naming why; with rejected when the simulation or the daemon refuses a read, which fails the same way at each try; and with attempt_failed when a read failed otherwise, a robot that gives no limb state or one that does not read among them; refused with rejected for a blank name and for a revision of 0. Changes nothing. The action gives no feedback.",
+        description: "The live world as a world document with the manifest that name and revision give: the setup record with each robot of a simulated option, joined as the stack lists it and, with a body, standing as the record says, its limbs where its last limb_states snapshot of limb_state measures them: the joint positions of each arm and the opening of each gripper. The applier keeps the last snapshot of each robot, since a robot measures its limbs only while the simulation runs. With start, the setup the simulation started with and the copies that the launch started, each with a body where it first joined, at home, without limbs. A robot whose join the scope cannot express, or of a physical option, is in no world: left_out names it. claim names the call that holds the setup claim of the applier, when one does: an apply, a reset, a run, or a sweep of sweep_runner. Fails with precondition_failed when the live setup makes no world document, naming why; with rejected when the simulation or the daemon refuses a read, which fails the same way at each try; and with attempt_failed when a read failed otherwise, a robot that gives no limb state or one that does not read among them; refused with rejected for a blank name and for a revision of 0. Changes nothing. The action gives no feedback.",
         goal_service: {
           request_message_format: { start: "bool", name: "string", revision: "u32" },
         },
@@ -48,10 +48,10 @@
             claim: {
               $type: "object",
               $optional: true,
-              call: { $type: "string", $enum: ["apply", "run", "sweep"] },
+              call: { $type: "string", $enum: ["apply", "reset", "run", "sweep"] },
               started_by: "string",
-              sweep: { $type: "string", $description: "The sweep (s<N>) of a sweep; empty for an apply and a run." },
-              run: { $type: "string", $description: "The run of the workflow director that runs now; empty before it starts, between the runs of a sweep, and for an apply." },
+              sweep: { $type: "string", $description: "The sweep (s<N>) of a sweep; empty for an apply, a reset and a run." },
+              run: { $type: "string", $description: "The run of the workflow director that runs now; empty before it starts, between the runs of a sweep, and for an apply and a reset." },
             },
           },
         },
@@ -102,12 +102,34 @@
         feedback_topic: {
           qos_profile: "standard",
           message_format: {
-            step: { $type: "string", $enum: ["check", "stack", "robots", "setup", "locations"] },
+            step: { $type: "string", $enum: ["check", "stack", "robots", "setup", "locations", "brains"] },
             message: "string",
           },
         },
         result_service: {
           response_message_format: { apply_id: "string" },
+        },
+        failure_kinds: ["world_refused", "claimed", "leased", "halted", "apply_failed"],
+      },
+      {
+        name: "reset",
+        description: "Applies the start world: the world that get with start gives, the setup the simulation started with and the copies that the launch started, each with a body where it first joined, at home, named world_start with revision 1. The applier reads the start world as get does, then runs the six steps of apply on it. started_by labels the reset in the setup claim, whose call is reset, as the refusal of another call names it; blank, it is refused with rejected. Step 2 removes each simulated robot that the launch did not start, or started with another join, or whose software stopped, and joins each copy of the launch that is missing. A copy of the launch that the start world leaves out is in no world, as get with start says: step 2 removes it when it stands in the simulation, as it removes each robot that the world does not name, and a robot that does not stand there, a physical robot among them, stays on the stack. Before anything changes, it fails with world_refused when the start setup makes no world document, naming why; with rejected when the simulation or the daemon refuses a read of the start world, which fails the same way at each try; and with attempt_failed when such a read fails otherwise. Apart from that, it is refused and fails as apply is. The feedback names each step as it starts, the read of the start world and each robot that it leaves out, with why, in the step check, and passes on the log lines of each join and removal and the progress of the build. The result gives the apply id of the start world, the start world as a world document, and each copy of the launch that it leaves out, with why, as get with start gives them.",
+        goal_service: {
+          request_message_format: { started_by: "string" },
+        },
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            step: { $type: "string", $enum: ["check", "stack", "robots", "setup", "locations", "brains"] },
+            message: "string",
+          },
+        },
+        result_service: {
+          response_message_format: {
+            apply_id: "string",
+            world: "string",
+            left_out: { $type: "array", $items: { $type: "object", robot: "string", reason: "string" } },
+          },
         },
         failure_kinds: ["world_refused", "claimed", "leased", "halted", "apply_failed"],
       },
@@ -129,7 +151,7 @@
           qos_profile: "reliable",
           message_format: {
             apply_id: "string",
-            step: { $type: "string", $enum: ["expand", "check", "stack", "robots", "setup", "locations", "run"] },
+            step: { $type: "string", $enum: ["expand", "check", "stack", "robots", "setup", "locations", "brains", "run"] },
             message: "string",
             run: "string",
             director: "string",
