@@ -14,7 +14,7 @@
   },
   failure_kinds: {
     sweep_refused: "A check of start refused the sweep before it held anything; the message names each error",
-    claimed: "The node holds the setup claim for an apply, a run or another sweep; the message names that call, its started_by, its sweep and its run",
+    claimed: "The node holds the setup claim for an apply, a reset, a run or another sweep; the message names that call, its started_by, its sweep and its run",
     leased: "Another client holds the lease of a robot of the stack; the message names the holder and the lease name",
     halted: "The stack is halted",
   },
