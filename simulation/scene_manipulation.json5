@@ -5,11 +5,15 @@
     tag: "v1",
     description: [
       "Editing the world of a simulation engine while it runs: listing the assets the engine can place, loading a scene, spawning, moving, pushing and removing objects, and relocating a robot. Any engine that keeps a scene graph can implement it; a commander only needs the contract, not the engine.",
-      "Asset ids come from get_assets_list and carry their kind as a prefix (\"scene/<id>\" or \"object/<id>\"). Object ids are minted by the implementer on spawn, and by the implementer that places the objects of a loaded scene as objects of the same set. Each object also has a name. A spawned object has the name spawn_object gave it, until the object is removed. An object the loaded scene placed, a scene object, has the placement id the scene authors, such as \"mantel_clock_01\", which each load of that scene gives it again, where its object id is new. A name is lowercase letters, digits and \"_\". No two objects share a name, and each placement id of the loaded scene stays taken, also after its scene object is removed. get_objects_list reports what stands in the scene and where, and get_object reports one object at one instant, its landmarks in the world frame and its state, for a caller that sets the world up, checks its setup and checks an event it asked for; the engine's object_state contract reports the same objects with their velocities, as a stream, for evaluation. Robot names come from get_robots_list. Positions are world-frame x, y, z in meters, headings are a yaw in radians about the world's +z, orientations are unit quaternions [x, y, z, w] in the world frame, forces are world-frame newtons, masses are kilograms.",
+      "Asset ids come from get_assets_list and carry their kind as a prefix (\"scene/<id>\", \"object/<id>\" or \"template/<id>\"). A template is a place that load_template builds anew at each seed: a room or one of several rooms of one kind, the furniture laid out by rules and the props drawn, so each seed gives another layout and other props, and the same seed the same world. Object ids are minted by the implementer on spawn, and by the implementer that places the objects of a loaded scene as objects of the same set. Each object also has a name. A spawned object has the name spawn_object gave it, until the object is removed. An object the loaded scene placed, a scene object, has the placement id the scene authors, such as \"mantel_clock_01\", which each load of that scene gives it again, where its object id is new. A name is lowercase letters, digits and \"_\". No two objects share a name, and each placement id of the loaded scene stays taken, also after its scene object is removed. get_objects_list reports what stands in the scene and where, and get_object reports one object at one instant, its landmarks in the world frame and its state, for a caller that sets the world up, checks its setup and checks an event it asked for; the engine's object_state contract reports the same objects with their velocities, as a stream, for evaluation. Robot names come from get_robots_list. Positions are world-frame x, y, z in meters, headings are a yaw in radians about the world's +z, orientations are unit quaternions [x, y, z, w] in the world frame, forces are world-frame newtons, masses are kilograms.",
       "A snap, which spawn_object and move_object take, places an object so that one of its belt ends continues a belt end of another object. Each end is a landmark of use \"inlet\" or \"outlet\" (get_object lists an object's landmarks, get_asset an asset's) whose outer edge, on its axis behind an inlet's centre and ahead of an outlet's, is where its belt ends. The two edges meet, centred on each other, the two belts running away from the joint on either side of it, and the two belt tops level: the placed object stands upright, turned about the world's +z, its origin at the height of the other object's origin, and the implementer sets the control that raises the body of its end, a displacement along +z such as a conveyor's height, to the value that brings its end to the other's height. Things then run from one belt onto the other across an inlet snapped to an outlet when both belts run forward, and across two inlets or two outlets when one of them runs backward. A goal with a snap is refused with `rejected` for an object id that names no object, a landmark the object or the asset does not declare, a landmark whose use is neither \"inlet\" nor \"outlet\", two ends whose widths (their size across) differ by more than 0.001 m, an end that does not face up, and an end of the placed object that no control brings to the other's height within its range. An implementer that keeps no landmark refuses every snap with `rejected`. A snap that needs a control the implementer cannot set where the placed object stands fails with `precondition_failed`, and a snap whose ends the implementer finds apart once it placed the object fails with `attempt_failed`.",
       "A goal that this contract refuses with a kind fails with that kind when the implementer finds the cause only once the goal started. An implementer that lets no caller edit or inspect its scene answers each call it does not serve with `rejected`: an error reply to a service, a refusal to a goal.",
       "An implementer may keep placement rules, such as how deep a placed thing may sink into what stands around it and how near two robots may stand. A spawn_object, move_object or move_robot whose place the rules refuse fails with `precondition_failed`, and the message says why.",
+      "An implementer may keep a texture budget: the most texture memory that a world shows, so that the page that shows it stays within what a browser holds. The texture memory of a world is the sum, over each texture that it shows once, of the bytes that the page uploads for it with its mip chain, the light of its room included. get_assets_list gives the texture memory of each object in texture_memory_bytes, the bytes that the object adds to a world that shows none of its textures. A spawn_object that would take the world past the budget fails with `precondition_failed`, as do a stand_at and a raise_object of scene_workspace whose riser would, and load_template refuses a drawn world past it with seed_refused; each message names the budget, the memory of the world and what the call adds.",
     ],
+  },
+  failure_kinds: {
+    seed_refused: "The seed gives no world of the world pattern: a sampler finds no value, a name that an entry of an item kind adds is a scene object name of the drawn scene, or the simulation refuses the drawn world; the message names the entry",
   },
   interfaces: {
     services: [
@@ -17,15 +21,15 @@
         name: "get_assets_list",
         description: "Give the catalogue of placeable assets in brief, as a JSON array in assets_json: get_asset gives the full entry of one asset. Each request field narrows the list; a field that is absent, or sent empty, narrows nothing, so a request without fields lists the whole catalogue.",
         request_message_format: {
-          kind: { $type: "string", $optional: true, $description: "\"scene\" or \"object\". Another value gets an error reply with `rejected`." },
+          kind: { $type: "string", $optional: true, $description: "\"scene\", \"object\" or \"template\". Another value gets an error reply with `rejected`." },
           category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. An unknown one lists nothing." },
           query: { $type: "string", $optional: true, $description: "Text an entry's asset_id, display_name or description must contain, compared without regard to case." },
-          work_surface_kind: { $type: "string", $optional: true, $description: "A kind of work surface, such as \"table\" or \"shelf\": lists the objects that carry a work surface of that kind alone, and no scene. An unknown one lists nothing." },
+          work_surface_kind: { $type: "string", $optional: true, $description: "A kind of work surface, such as \"table\" or \"shelf\": lists the objects that carry a work surface of that kind alone, and no scene and no template. An unknown one lists nothing." },
         },
         response_message_format: {
           assets_json: {
             $type: "string",
-            $description: "The catalogue as a JSON array of brief entries. Every entry carries at least asset_id, display_name, description, kind (\"scene\" or \"object\") and category; implementers may add engine-specific fields that each hold one number, string or boolean, and add no field that holds a list or an object: get_asset gives those. An implementer that keeps the front of an object gives it in front, the side of its root that a person faces when they use it (\"+x\", \"-x\", \"+y\" or \"-y\"), for an object that has one.",
+            $description: "The catalogue as a JSON array of brief entries. Every entry carries at least asset_id, display_name, description, kind (\"scene\", \"object\" or \"template\") and category; implementers may add engine-specific fields that each hold one number, string or boolean, and add no field that holds a list or an object: get_asset gives those. An implementer that keeps the front of an object gives it in front, the side of its root that a person faces when they use it (\"+x\", \"-x\", \"+y\" or \"-y\"), for an object that has one. An implementer that keeps a texture budget gives the texture memory of each object in texture_memory_bytes, as the contract description defines it.",
           },
         },
       },
@@ -33,12 +37,12 @@
         name: "get_asset",
         description: "Give the full entry of one asset of the catalogue, as a JSON object in asset_json: the fields of its brief entry in get_assets_list, and the fields that hold a list or an object, which get_assets_list leaves out. An asset_id that names no asset of the catalogue gets an error reply with `rejected`.",
         request_message_format: {
-          asset_id: { $type: "string", $description: "An asset id that get_assets_list gives: \"scene/<id>\" or \"object/<id>\"." },
+          asset_id: { $type: "string", $description: "An asset id that get_assets_list gives: \"scene/<id>\", \"object/<id>\" or \"template/<id>\"." },
         },
         response_message_format: {
           asset_json: {
             $type: "string",
-            $description: "The entry as a JSON object: every field of its brief entry in get_assets_list, and the engine-specific fields that hold a list or an object. An implementer that keeps landmarks gives an object's landmarks (landmarks: each with its name, use, shape, body, centre, normal, axis and size, in the frame of its body at scale 1) and its work surfaces (work_surfaces: each with its landmark, its kind and the sides a robot works it from, as scene_workspace defines a work surface). It gives a scene's work surfaces, those of the objects the scene places, in work_surfaces: each with the placement id of its object (an object id exists only once the scene loads), the display_name of the object's asset, its landmark, its kind, the height of its top and, for each of its sides, the centre of the side's edge, in the world with the scene loaded at scale 1. It gives a scene's walls in walls: each with its id, the line of its inner face seen from above from [x, y] to [x, y] with the room on its left, its height and its openings, each a doorway (from_m, to_m along the wall from its start, and top) or a window (from_m, to_m, bottom and top), in the world with the scene loaded at scale 1; a scene without walls gives none.",
+            $description: "The entry as a JSON object: every field of its brief entry in get_assets_list, and the engine-specific fields that hold a list or an object. An implementer that keeps landmarks gives an object's landmarks (landmarks: each with its name, use, shape, body, centre, normal, axis and size, in the frame of its body at scale 1) and its work surfaces (work_surfaces: each with its landmark, its kind and the sides a robot works it from, as scene_workspace defines a work surface). It gives a scene's work surfaces, those of the objects the scene places, in work_surfaces: each with the placement id of its object (an object id exists only once the scene loads), the display_name of the object's asset, its landmark, its kind, the height of its top and, for each of its sides, the centre of the side's edge, in the world with the scene loaded at scale 1. It gives a scene's walls in walls: each with its id, the line of its inner face seen from above from [x, y] to [x, y] with the room on its left, its height and its openings, each a doorway (from_m, to_m along the wall from its start, and top) or a window (from_m, to_m, bottom and top), in the world with the scene loaded at scale 1; a scene without walls gives none. It gives a template's rooms in rooms, the asset id of each scene that load_template draws its room from, and its stations in stations: each kind of work surface that the stations of the template work, as kind, with how many stations work one, as count, the stations of its furniture and its fixed stations alike.",
           },
         },
       },
@@ -50,7 +54,7 @@
             $type: "array",
             $items: {
               $type: "object",
-              kind: { $type: "string", $description: "\"scene\" or \"object\"." },
+              kind: { $type: "string", $description: "\"scene\", \"object\" or \"template\"." },
               category: "string",
               count: { $type: "u32", $description: "Assets of this kind in this category." },
             },
@@ -61,7 +65,7 @@
         name: "get_objects_list",
         description: "Give what stands in the scene and where, for a caller that sets the world up and checks its setup: every object the implementer tracks, spawned by a caller or placed by the loaded scene, with its pose as of `timestamp`. A dynamic object can move after that instant. The order is the implementer's object order.",
         request_message_format: {
-          source: { $type: "string", $optional: true, $description: "\"spawned\" lists the objects a caller spawned, \"scene\" the objects the loaded scene placed. Absent, or empty, lists both. Another value gets an error reply with `rejected`. An implementer that tracks no scene-placed object as an object answers \"scene\" with an empty list." },
+          source: { $type: "string", $optional: true, $description: "\"spawned\" lists the objects a caller spawned, \"scene\" the objects the loaded scene placed, \"riser\" the risers that a stand or a raise of scene_workspace placed and that belong to it. Absent, or empty, lists all of them. Another value gets an error reply with `rejected`. An implementer that tracks no scene-placed object as an object answers \"scene\" with an empty list, and an implementer that places no riser answers \"riser\" with an empty list." },
           category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. Absent, or empty, lists every category." },
         },
         response_message_format: {
@@ -74,7 +78,7 @@
               name: { $type: "string", $description: "The object's name, as the contract description defines it: the name spawn_object gave it, or the placement id of an object the loaded scene placed." },
               asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of." },
               category: { $type: "string", $description: "The asset's category, as get_asset_categories reports it." },
-              source: { $type: "string", $description: "\"spawned\" or \"scene\"." },
+              source: { $type: "string", $description: "\"spawned\", \"scene\" or \"riser\"." },
               physics: { $type: "string", $description: "\"dynamic\", \"static\" or \"none\", as spawn_object takes it." },
               mass: { $type: "f64", $description: "Mass (kg)." },
               scale: { $type: "f64", $description: "Uniform scale; 1 = as authored." },
@@ -221,7 +225,7 @@
     actions: [
       {
         name: "load_scene",
-        description: "Replace the current scene with the asset named by asset_id, which must be of kind \"scene\". Spawned objects are removed first. A load that arrives while another one runs may replace it: the replaced goal then ends cancelled, with a reason that names the load that replaced it. A build of simulation_world that comes before the load has handed its command over ends it cancelled the same way, naming the build. The load is refused with `rejected` for an asset_id that names no scene of the catalogue and for a scale the implementer does not take, and fails with `attempt_failed` when the scene does not load. The feedback gives one message when the goal is accepted, then one whenever a field of the feedback changes, a few changes of a short period in one message, and none while nothing changes: silence means the goal makes no progress. The stream ends with the goal. The result is empty.",
+        description: "Replace the current scene with the asset named by asset_id, which must be of kind \"scene\". Spawned objects are removed first. A load_scene or a load_template that arrives while another one runs may replace it: the replaced goal then ends cancelled, with a reason that names the load that replaced it. A build of simulation_world that comes before the load has handed its command over ends it cancelled the same way, naming the build. The load is refused with `rejected` for an asset_id that names no scene of the catalogue and for a scale the implementer does not take, and fails with `attempt_failed` when the scene does not load. The feedback gives one message when the goal is accepted, then one whenever a field of the feedback changes, a few changes of a short period in one message, and none while nothing changes: silence means the goal makes no progress. The stream ends with the goal. The result is empty.",
         goal_service: {
           request_message_format: {
             asset_id: "string",
@@ -242,6 +246,52 @@
         result_service: {},
       },
       {
+        name: "load_template",
+        description: "Load the template that template names at a seed, and set its world up in place of the current scene: a room of the template, its furniture laid out by the rules of furnish of scene_workspace, its props drawn, and each robot that stands at a joining spot of the room. The seed is the seed of seeded; without seeded, the implementer draws a seed, and draws again while a drawn seed gives no world, at most 10 draws in all, and with seeded it draws no other seed. The implementer first takes, for each robot that stands, in the order the robots joined, the joining spot of the drawn room that a join without a placement would take: when the room has a free spot for fewer robots than stand, the goal fails with `precondition_failed` before any change, naming the robot without a spot. It then expands the world pattern of the template at the seed as expand of simulation_world expands a pattern, apart from the live world: the layout avoids each robot at its spot as it avoids a robot that stands, the box seen from above of the robot's colliding geometry at its start pose at that spot, and a robot blocks no walkway and no doorway; an implementer may draw the objects of an item kind among some of the assets of the kind alone, and says which. It fetches the files of the drawn world, loads its room, moves each robot to its spot, places each piece of furniture and each prop of the world with its physics, and lets the objects settle for 2 s of simulated time. Each piece and each prop is then an object of the setup as spawn_object makes one, so the setup record of simulation_world holds a concrete world that a build makes again without the template. Refused with `rejected` for a template the implementer does not hold, and by an implementer that lets no caller edit its scene. A seed that gives no world fails with seed_refused before any change, naming the entry: a drawn world past the texture budget of the contract description is such a world, and the message names the budget, the memory of the world and what the template adds. Files that do not come fail with `attempt_failed`, and the world is unchanged. After its first change, the goal fails as build of simulation_world fails after its first change: with `precondition_failed` when the world refuses a step, with `attempt_failed` for any other cause, and each robot that it moved but did not place goes back where it stood. A load_scene, a load_template or a build of simulation_world that arrives while it runs replaces it as it replaces a load_scene. An implementer that holds no template refuses each goal with `rejected`. The feedback is that of load_scene, over the files of the drawn world. The result gives the seed, the name of the drawn world, and each station of the world.",
+        goal_service: {
+          request_message_format: {
+            template: { $type: "string", $description: "The template, by the asset id that get_assets_list gives it: \"template/<id>\"." },
+            seeded: {
+              $type: "object",
+              $optional: true,
+              $description: "When present, the world of this seed; absent, the implementer draws the seed.",
+              seed: { $type: "u32", $description: "The seed of the world: the same template and seed always give the same world." },
+            },
+          },
+        },
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            bytes_fetched: { $type: "u64", $description: "Bytes of the drawn world's asset files received so far; 0 for an engine that fetches nothing." },
+            files_ready: { $type: "u64", $description: "Files of the drawn world that are ready: found in the engine's cache or received whole." },
+            building: { $type: "bool", $description: "True once every file is ready and the engine builds the world." },
+            bytes_ready: { $type: "u64", $description: "Bytes of the drawn world's asset files that are in the engine's cache: each file found there or received whole, and the bytes received so far of each file in transfer, each byte counted once. bytes_ready of bytes_total is the share of the fetch that is done." },
+            bytes_total: { $type: "u64", $description: "Bytes of every asset file the drawn world needs, as the catalogue records them; 0 for an engine that fetches nothing." },
+            bytes_per_second: { $type: "u64", $description: "Bytes received per second over the last two seconds, the rate of bytes_fetched; 0 once nothing arrived for two seconds, and once the engine builds the world." },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            seed: { $type: "u32", $description: "The seed of the world; 0 when the goal ends cancelled and built nothing." },
+            world: { $type: "string", $description: "The name of the drawn world, <template id>_seed_<seed>; empty when the goal ends cancelled and built nothing." },
+            stations: {
+              $type: "array",
+              $description: "Each station of the world, where a robot stands to work a work surface: the stations of its furniture, in the order of the names of their pieces, then its fixed stations, in the order the template lists them. Empty when the goal ends cancelled and built nothing.",
+              $items: {
+                $type: "object",
+                object_id: { $type: "string", $description: "The object whose work surface the station works, as get_objects_list gives it." },
+                name: { $type: "string", $description: "The name of that object: a piece of furniture or a fixture of the room." },
+                landmark: { $type: "string", $description: "The landmark of the work surface." },
+                side: { $type: "string", $description: "The side of the work surface that the station stands at: \"+x\", \"-x\", \"+y\" or \"-y\", for stand_at of scene_workspace." },
+                position: { $type: "array", $items: "f64", $length: 3, $description: "The place in front of the side: the centre of the station on the floor, x, y, z in metres." },
+                yaw: { $type: "f64", $description: "The heading toward the work surface from the station: rotation about the world's +z in radians." },
+              },
+            },
+          },
+        },
+        failure_kinds: ["seed_refused"],
+      },
+      {
         name: "clear_scene",
         description: "Remove every spawned object and restore the default scene. It fails with `attempt_failed` when the default scene does not load. The action gives no feedback and an empty result.",
         goal_service: {},
@@ -249,7 +299,7 @@
       },
       {
         name: "spawn_object",
-        description: "Place one instance of an \"object\" asset and report its new id and its name. The spawn is refused with `rejected` when the asset is unknown or the arguments are invalid. It fails with `precondition_failed` when the placement rules that the contract description names refuse its place, and with `attempt_failed` when the object does not spawn. A build of simulation_world that comes before the spawn has handed its command over ends it cancelled, with a reason that names the build, and it spawns nothing. The feedback gives one message when the goal is accepted, then one whenever a field of the feedback changes, a few changes of a short period in one message, and none while nothing changes: silence means the goal makes no progress. The stream ends with the goal. The result gives the id and the name of the new object.",
+        description: "Place one instance of an \"object\" asset and report its new id and its name. The spawn is refused with `rejected` when the asset is unknown or the arguments are invalid. It fails with `precondition_failed` when the placement rules that the contract description names refuse its place, or when the object would take the world past the texture budget that the contract description names, and with `attempt_failed` when the object does not spawn. A build of simulation_world that comes before the spawn has handed its command over ends it cancelled, with a reason that names the build, and it spawns nothing. The feedback gives one message when the goal is accepted, then one whenever a field of the feedback changes, a few changes of a short period in one message, and none while nothing changes: silence means the goal makes no progress. The stream ends with the goal. The result gives the id and the name of the new object.",
         goal_service: {
           request_message_format: {
             asset_id: "string",
@@ -291,7 +341,7 @@
       },
       {
         name: "move_object",
-        description: "Teleport an object to a new position, zeroing its velocity. It keeps its orientation unless the goal carries one. The move is refused with `rejected` for an object_id that names no object and for an orientation that spawn_object refuses. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place, and with `attempt_failed` when the object does not move. The action gives no feedback and an empty result.",
+        description: "Teleport an object to a new position, zeroing its velocity. It keeps its orientation unless the goal carries one. The move is refused with `rejected` for an object_id that names no object, for a riser while its stand or its raise of scene_workspace lasts and for an orientation that spawn_object refuses. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place, and with `attempt_failed` when the object does not move. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             object_id: "string",
@@ -311,7 +361,7 @@
       },
       {
         name: "remove_object",
-        description: "Delete an object. An object_id that names no object is refused with `rejected`. The action gives no feedback and an empty result.",
+        description: "Delete an object. An object_id that names no object, and a riser while its stand or its raise of scene_workspace lasts, are refused with `rejected`. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             object_id: "string",

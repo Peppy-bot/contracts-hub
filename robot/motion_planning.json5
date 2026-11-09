@@ -33,7 +33,7 @@
             },
             goal_joint_constraints: {
               $type: "array",
-              $description: "Targets for any of the joints of the arms; each joint may end tolerance_above above and tolerance_below below its target, in rad, or m for a prismatic joint. A target outside the joint limits is refused with rejected.",
+              $description: "Targets for any of the joints of the arms; each joint may end tolerance_above above and tolerance_below below its target, in rad, or m for a prismatic joint. A target up to 0.001 outside its joint limits is taken at the limit, so a measured position sent back as a target is planned to; one farther out is refused with rejected.",
               $items: {
                 $type: "object",
                 joint_name: { $type: "string", $description: "As describe_arms names it." },
@@ -146,7 +146,7 @@
     services: [
       {
         name: "check_joint_path",
-        description: "Checks the path execute_joint_path would run from the start through the waypoints, for collisions and joint limits, as a plan is checked. Moves nothing. A start in contact, a start outside a joint limit by more than the implementer's start tolerance, a waypoint outside a joint limit, and a path that breaks the start rule each give clear false.",
+        description: "Checks the path execute_joint_path would run from the start through the waypoints, for collisions and joint limits, as a plan is checked. Moves nothing. A start in contact, a start outside a joint limit by more than the implementer's start tolerance, a waypoint more than 0.001 outside a joint limit (one closer is taken at the limit, as execute_joint_path takes it), and a path that breaks the start rule each give clear false.",
         request_message_format: {
           arms: {
             $type: "array",
