@@ -65,7 +65,7 @@
         name: "get_objects_list",
         description: "Give what stands in the scene and where, for a caller that sets the world up and checks its setup: every object the implementer tracks, spawned by a caller or placed by the loaded scene, with its pose as of `timestamp`. A dynamic object can move after that instant. The order is the implementer's object order.",
         request_message_format: {
-          source: { $type: "string", $optional: true, $description: "\"spawned\" lists the objects a caller spawned, \"scene\" the objects the loaded scene placed, \"riser\" the risers that a stand or a raise of scene_workspace placed and that belong to it. Absent, or empty, lists all of them. Another value gets an error reply with `rejected`. An implementer that tracks no scene-placed object as an object answers \"scene\" with an empty list, and an implementer that places no riser answers \"riser\" with an empty list." },
+          source: { $type: "string", $optional: true, $description: "\"spawned\" lists the objects a caller spawned and the risers that their stand or their raise of scene_workspace left, \"scene\" the objects the loaded scene placed, \"riser\" the risers that a stand or a raise of scene_workspace placed and that belong to it. Absent, or empty, lists all of them. Another value gets an error reply with `rejected`. An implementer that tracks no scene-placed object as an object answers \"scene\" with an empty list, and an implementer that places no riser answers \"riser\" with an empty list." },
           category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. Absent, or empty, lists every category." },
         },
         response_message_format: {
@@ -76,8 +76,8 @@
               $type: "object",
               object_id: { $type: "string", $description: "The id move_object, remove_object and apply_force take." },
               name: { $type: "string", $description: "The object's name, as the contract description defines it: the name spawn_object gave it, or the placement id of an object the loaded scene placed." },
-              asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of." },
-              category: { $type: "string", $description: "The asset's category, as get_asset_categories reports it." },
+              asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of; empty for a riser of scene_workspace, which is an instance of no asset." },
+              category: { $type: "string", $description: "The asset's category, as get_asset_categories reports it; \"fixtures\" for a riser of scene_workspace." },
               source: { $type: "string", $description: "\"spawned\", \"scene\" or \"riser\"." },
               physics: { $type: "string", $description: "\"dynamic\", \"static\" or \"none\", as spawn_object takes it." },
               mass: { $type: "f64", $description: "Mass (kg)." },
@@ -98,13 +98,13 @@
           timestamp: { $type: "time", $description: "The simulated instant of the pose, the landmarks and the state, on the implementer's clock." },
           object_id: "string",
           name: { $type: "string", $description: "The object's name, as get_objects_list gives it." },
-          asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of." },
+          asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of; empty for a riser of scene_workspace." },
           position: { $type: "array", $items: "f64", $length: 3, $description: "Where the object's origin stands: x, y, z (m), as get_objects_list gives it." },
           orientation: { $type: "array", $items: "f64", $length: 4, $description: "How the object is turned: a unit quaternion [x, y, z, w]." },
           scale: { $type: "f64", $description: "Uniform scale; 1 = as authored." },
           landmarks: {
             $type: "array",
-            $description: "The working parts of the object that its asset declares, in the world frame: each at the pose its body has now and sized by the scale. Empty for an asset that declares none.",
+            $description: "The working parts of the object that its asset declares, in the world frame: each at the pose its body has now and sized by the scale. Empty for an asset that declares none. A riser of scene_workspace gives its base and its deck: the deck gives its size and its height.",
             $items: {
               $type: "object",
               name: { $type: "string", $description: "Unique in the asset, such as \"base\" or \"zone_front_left\"." },
@@ -341,7 +341,7 @@
       },
       {
         name: "move_object",
-        description: "Teleport an object to a new position, zeroing its velocity. It keeps its orientation unless the goal carries one. The move is refused with `rejected` for an object_id that names no object, for a riser while its stand or its raise of scene_workspace lasts and for an orientation that spawn_object refuses. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place, and with `attempt_failed` when the object does not move. The action gives no feedback and an empty result.",
+        description: "Teleport an object to a new position, zeroing its velocity. It keeps its orientation unless the goal carries one. The move is refused with `rejected` for an object_id that names no object, for a riser while its stand or its raise of scene_workspace lasts and for an orientation that spawn_object refuses. A riser that its stand or its raise left moves as a spawned object does. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place, and with `attempt_failed` when the object does not move. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             object_id: "string",
