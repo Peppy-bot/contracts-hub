@@ -6,11 +6,13 @@
     description: [
       "The whole-robot posture moves: a robot that can plan and execute a motion bringing every limb to a named posture.",
       "Two postures cover the operating loop:",
-      "home: the rest posture, the robot's natural pose to start from and power down at. For an arm, low and close to the robot's body.",
+      "home: the rest posture with every gripper closed, the robot's natural pose to start from and power down at. For an arm, low and close to the robot's body.",
       "ready: the working posture, out in the robot's main workspace and poised to take commands. For an arm, raised out in front.",
       "The exact joint values behind each name are the implementer's business. Distinct from the streamed setpoints on the *_link pairings: these are discrete planned moves with a result.",
+      "move_to_home first closes each gripper of the robot, then brings the arms to home. Where the arms can stop is a fact of the robot: on some robots, open jaws stop against the robot's body before the arms reach the rest posture. Thus no caller closes the grippers before it calls move_to_home. move_to_ready sends no command to the grippers.",
       "move_to_ready and move_to_home have the mark `moves_robot`: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls one of them.",
-      "A posture goal is refused with `leader_streaming` while a leader streams a limb of the robot, and with `precondition_failed` while a limb executes another move. A leader is a robot commander, such as a leader arm or the browser panel, or the headset. A posture move completes once every arm stands at the posture, within the tolerance of the implementer. It fails with `timeout` when an arm does not stand there by the settle timeout of the implementer past the planned end, as when an object that the implementer does not see holds the arm short, and the message names the arm and how far it stands; with `rejected` when the joint limits cannot run it within 60 s, with `unreachable` when no plan brings an arm to the posture, with `resource_unavailable` when a limb stops answering, and with `attempt_failed` when it cannot go on for another reason. A failed goal gives no result. A cancelled goal, whether its caller or the stop of limb_motion cancelled it, gives the reason of the cancel and its result.",
+      "A posture goal is refused with `leader_streaming` while a leader streams a limb that the goal moves, and with `precondition_failed` while such a limb executes another move, and the message names the limb. move_to_ready moves the arms, and move_to_home moves the arms and the grippers. A leader is a robot commander, such as a leader arm or the browser panel, or the headset. A posture move completes once every arm stands at the posture, within the tolerance of the implementer. It fails with `timeout` when an arm does not stand there by the settle timeout of the implementer past the planned end, as when an object that the implementer does not see holds the arm short, and the message names the arm and how far it stands; with `rejected` when the joint limits cannot run it within 60 s, with `unreachable` when no plan brings an arm to the posture, with `resource_unavailable` when a limb stops answering, and with `attempt_failed` when it cannot go on for another reason. A failed goal gives no result. A cancelled goal, whether its caller or the stop of limb_motion cancelled it, gives the reason of the cancel and its result.",
+      "Close rule of move_to_home: the close of a gripper ends as a gripper move of limb_motion ends: as soon as its jaws stand still, and at the latest at the settle timeout of the implementer, where they stand. A gripper that holds an item closes on it: its jaws stop on the item, and the arms go home with it. A cancel of the goal or a stop of limb_motion during the close ends the goal cancelled before the arms move. A close that fails ends the goal with its failure, and the arms do not move. duration_s is the time of the arm move alone: the close adds its own time.",
       "Pose rule for the results: a result reports where each arm ended, as limb_state reports it, or no pose:",
       "Each pose is the grasp-point pose of an arm in the robot frame. The description of limb_state defines the grasp point, the robot frame and the slicing of the arrays.",
       "The implementer measures the pose of every arm when the goal completes or ends cancelled, after the moves of all its arms ended.",
@@ -27,7 +29,7 @@
     actions: [
       {
         name: "move_to_ready",
-        description: "Bring the arms of the robot to ready, the working posture, on a motion that the implementer plans. The action gives no feedback. The result gives where each arm ended, per the pose rule of this contract.",
+        description: "Bring the arms of the robot to ready, the working posture, on a motion that the implementer plans. The grippers get no command. The action gives no feedback. The result gives where each arm ended, per the pose rule of this contract.",
         goal_service: {
           request_message_format: {
             duration_s: { $type: "f64", $description: "Requested move duration (s), up to 60; floored at the duration the implementer's joint limits allow. 0 = fastest." },
@@ -45,10 +47,10 @@
       },
       {
         name: "move_to_home",
-        description: "Bring the arms of the robot to home, the rest posture, on a motion that the implementer plans. The action gives no feedback. The result gives where each arm ended, per the pose rule of this contract.",
+        description: "Close each gripper of the robot, per the close rule of this contract, then bring the arms of the robot to home, the rest posture, on a motion that the implementer plans. The action gives no feedback. The result gives where each arm ended, per the pose rule of this contract.",
         goal_service: {
           request_message_format: {
-            duration_s: { $type: "f64", $description: "Requested move duration (s), up to 60; floored at the duration the implementer's joint limits allow. 0 = fastest." },
+            duration_s: { $type: "f64", $description: "Requested duration of the arm move (s), up to 60; floored at the duration the implementer's joint limits allow. 0 = fastest. The close of the grippers adds its own time." },
           },
         },
         result_service: {
