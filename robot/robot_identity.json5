@@ -4,7 +4,8 @@
     name: "robot_identity",
     tag: "v1",
     description: [
-      "Who a robot is: the name it stands under, the model it is and the core node hosting it.",
+      "Who a robot is: the name it stands under, the model it is and the core node hosting it, and the description of that model.",
+      "A model's description is one URDF and one SRDF, with the collision meshes the URDF names: its links, joints and their limits in the URDF, and in the SRDF its arm and gripper groups, its named states and the pairs of its links that collision checks skip. Each arm group is a chain from the arm's base link to its grasp link, and its name is the name limb_motion and limb_state address the arm by; each gripper group holds the joints of a gripper's fingers, under the name the gripper answers to.",
       "A distinct contract from robot_ready: identity, not readiness, so a consumer that tells robots apart needs no readiness link and the answer holds for the robot's whole session, ready or not.",
     ],
   },
@@ -17,6 +18,24 @@
           robot: { $type: "string", $description: "The name this robot stands under everywhere: the copy it runs as, or its instance id for a robot launched outside a copy. A simulation hosting the robot lists it under this name." },
           model: { $type: "string", $description: "The robot's model id, for example openarm_v2." },
           core_node: { $type: "string", $description: "The core node hosting the robot." }
+        }
+      },
+      {
+        name: "get_description",
+        description: "Give the description of the robot's model: the URDF, the SRDF, each collision mesh the URDF names, and their digest. The answer holds for the whole session of the robot, ready or not. A node built with a description of the robot's model tells by the digests whether the robot's description is the one it was built with.",
+        response_message_format: {
+          urdf: { $type: "string", $description: "The model's URDF file." },
+          srdf: { $type: "string", $description: "The model's SRDF file." },
+          meshes: {
+            $type: "array",
+            $description: "Each collision mesh the URDF names, once, in the order of their names.",
+            $items: {
+              $type: "object",
+              name: { $type: "string", $description: "The mesh's file name: the last part of the path the URDF gives it." },
+              data: { $type: "array", $items: "u8", $description: "The bytes of the mesh file." },
+            },
+          },
+          digest: { $type: "string", $description: "The digest of the URDF, the SRDF and the meshes with their names, in lowercase hex: two descriptions with the same digest hold the same files." }
         }
       }
     ]
