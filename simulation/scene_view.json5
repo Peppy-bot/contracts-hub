@@ -94,7 +94,7 @@
             point: { $type: "array", $items: "f64", $description: "Where the ray meets it: x, y, z (m)." },
             kind: { $type: "string", $description: "\"object\", \"robot\", \"floor\" or \"backdrop\"." },
             object_id: { $type: "string", $description: "For an object: the object_id get_objects_list of scene_manipulation gives." },
-            asset_id: { $type: "string", $description: "For an object: its \"object/<id>\" asset." },
+            asset_id: { $type: "string", $description: "For an object: its \"object/<id>\" asset; empty for a riser of scene_workspace, which is an instance of no asset." },
             robot: { $type: "string", $description: "For a robot: its name." },
             part: { $type: "string", $description: "For a robot: the part the ray meets, an arm or a gripper under the name the robot's limbs answer to, or \"body\" for the rest of the robot." },
             name: { $type: "string", $description: "For \"backdrop\", a fixed piece of the scene that is no object, such as a wall of the scene's backdrop: the name the scene gives it." },
