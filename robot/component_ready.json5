@@ -5,18 +5,25 @@
     tag: "v1",
     description: [
       "Component-level readiness. `ready` is true once one component of a robot (an arm, a gripper) is ready to serve motion, false otherwise.",
-      "The caller, the robot's initializer, names the robot's model on every call: the first call configures the component for that model, and the component answers ready only once it is configured.",
+      "`set_model` is for a robot that comes in more than one model: the robot's initializer tells each component the robot's model, and a component that drives several models sets itself up for that one.",
       "A distinct contract from robot_ready: component readiness, not robot readiness, so a robot-level consumer can never be linked to a single component.",
     ],
   },
   interfaces: {
     services: [
       {
-        name: "is_ready",
-        description: "Tell whether this component is ready to serve motion as a part of a robot of the model the request names. A model the component does not drive, or a model other than the one its first call named, gets an error reply with `rejected` that names the model and the models the component drives, and the component then stops.",
+        name: "set_model",
+        description: "Tell the component which model of robot it is a part of. A component that drives several models of a robot, as an OpenArm arm drives the v1 and the v2, sets itself up for the model it is told first. A component that drives one model accepts that model alone. Telling it the model it already has gives the response and changes nothing. A model the component does not drive, or a model other than the one it was told first, gets an error reply with `rejected` that names the model and the models the component drives, and the component then stops.",
         request_message_format: {
           model: { $type: "string", $description: "The robot's model id, the one robot_identity answers, for example openarm_v2." },
         },
+        response_message_format: {
+          model: { $type: "string", $description: "The model the component is set up for after the call." },
+        },
+      },
+      {
+        name: "is_ready",
+        description: "Tell whether this component is ready to serve motion. A component that drives several models is not ready until `set_model` has told it one.",
         response_message_format: {
           ready: "bool"
         }
