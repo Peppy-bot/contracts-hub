@@ -5,6 +5,7 @@
     tag: "v1",
     description: [
       "Component-level readiness. `ready` is true once one component of a robot (an arm, a gripper) is ready to serve motion, false otherwise.",
+      "The caller, the robot's initializer, names the robot's model on every call: the first call configures the component for that model, and the component answers ready only once it is configured.",
       "A distinct contract from robot_ready: component readiness, not robot readiness, so a robot-level consumer can never be linked to a single component.",
     ],
   },
@@ -12,7 +13,10 @@
     services: [
       {
         name: "is_ready",
-        description: "Tell whether this component is ready to serve motion.",
+        description: "Tell whether this component is ready to serve motion as a part of a robot of the model the request names. A model the component does not drive, or a model other than the one its first call named, gets an error reply with `rejected` that names the model and the models the component drives, and the component then stops.",
+        request_message_format: {
+          model: { $type: "string", $description: "The robot's model id, the one robot_identity answers, for example openarm_v2." },
+        },
         response_message_format: {
           ready: "bool"
         }
