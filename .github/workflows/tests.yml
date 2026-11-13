@@ -92,7 +92,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           # Nothing here pushes, so the job has no use for a writable
@@ -139,7 +139,7 @@ jobs:
     steps:
       # Each hub is checked out in a directory of its own, so the checkout
       # the daemon reads as this repository holds no other hub.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: contracts-hub
@@ -201,7 +201,7 @@ jobs:
 
       # mcp-hub at the commit the registry pins: the exposures the check
       # reads come from this checkout.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           repository: Peppy-bot/mcp-hub
           ref: ${{ fromJSON(steps.peppy.outputs.set).hubs['mcp-hub'].commit }}
@@ -219,11 +219,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@v7.0.0
         with:
           python-version: "3.12"
 
@@ -250,11 +250,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@v7.0.0
         with:
           python-version: "3.12"
 
@@ -264,11 +264,43 @@ jobs:
       - name: Check every mark of the contracts against the mark list
         run: python .github/scripts/check_marks.py
 
+  # The lockfile, .github/workflows/actions.lock, holds the commit of each
+  # action that the workflows of this repository use, and GitHub Actions runs
+  # that commit only. This job fails when the lockfile does not agree with
+  # the `uses:` lines of the workflows and of the actions they use, or when a
+  # commit of the lockfile is not in the history of its tag or branch.
+  # `gh actions-lock` writes the lockfile.
+  lockfile:
+    name: Verify the lockfile of the actions
+    # The smallest RunsOn runner: the job asks the GitHub API about each
+    # commit of the lockfile and builds nothing.
+    runs-on: runs-on=${{ github.run_id }}/runner=peppy-ci-ubuntu-24.04-x86_64/image=peppy-ubuntu24/cpu=2/ram=4+8/family=c8a+c7a+m8a+m7a${{ fromJSON(github.run_attempt) >= 3 && '/spot=false' || '' }}  # custom Peppy AMI
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          # Nothing here pushes, so the job has no use for a writable
+          # credential sitting in .git/config for every later step to inherit.
+          persist-credentials: false
+
+      # The release of the extension is pinned, so every run verifies with
+      # the same program.
+      - name: Install the gh actions-lock extension
+        run: gh extension install github/gh-actions-lock --pin v0.4.1
+
+      - name: Verify the lockfile
+        run: gh actions-lock --verify
+
   # The one status check the org ruleset requires on main. It is green only
   # when every job above succeeded or was skipped, so a red job blocks the
   # merge whichever job it ran in.
   test:
-    needs: [wait-for-peppy, check-index, check-mcp-exposures, contract-similarity-tests, check-marks]
+    needs: [wait-for-peppy, check-index, check-mcp-exposures, contract-similarity-tests, check-marks, lockfile]
     # Runs whatever happened above: on the default condition a failed or
     # cancelled job would leave this check unreported instead of red.
     if: always()
