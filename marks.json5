@@ -47,5 +47,10 @@
       owner: "workflow",
       meaning: "The field is a string that receives the name of a location that the node knows through locations:v1, so the workflow director takes its value only from a `{ $location }` of a location the workflow declares, never from a literal and never from a `$ref`, and the node that serves the member implements locations:v1.",
     },
+    {
+      name: "moves_base",
+      owner: "workflow",
+      meaning: "The member can move the mobile base of the robot whose instance serves it, which carries the robot frame with it, so the workflow director takes a `$ref` to a field with the mark `robot_frame` only from a call or an observation of the same role that ended after the last call of a member with this mark on that role, on every path of the lane.",
+    },
   ],
 }

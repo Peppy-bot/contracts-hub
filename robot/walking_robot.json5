@@ -1,0 +1,56 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "walking_robot",
+    tag: "v1",
+    description: [
+      "Standing a robot's walking base up and sitting it down, each by a motion of the base's own.",
+      "A walking robot implements it, and its implementer is robot_stop's; base_state reports the base's mode, as it defines each mode. Positions and yaws are in the robot frame of base_state. The goal's frame is the robot frame where the robot stood when the goal was accepted, fixed to the floor for the life of the goal. The timeouts a goal names are on the clock the implementer's instance reads, the simulation clock in a simulation.",
+      "stand and sit have the mark `moves_robot`: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls one. Both also have the mark `moves_base` (marks.json5), which the workflow side reads: after a call of one of them, a workflow reads each position in the robot frame again before it passes it. robot_stop's stop ends them.",
+      "One goal of this contract runs at a time. A goal is checked in this order. It is refused with `rejected` for a timeout outside its range and a number that is not finite. It is refused with `resource_unavailable` while the base's motion sensing is silent, as base_state defines silence; with `precondition_failed` while a safety input of the base's own holds the base, as base_state defines one, the message naming the input; with `precondition_failed` while base_states' mode is transition, and while the base holds a pose from which its motion does not stand it up or sit it down, such as a fallen base that still lies tipped, the message naming the mode and what to do; a sit, with `leader_streaming` while the leader of drive_link streams, as drive_link defines it; and with `precondition_failed` while another goal of this contract runs, while the base comes to rest from a goal of base_motion, and while another goal of the implementer holds the base, as drive_link defines that hold. The message of a refusal names its cause and what to do.",
+      "A stand completes at once while the mode is standing or moving, or upright on a base that cannot drive, as base_state defines one, and a sit while the mode is resting. Otherwise a goal fails with `timeout` when it has not completed by its timeout_s after its acceptance, with `resource_unavailable` when the base's motion sensing falls silent, and with `attempt_failed` when the mode becomes off, damped or fallen, the message naming the mode. A goal that its caller cancels or that robot_stop's stop ends brings the base, by its own motion, to the nearest mode the base holds by itself, resting, upright, standing or damped, and ends cancelled once the mode is no longer transition, its reason naming that mode. After any end of a goal, the mode says what the base does. A failed goal gives no result.",
+    ],
+  },
+  failure_kinds: {
+    leader_streaming: "A leader of drive_link drives the base",
+  },
+  interfaces: {
+    actions: [
+      {
+        name: "stand",
+        description: "Stand the base up: the base arms its drives and stands up by a motion of its own, base_states reporting transition while it does. The goal completes once base_states reports standing, or upright on a base that cannot drive, as base_state defines one, and fails with `timeout` when it does not by timeout_s after its acceptance; the message gives the mode then. The action gives no feedback. The result gives where the robot frame stood in the goal's frame when the goal ended and how long the action took.",
+        goal_service: {
+          request_message_format: {
+            timeout_s: { $type: "f64", $description: "How long (s, 0 to 60) after its acceptance the base may take to stand up before the goal fails. With 0 the goal fails at once unless the mode is already standing or moving, or upright on a base that cannot drive, as base_state defines one." },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            final_position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot frame's origin stood in the goal's frame when the goal ended: x, y, z (m)." },
+            final_yaw: { $type: "f64", $description: "The robot frame's heading in the goal's frame when the goal ended (rad, in (-pi, pi])." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
+          },
+        },
+        marks: ["moves_robot", "moves_base"],
+      },
+      {
+        name: "sit",
+        description: "Sit the base down, such as seated or crouched: the base comes to rest, then sits down by a motion of its own, base_states reporting transition while it does. The goal completes once base_states reports resting, and fails with `timeout` when it does not by timeout_s after its acceptance; the message gives the mode then. The action gives no feedback. The result gives where the robot frame stood in the goal's frame when the goal ended and how long the action took.",
+        goal_service: {
+          request_message_format: {
+            timeout_s: { $type: "f64", $description: "How long (s, 0 to 60) after its acceptance the base may take to sit down before the goal fails. With 0 the goal fails at once unless the mode is already resting." },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            final_position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot frame's origin stood in the goal's frame when the goal ended: x, y, z (m)." },
+            final_yaw: { $type: "f64", $description: "The robot frame's heading in the goal's frame when the goal ended (rad, in (-pi, pi])." },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
+          },
+        },
+        failure_kinds: ["leader_streaming"],
+        marks: ["moves_robot", "moves_base"],
+      },
+    ],
+  },
+}

@@ -1,0 +1,34 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "lidar_3d",
+    tag: "v1",
+    description: [
+      "A lidar that measures in three dimensions (a 3-D lidar): a device or a simulated sensor that streams clouds of the points it measured, each where a ray met a surface. A sensor that measures in one plane implements lidar_2d, and a camera that measures depth per pixel implements rgbd_camera.",
+      "Conventions:",
+      "Sensor frame. Fixed to the sensor: +X forward, +Y left and +Z up. Only the sensor's own geometry is here: where the sensor sits on a robot is not the sensor's to know, and sensor_mounts gives the pose of this frame on the robot.",
+      "Points. A cloud holds the points of one sweep, or, for a sensor that does not sweep, such as a non-repetitive scanner, of one frame period that the implementer sets, in the order the sensor measured them. A ray that met nothing, met a surface nearer than min_range_m or farther than max_range_m, or that the sensor could not measure, gives no point. Each point is in the sensor frame where the sensor stood when it measured that point, which time_offsets_s gives after the header's timestamp; a sensor that moves during a sweep measures its points at their own times. Timestamps are on the clock the implementer's instance reads, the simulation clock in a simulation, and give the time of the measurement, which is earlier than its arrival at the implementer.",
+    ],
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "cloud_stream",
+        description: "The clouds of the sensor, as it measures them, one per sweep or frame period.",
+        qos_profile: "sensor_data",
+        message_format: {
+          header: {
+            $type: "object",
+            timestamp: { $type: "time", $description: "When the sensor measured the first point of the cloud." },
+            frame_id: { $type: "u32", $description: "The capture counter of the cloud, not a coordinate frame." },
+          },
+          min_range_m: { $type: "f32", $description: "The nearest range the sensor measures (m), 0 or above." },
+          max_range_m: { $type: "f32", $description: "The farthest range the sensor measures (m), above min_range_m." },
+          positions: { $type: "array", $items: "f32", $description: "3 entries per point (x, y, z, m), in the sensor frame and in measurement order." },
+          intensities: { $type: "array", $items: "f32", $description: "One entry per point, in the sensor's own unit; empty for a sensor that measures none." },
+          time_offsets_s: { $type: "array", $items: "f32", $description: "One entry per point, its time after the header's timestamp (s), 0 or above, each entry at least the one before it; empty for a sensor that measures every point at once." },
+        },
+      },
+    ],
+  },
+}

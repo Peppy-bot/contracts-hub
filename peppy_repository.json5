@@ -6,6 +6,21 @@
         path: "system/alert.json5"
       }
     },
+    base_motion: {
+      v1: {
+        path: "robot/base_motion.json5"
+      }
+    },
+    base_navigation: {
+      v1: {
+        path: "robot/base_navigation.json5"
+      }
+    },
+    base_state: {
+      v1: {
+        path: "robot/base_state.json5"
+      }
+    },
     brain_model: {
       v1: {
         path: "robot/brain_model.json5"
@@ -14,11 +29,6 @@
     camera_geometry: {
       v1: {
         path: "cameras/camera_geometry.json5"
-      }
-    },
-    camera_mounts: {
-      v1: {
-        path: "robot/camera_mounts.json5"
       }
     },
     camera_profile: {
@@ -59,6 +69,16 @@
     item_perception: {
       v1: {
         path: "robot/item_perception.json5"
+      }
+    },
+    lidar_2d: {
+      v1: {
+        path: "lidars/lidar_2d.json5"
+      }
+    },
+    lidar_3d: {
+      v1: {
+        path: "lidars/lidar_3d.json5"
       }
     },
     limb_motion: {
@@ -106,6 +126,11 @@
         path: "robot/postures.json5"
       }
     },
+    range_sensor: {
+      v1: {
+        path: "range_sensors/range_sensor.json5"
+      }
+    },
     rgb_camera: {
       v1: {
         path: "cameras/rgb_camera.json5"
@@ -129,6 +154,16 @@
     robot_ready: {
       v1: {
         path: "robot/robot_ready.json5"
+      }
+    },
+    robot_stop: {
+      v1: {
+        path: "robot/robot_stop.json5"
+      }
+    },
+    room_map: {
+      v1: {
+        path: "robot/room_map.json5"
       }
     },
     scene_daylight: {
@@ -159,6 +194,11 @@
     scene_workspace: {
       v1: {
         path: "simulation/scene_workspace.json5"
+      }
+    },
+    sensor_mounts: {
+      v1: {
+        path: "robot/sensor_mounts.json5"
       }
     },
     sensor_readout: {
@@ -194,6 +234,11 @@
     sweep_runner: {
       v1: {
         path: "simulation/sweep_runner.json5"
+      }
+    },
+    walking_robot: {
+      v1: {
+        path: "robot/walking_robot.json5"
       }
     },
     workflow_director: {
