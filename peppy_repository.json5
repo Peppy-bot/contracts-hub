@@ -236,6 +236,16 @@
         path: "simulation/sweep_runner.json5"
       }
     },
+    transform_lookup: {
+      v1: {
+        path: "robot/transform_lookup.json5"
+      }
+    },
+    transforms: {
+      v1: {
+        path: "robot/transforms.json5"
+      }
+    },
     walking_robot: {
       v1: {
         path: "robot/walking_robot.json5"

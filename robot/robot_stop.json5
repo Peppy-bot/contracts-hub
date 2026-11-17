@@ -5,7 +5,7 @@
     tag: "v1",
     description: [
       "The robot stop: one service that ends every planned move of a robot, whoever started it, and brings its base to rest, whatever parts the robot has.",
-      "The implementer is the one node of a robot that runs its parts: the node of an arm robot, of a robot with arms on a mobile base, of a mobile base alone, or of a walking robot. A robot has one such node. The same implementer serves every contract whose members move a part of the robot, limb_motion, postures, base_motion and walking_robot among them, and base_state and sensor_mounts, and follows drive_link.",
+      "The implementer is the one node of a robot that runs its parts: the node of an arm robot, of a robot with arms on a mobile base, of a mobile base alone, or of a walking robot. A robot has one such node. The same implementer serves every contract whose members move a part of the robot, limb_motion, postures, base_motion and walking_robot among them, and base_state, and follows drive_link.",
       "A robot stop ends every goal in flight on a member the implementer serves, such as limb_motion's and postures' moves, and holds the base at rest against the leader of drive_link, as drive_link states; a goal of base_navigation then ends cancelled, as base_navigation states. A node that runs a sequence of moves for a goal of its own, such as item_manipulation's implementer, ends that goal when the robot stop ends one of its moves, and starts no further move for it. Setpoints that another node streams to the robot's parts on joint_link, gripper_link or pose_link are not stopped.",
       "The robot stop has no mark: it never waits for a lease.",
     ],
