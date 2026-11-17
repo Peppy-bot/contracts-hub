@@ -6,7 +6,7 @@
     description: [
       "Where a robot can work: where its arms reach and where the camera it finds items with sees, from the robot's design and that camera's field of view.",
       "It knows nothing of the world around the robot: a surface is a flat, level plane at a given height, with nothing on it and nothing in the way. Every member reads; none moves the robot. check_arm_move of limb_motion asks whether one given pose has a plan from where an arm is now; this contract asks where the robot can work at all, from its design alone.",
-      "The robot frame is fixed to the robot's base: its origin is the point the base stands on, +X points the way the robot faces, +Y to its left and +Z up. It moves with the robot, and it is not a frame of the room or of a simulated world. Positions are in meters.",
+      "The robot frame is the robot frame of transforms: the root link of the robot's URDF. Positions are in meters.",
       "The definitions, the same for every implementer:",
       "Grasp point. The gripper's grasp point, on the jaw closing axis midway between the pads, as limb_motion defines it.",
       "Reachable. Some arm brings its grasp point within 0.01 m of the point with its gripper's approach axis within 0.05 rad (about 3 degrees) of straight down or straight forward (along the robot frame's -Z or +X). The roll the gripper ends at about that direction is not checked.",
@@ -28,7 +28,7 @@
           surface_height: { $type: "f64", $description: "Height of the surface above the robot's base point (m). A value that is not a finite number and a height more than 1000 m from the robot's base point get an error reply with `rejected`." },
         },
         response_message_format: {
-          perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot (camera_mounts names it), or \"\" for a robot without one." },
+          perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot (sensor_mounts names it), or \"\" for a robot without one." },
           workable: { $type: "bool", $description: "Whether the robot can work the surface." },
           area: { $type: "f64", $description: "Area of the workable part (m^2)." },
           rectangle: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "[x_min, x_max, y_min, y_max] in the robot frame (m) of the largest rectangle whose every grid point is workable, its corners on grid points: where to put items. Absent when no point is workable." },
