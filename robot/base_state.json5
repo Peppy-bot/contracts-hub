@@ -1,0 +1,93 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "base_state",
+    tag: "v1",
+    description: [
+      "The measured motion of a robot's mobile base, as a stream, and what the base is, on demand: the velocity it executes, where its odometry places it and its mode; its name, its odometry source, the limits of its motion and its outline.",
+      "Any consumer reads it without holding the base's pairing or the right to move it. A base may roll on wheels or walk on legs. The implementer is robot_stop's.",
+      "The robot frame is the robot frame of transforms, the root link base_footprint of the robot's URDF. On a wheeled base the origin is on the floor at the point about which the base turns in place, midway between the driven wheels of a differential base. On a walking base the origin is the point below the base link of the robot's model at the height of the robot's lower sole, +Z is vertical, and +X is the heading of that link projected on the horizontal plane; while that link's +X stands too near vertical to give a heading, by the implementer's bound, the heading keeps its last value.",
+      "The odometry frame, odom in transforms, is the robot frame where the base stood when its odometry started, fixed to the floor from then on. Each base_states places the robot frame in it, as nav_msgs/Odometry does: its frame is odom, its child_frame base_footprint, and its pose the robot frame's pose in odom. The implementer publishes the transform odom to base_footprint on transforms at the timestamp of each base_states, equal to its pose within 1e-9 m and rad. The transform's start on transforms is odometry_start_timestamp, so it starts over, as transforms defines it, when odometry_start_timestamp takes a new value. The pose's position gives the horizontal part of where the robot frame's origin stands, in the odometry frame's XY plane, and its orientation a turn about +z alone; the twist's linear_velocity gives the horizontal part of how the origin moves and its angular_velocity a turn about +z alone. So the z of the position and of the linear velocity is 0, and so are the x and the y of the angular velocity, also where the base climbs or descends, as a walking base on a slope or a step does. The base integrates that placement from its odometry source, which describe_base's odometry_source names: measured, from the robot's own sensing of its motion, such as its wheel encoders, its leg joints with an inertial unit, or visual or lidar odometry; or commanded, from the velocities the base executes, on a base that senses none of its motion. Nothing outside the robot enters it. The placement changes only by the base's motion, and drifts as the base slips; after a silence of a sensing that measures the motion across it, the placement takes in that motion in one step. The odometry starts over at zero when the implementer starts, and when a measurement of its sensing does not continue the one before it: after its sensing restarts, after its clock goes back, after a silence of a sensing that measures no motion across it, such as one that integrates the velocities of legs and an inertial unit, or when the motion it measures is faster than the implementer's bound on the base's motion; odometry_start_timestamp then takes a value it has not had before.",
+      "The twist of base_states is in the robot frame, its child_frame, as REP 105 places an odometry's twist: linear_velocity is x forward, y leftward and z up in m/s, and angular_velocity about x, y and z in rad/s, its z counterclockwise seen from above. The base moves on three axes: x and y of its linear velocity, and its turn, the z of its angular velocity. A differential base executes no velocity along y. On a base whose odometry is measured, the twist of base_states is the one its sensing measures, which may average its newest measurements over the implementer's averaging window. On a base whose odometry is commanded, it is the one the base executes, which the limiter gives.",
+      "The implementer limits every velocity it commands on three axes: x and y of linear_velocity, each by its entry of the x, y pairs of describe_base's linear_limits, and the turn, by describe_base's angular_limits. At each step of its control loop, of period dt, at most 0.05 s, it clamps each axis of the velocity that a setpoint of drive_link or a goal asks for between that axis's min_velocity and max_velocity, or min_rate and max_rate, so a differential base takes 0 along y. It then moves each axis of the command it formed at the previous step toward the clamped value, by at most that axis's max_acceleration times dt when the clamped value is at least as large in magnitude as that command and not of the opposite sign, and by at most its max_deceleration times dt otherwise. The axes scale together, so that each step's change points toward the clamped value: eta is the smallest ratio, over the axes whose change exceeds its limit for the step, of that limit to the change, or 1 when no axis exceeds it, and each axis changes by eta times its change, clamped to its own limit for the step. Last, it executes 0 on each axis whose result is smaller in magnitude than its deadband, and keeps the result before that zeroing as the command of the step. At rest, before any setpoint or goal, the command of the previous step is 0, and so it is from the step at which the base's drives stop the base by themselves, as on a drive's own command timeout. To bring the base to rest is to move the command to 0 through this limiter; every contract that brings a base to rest means this.",
+      "The limits of an axis: its most negative and its most positive velocity may differ in magnitude, as on a base that walks forward faster than backward. A differential base has a range of 0 to 0 along y. A base that cannot drive, such as a walking base that runs no walking controller, has a range of 0 to 0 on all three axes; on every other base, x and the turn have a range other than 0 to 0. On an axis whose range is 0 to 0, the acceleration, the deceleration, the deadband and rest_velocity or rest_rate are 0. On every other axis, the acceleration and the deceleration are above 0; the deadband is 0 or above and below the larger magnitude of that axis's min_velocity and max_velocity, or min_rate and max_rate; and rest_velocity or rest_rate is above 0 on a base whose odometry is measured, and 0 on one whose odometry is commanded. The deadband of an axis is the smallest magnitude of velocity along it that the base executes alone, 0 where it executes any; a base whose smallest velocity on an axis depends on the other axes, such as one whose floor belongs to each wheel, reports 0 for that axis. The base follows the limiter's command: each limit is one the base's drives achieve, and max_deceleration is at most the deceleration with which the base comes to rest. The limits are those of the robot in the configuration in which it may move least fast.",
+      "Timestamps are on the clock the implementer's instance reads, the simulation clock in a simulation, except odometry_start_timestamp, on the wall clock of the machine that runs the implementer. The base's motion sensing is silent before its first measurement and while its newest measurement is older than 0.5 s; a base whose odometry is commanded is never silent. The implementer publishes no base_states while the sensing is silent, and at least one every 0.1 s otherwise; a base_states may repeat the newest measurement and its timestamp. The base has a mode while its sensing is silent, and the implementer publishes none of it: the first base_states after a silence carries the mode of its timestamp. The base rests while its sensing is not silent and, in every base_states whose timestamp is at most 0.2 s before the newest timestamp, the twist's linear_velocity along x and along y lies within that axis's rest_velocity of describe_base's linear_limits, and its turn within the rest_rate of its angular_limits, the bound included. It moves otherwise, a silent base included.",
+      "The mode says what the base can do now: off, damped, posed, transition, upright, standing, moving or fallen. A wheeled base reports only off, damped, standing and moving. Off: the base takes no velocity and nothing resists its motion: a wheeled base's wheels turn freely, and a walking base hangs from a support or lies on the floor. Damped: the base takes no velocity and its drives or its brakes resist motion, as after a fault or under an emergency stop; a wheeled base stays where it stands, and a walking base sinks to the floor or hangs. Posed: the joints of a walking base hold a pose without balancing, such as seated, crouched or hung from a support. Transition: a walking base moves its whole body by a motion of its own, such as standing up, sitting down or a motion it plays, and takes no velocity. Upright: the joints of a walking base hold it on its feet without balancing, such as a walking base that runs no walking controller after it stands up. Standing: the drives hold the base, a walking base balancing in place, the base takes velocity, and it rests as this contract defines rest. Moving: the base takes velocity and does not rest. While the base takes velocity, its mode is standing exactly while it rests and moving otherwise, so the mode and the rest rule never disagree. Fallen: a walking base has tipped past what it recovers from; its drives are damped or off, and the mode stays fallen until a person has righted the base and standing it up arms its drives again. While a safety input of the base's own, such as an emergency stop, a bumper or a cliff sensor, holds the base, the base takes no velocity and reports damped where its drives or its brakes resist motion, and off where nothing does; a walking base that has fallen reports fallen, whatever holds its drives. A base that cannot sense the state of its drives reports standing or moving by the rest rule alone. An implementer that serves component_ready answers its is_ready with true while the base's motion sensing reports and the mode is posed, transition, upright, standing or moving, so that a walking base can be brought to standing or upright, and with false while the mode is off, damped or fallen.",
+    ],
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "base_states",
+        description: "One measurement of the base: where its odometry places the robot frame and the velocity it executes, captured at timestamp, as nav_msgs/Odometry gives them. Once its clock reads a measurement's timestamp, the implementer publishes the newest measurement of the base's motion whose timestamp its clock has reached; a measurement that a newer one replaces before then is not published.",
+        // High-frequency stream where only the latest state matters;
+        // occasional drops are acceptable.
+        qos_profile: "sensor_data",
+        message_format: {
+          timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+          odometry_start_timestamp: { $type: "time", $description: "When the odometry frame was fixed, on the wall clock of the machine that runs the implementer: a new value means the odometry started over at zero." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; the record's twist is in child_frame." },
+          child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
+          pose: {
+            $type: "object",
+            $description: "The robot frame's pose in the odometry frame, odom: its position's z is 0, and its orientation turns about +z alone.",
+            position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+          },
+          twist: {
+            $type: "object",
+            $description: "The velocity the base executes in the robot frame, base_footprint, as its odometry measures it: linear_velocity is x forward, y leftward and z up, with a y of 0 on a differential base and a z of 0; angular_velocity turns about +z alone, counterclockwise seen from above.",
+            linear_velocity: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m/s)." },
+            angular_velocity: { $type: "array", $items: "f64", $length: 3, $description: "About x, y, z (rad/s)." },
+          },
+          mode: { $type: "string", $enum: ["off", "damped", "posed", "transition", "upright", "standing", "moving", "fallen"], $description: "What the base can do at timestamp, as this contract defines each mode; a wheeled base reports off, damped, standing or moving." },
+          parts_within_footprint: { $type: "bool", $description: "True while the outline on the floor of every link of every limb of the robot, at the joints measured at timestamp, lies within describe_base's footprint; true on a robot with no limb. What a limb holds is not counted." },
+        },
+      },
+    ],
+    services: [
+      {
+        name: "describe_base",
+        description: "Give what the base is and how fast it may move: its name, its odometry source, the limits of each axis of its motion, the velocity and the turn rate at or below which it counts as at rest, and its outline, answered from the time the implementer runs the base, whatever the base is doing. base_name, linear_limits, angular_limits and footprint hold until the implementer restarts; a restart gives base_states a new odometry_start_timestamp, on which a consumer reads them again.",
+        response_message_format: {
+          base_name: { $type: "string", $description: "The base's part name (e.g. \"base\"), not empty and distinct from every other part name of the robot: the name robot_stop's stop answers for the base." },
+          odometry_source: { $type: "string", $enum: ["measured", "commanded"], $description: "Where the odometry comes from: measured, from the robot's own sensing of its motion; commanded, from the velocities the base executes, on a base that senses none of its motion." },
+          linear_limits: {
+            $type: "object",
+            $description: "The limits of the base's linear velocity in the robot frame, each an x, y pair: x forward and y leftward.",
+            min_velocity: { $type: "array", $items: "f64", $length: 2, $description: "The most negative velocity the base executes along x and along y (m/s), each 0 or below: backward and rightward." },
+            max_velocity: { $type: "array", $items: "f64", $length: 2, $description: "The most positive velocity the base executes along x and along y (m/s), each 0 or above: forward and leftward." },
+            max_acceleration: { $type: "array", $items: "f64", $length: 2, $description: "The fastest the magnitude of the velocity along x and along y may grow (m/s^2), as the limiter of this contract applies it." },
+            max_deceleration: { $type: "array", $items: "f64", $length: 2, $description: "The fastest the magnitude of the velocity along x and along y may fall (m/s^2), as the limiter of this contract applies it." },
+            deadband: { $type: "array", $items: "f64", $length: 2, $description: "Along x and along y, the deadband of the axis (m/s), as the contract's description defines it." },
+            rest_velocity: { $type: "array", $items: "f64", $length: 2, $description: "Along x and along y, the largest magnitude of base_states' linear_velocity at which the base counts as at rest (m/s): the bound of the velocity its sensing measures while it stands: the noise of its sensing, and on a walking base the sway of balancing in place." },
+          },
+          angular_limits: {
+            $type: "object",
+            $description: "The limits of the base's turn rate in the robot frame, the z of a twist's angular_velocity, counterclockwise seen from above.",
+            min_rate: { $type: "f64", $description: "The most negative turn rate the base executes (rad/s), 0 or below: clockwise." },
+            max_rate: { $type: "f64", $description: "The most positive turn rate the base executes (rad/s), 0 or above: counterclockwise." },
+            max_acceleration: { $type: "f64", $description: "The fastest the magnitude of the turn rate may grow (rad/s^2), as the limiter of this contract applies it." },
+            max_deceleration: { $type: "f64", $description: "The fastest the magnitude of the turn rate may fall (rad/s^2), as the limiter of this contract applies it." },
+            deadband: { $type: "f64", $description: "The deadband of the turn rate (rad/s), as the contract's description defines it." },
+            rest_rate: { $type: "f64", $description: "The largest magnitude of the z of base_states' angular_velocity at which the base counts as at rest (rad/s): the bound of the rate its sensing measures while it stands: the noise of its sensing, and on a walking base the sway of balancing in place." },
+          },
+          footprint: {
+            $type: "object",
+            $description: "The outline on the floor of the base, of every part fixed to it and of every part that a joint moves along the vertical alone, such as a lift's carriage, and on a walking base the outline that its legs, its body and its arms while its walking drives them stay within while it stands and walks; every other part that moves apart from the base, such as an arm, a gripper or a head, and what it holds, are not part of it. It is in the robot frame and holds at every time: frame is base_footprint and the timestamp is left out.",
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+            timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+            points: {
+              $type: "array",
+              $description: "The corners of the outline, each a point with a z of 0: 3 or more, counterclockwise seen from above, each once; an edge joins the last point to the first, the outline does not cross itself, encloses the robot frame's origin and has an area above 0.",
+              $items: {
+                $type: "object",
+                position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              },
+            },
+          },
+        },
+      },
+    ],
+  },
+}

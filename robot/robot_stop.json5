@@ -1,0 +1,27 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "robot_stop",
+    tag: "v1",
+    description: [
+      "The robot stop: one service on each backbone of a robot that ends every planned move of the parts that backbone runs, whoever started it, and brings the base to rest when that backbone runs the base. A stop of every backbone of a robot ends every planned move of the robot, whatever parts the robot has.",
+      "The implementer is a backbone of a robot: a node that runs some of the robot's parts and serves every contract whose members move those parts, limb_motion, postures and base_motion among them, and base_state where it runs the base, and follows drive_link there. An arm robot, a mobile base alone and a walking robot have one backbone; a robot with arms on a mobile base has the backbone of its base and the backbone of its arms. A caller stops a robot by calling stop on every backbone of the robot.",
+      "A robot stop ends every goal in flight on a member the implementer serves, such as limb_motion's and postures' moves, and, where the implementer runs the base, holds the base at rest against the leader of drive_link, as drive_link states. A node that runs a sequence of moves for a goal of its own, such as item_manipulation's implementer, ends that goal when the robot stop ends one of its moves, and starts no further move for it. Setpoints that another node streams to the robot's parts on joint_link, gripper_link or pose_link are not stopped.",
+      "The robot stop has no mark: it never waits for a lease.",
+    ],
+  },
+  interfaces: {
+    services: [
+      {
+        name: "stop",
+        description: "End every planned move of the parts the implementer runs, and bring the base to rest where the implementer runs the base. Each goal in flight on a member the implementer serves ends cancelled, whoever started it, a goal accepted that has not started to move included, with a reason that names the robot stop and the reason of the stop request; a goal that a cancel ended before keeps the reason of that cancel. Each part whose move the robot stop ends holds as a cancel of that move leaves it, as the move's contract states, and, where the implementer runs the base, the base comes to rest, as base_state brings a base to rest, and is held as drive_link states. A goal that arrives after the robot stop runs as usual, except one that the hold of the base refuses, as the goal's contract states. The robot stop gives an error reply with `attempt_failed` when the implementer cannot carry it out within its answer time, the message saying why; a stop the implementer took before that reply still runs.",
+        request_message_format: {
+          reason: { $type: "string", $description: "Why the robot is stopped, carried into the reason of each goal the robot stop ends. Empty is accepted." },
+        },
+        response_message_format: {
+          stopped: { $type: "array", $items: "string", $description: "The parts whose goal the robot stop ended, and the base when the leader of drive_link streamed at the robot stop, each once, by the names their contracts address them by (the names of its parts, the base's name among them), sorted by name; empty when the robot stop ended no goal and the leader did not stream." },
+        },
+      },
+    ],
+  },
+}

@@ -6,6 +6,16 @@
         path: "system/alert.json5"
       }
     },
+    base_motion: {
+      v1: {
+        path: "robot/base_motion.json5"
+      }
+    },
+    base_state: {
+      v1: {
+        path: "robot/base_state.json5"
+      }
+    },
     brain_model: {
       v1: {
         path: "robot/brain_model.json5"
@@ -124,6 +134,11 @@
     robot_ready: {
       v1: {
         path: "robot/robot_ready.json5"
+      }
+    },
+    robot_stop: {
+      v1: {
+        path: "robot/robot_stop.json5"
       }
     },
     scene_daylight: {
