@@ -16,11 +16,6 @@
         path: "cameras/camera_geometry.json5"
       }
     },
-    camera_mounts: {
-      v1: {
-        path: "robot/camera_mounts.json5"
-      }
-    },
     camera_profile: {
       v1: {
         path: "cameras/camera_profile.json5"
@@ -159,6 +154,11 @@
     scene_workspace: {
       v1: {
         path: "simulation/scene_workspace.json5"
+      }
+    },
+    sensor_mounts: {
+      v1: {
+        path: "robot/sensor_mounts.json5"
       }
     },
     sensor_readout: {

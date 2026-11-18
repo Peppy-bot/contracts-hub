@@ -28,7 +28,7 @@
           surface_height: { $type: "f64", $description: "Height of the surface above the robot's base point (m). A value that is not a finite number and a height more than 1000 m from the robot's base point get an error reply with `rejected`." },
         },
         response_message_format: {
-          perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot (camera_mounts names it), or \"\" for a robot without one." },
+          perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot (sensor_mounts names it), or \"\" for a robot without one." },
           workable: { $type: "bool", $description: "Whether the robot can work the surface." },
           area: { $type: "f64", $description: "Area of the workable part (m^2)." },
           rectangle: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "[x_min, x_max, y_min, y_max] in the robot frame (m) of the largest rectangle whose every grid point is workable, its corners on grid points: where to put items. Absent when no point is workable." },
