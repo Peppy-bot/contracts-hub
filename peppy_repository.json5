@@ -196,6 +196,16 @@
         path: "simulation/sweep_runner.json5"
       }
     },
+    transform_lookup: {
+      v1: {
+        path: "robot/transform_lookup.json5"
+      }
+    },
+    transforms: {
+      v1: {
+        path: "robot/transforms.json5"
+      }
+    },
     workflow_director: {
       v1: {
         path: "workflow/workflow_director.json5"
