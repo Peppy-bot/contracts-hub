@@ -20,12 +20,12 @@
     services: [
       {
         name: "lookup_transform",
-        description: "Give where the source frame stands in the target frame at the time of the request, or at the latest time when the request gives none. The implementer answers as soon as the lookup succeeds, and with the failure of the lookup once timeout_s has passed since the request arrived. A lookup of a frame in itself places it at the origin, whether or not a transform names the frame.",
+        description: "Give where the source frame stands in the target frame at the time of the request, or at the latest time when the request gives none. The implementer answers requests one at a time, in the order they arrive, so a request can wait behind the waits of the requests before it. It answers as soon as the lookup succeeds, and with the failure of the lookup once timeout_s has passed since it took the request. A lookup of a frame in itself places it at the origin, whether or not a transform names the frame.",
         request_message_format: {
           target_frame: { $type: "string", $description: "The frame the answer places the source frame in, as transforms names frames; not empty." },
           source_frame: { $type: "string", $description: "The frame the answer places, as transforms names frames; not empty." },
           time: { $type: "time", $optional: true, $description: "The time of the lookup; absent for the latest time, as transforms defines a lookup at the latest time." },
-          timeout_s: { $type: "f64", $description: "How long the implementer waits for the lookup to succeed (s), finite and 0 or above; 0 answers at once." },
+          timeout_s: { $type: "f64", $description: "How long the implementer waits for the lookup to succeed (s), from 0 to 1; 0 answers at once." },
         },
         response_message_format: {
           position: { $type: "array", $items: "f64", $length: 3, $description: "The source frame's origin in the target frame: x, y, z (m)." },
