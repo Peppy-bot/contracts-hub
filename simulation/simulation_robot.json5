@@ -13,6 +13,7 @@
   },
   failure_kinds: {
     busy: "A robot in the way of the goal still joins or leaves the scene; the same goal can succeed once that robot stands or is out",
+    unknown_frame: "A frame of the request is not world, the one frame of the simulation",
   },
   interfaces: {
     services: [
@@ -35,9 +36,11 @@
             placement: {
               $type: "object",
               $optional: true,
-              $description: "Where the robot's base stands on the floor. Absent, the engine places the robot on a free spot of its own choosing.",
-              position: { $type: "array", $items: "f64", $length: 3, $description: "World-frame x, y, z in metres." },
-              yaw: { $type: "f64", $description: "Rotation about the world's +z in radians." },
+              $description: "Where the robot's base stands on the floor: a pose in world, whose orientation turns about +z alone and gives the way the base faces. A frame other than world is refused with `unknown_frame`. An orientation that turns by more than 1e-9 rad about an axis other than +z is refused with `rejected`, the message naming the part and what to send: an orientation [0, 0, sin(yaw/2), cos(yaw/2)]. An orientation whose squared norm lies 0.01 or more from 1 is refused with `rejected`, the tolerance of tf2's buffer that transforms names; the implementer normalizes each orientation it takes. The timestamp places the pose in world at any time. Absent, the engine places the robot on a free spot of its own choosing.",
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
             },
             urdf: { $type: "string", $description: "The URDF of the robot's description, as get_description of robot_identity answers it." },
             srdf: { $type: "string", $description: "The SRDF of the robot's description. Its arm and gripper groups are the robot's limbs: the engine drives each arm's joints in the group's order, and each gripper through its fingers." },
@@ -50,7 +53,7 @@
           },
         },
         result_service: {},
-        failure_kinds: ["busy"],
+        failure_kinds: ["busy", "unknown_frame"],
       },
     ],
   },

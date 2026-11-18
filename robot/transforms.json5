@@ -5,9 +5,9 @@
     tag: "v1",
     description: [
       "The frames of a robot as one tree: each transform places a child frame in its parent frame, and the transforms compose along the tree to place any frame of it in any other at a time. transform_lookup answers such a lookup for a node that holds no tree.",
-      "Frames. A frame is a link of the robot's model, named byte for byte as in the URDF that robot_identity's get_description gives.",
+      "Frames. A frame is a link of the robot's model, named byte for byte as in the URDF that robot_identity's get_description gives, or a frame that a publisher of transforms gives beyond the model: odom and map, as REP 105 names them, and world, the one frame of a simulation.",
       "Robot frame. The root link of the URDF is the robot frame. It is fixed to the robot's base: its origin is the point the base stands on, +X points the way the robot faces, +Y to its left and +Z up. It moves with the robot, and it is not a frame of the room or of a simulated world. On a robot with a mobile base the root link is base_footprint. Every contract that places a position or a pose in the robot frame means this frame.",
-      "Transforms. A transform has a parent frame and a child frame, distinct and not empty, and places the child frame in the parent frame: a point p of the child frame is R(q) * p + t of the parent frame, with t the transform's position, x, y, z in meters, and q its orientation, a unit quaternion [x, y, z, w]. Each frame has at most one parent at a time, and no frame is its own ancestor, so the transforms form a tree. Two frames whose chains of parents share no frame have no lookup between them. A consumer drops a transform whose frames are empty or equal, whose numbers are not all finite, or whose quaternion's squared norm lies 0.01 or more from 1, the tolerance of tf2's buffer, and normalizes the quaternion of each transform it keeps. It drops a message whose arrays do not hold one parent frame, 3 position entries and 4 orientation entries per child frame, or that names a child frame twice.",
+      "Transforms. A transform has a parent frame and a child frame, distinct and not empty, and places the child frame in the parent frame: a point p of the child frame is R(q) * p + t of the parent frame, with t the transform's position, x, y, z in meters, and q its orientation, a unit quaternion [x, y, z, w]. Each transform of a message gives its parent frame in frame and its child frame in child_frame, as geometry_msgs/TransformStamped gives header.frame_id and child_frame_id. Each frame has at most one parent at a time, and no frame is its own ancestor, so the transforms form a tree. Two frames whose chains of parents share no frame have no lookup between them. A consumer drops a transform whose frames are empty or equal, whose numbers are not all finite, or whose quaternion's squared norm lies 0.01 or more from 1, the tolerance of tf2's buffer, and normalizes the quaternion of each transform it keeps. It drops a message that names a child frame twice.",
       "Joints. The transform of a joint of the model runs from the joint's parent link to its child link: the joint's origin in the URDF, then its motion at its position: a rotation by the angle about the joint's axis for a revolute or a continuous joint, a translation by the distance along its axis for a prismatic joint, the pose of the child link for a floating or a planar joint, and none for a fixed joint. A mimic joint takes the position its mimic element gives from the joint it follows.",
       "Publishers. Each transform has one publisher. The implementer of robot_identity publishes the transform of every fixed joint of the model on static_transforms, from the URDF it holds; these transforms are the robot's design: exact in a simulation, nominal on hardware, where a part stands within the tolerance of its mount. The node that measures a moving joint publishes the joint's transform on transforms at its measured position, and the transform of every mimic joint that follows it at the same timestamp; a moving joint that no node measures and that follows no measured joint has no transform, and the links below it have no place in the tree. An implementer publishes nothing on a topic that carries none of its transforms.",
       "Time. A transforms carries the transforms its publisher measured at its timestamp, one timestamp for all of them, as limb_states carries one for its joints; a publisher whose transforms are measured at different times publishes a message for each time. Timestamps are on the clock the implementer's instance reads, the simulation clock in a simulation, and every publisher of a robot's tree stamps on one clock, since a lookup composes the transforms of several publishers at one time. A static transform holds at every time. When a stamp of a moving transform arrives, a consumer drops the stamps of its child frame older than the child frame's newest held stamp less a cache window (s, finite and above 0) that its caller or its launcher sets, then takes the arriving stamp unless it is older than that too, as tf2's buffer does; an arriving stamp equal to a held one replaces it. When the clock its instance reads goes back, a consumer drops the stamps of every moving transform it holds and keeps its static transforms, which hold at every time.",
@@ -25,26 +25,41 @@
         // and every message carries the starts of its transforms.
         qos_profile: "sensor_data",
         message_format: {
-          timestamp: { $type: "time", $description: "When the publisher measured every transform of this message." },
-          child_frames: { $type: "array", $items: "string", $description: "The child frame of each transform, each named once. parent_frames, positions and orientations are index-aligned with this array." },
-          parent_frames: { $type: "array", $items: "string", $description: "The parent frame of each transform, in child_frames order." },
-          positions: { $type: "array", $items: "f64", $description: "3 entries per transform (x, y, z, m): the child frame's origin in the parent frame, in child_frames order." },
-          orientations: { $type: "array", $items: "f64", $description: "4 entries per transform, a unit quaternion [x, y, z, w]: the child frame's orientation in the parent frame, in child_frames order." },
+          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+          transforms: {
+            $type: "array",
+            $description: "The transforms of this message, at its timestamp: each places its child frame in its parent frame, frame, and names a child frame no other transform of the message names.",
+            $items: {
+              $type: "object",
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+            },
+          },
           start_timestamp: { $type: "time", $description: "When every transform of this message last started over, on the wall clock of the machine that runs its publisher: a new value means they started over." },
         },
       },
       {
         name: "static_transforms",
-        description: "The transform of every fixed joint of the model, each holding at every time. The implementer of robot_identity publishes one once it holds the model, and the newest replaces the one before.",
+        description: "The transform of every fixed joint of the model, each holding at every time, so its timestamp is 0. The implementer of robot_identity publishes one once it holds the model, and the newest replaces the one before.",
         // A consumer needs every fixed transform the moment it subscribes, and
         // each message replaces the one before it.
         qos_profile: "reliable",
         retention: { latest: 1 },
         message_format: {
-          child_frames: { $type: "array", $items: "string", $description: "The child frame of each transform, each named once. parent_frames, positions and orientations are index-aligned with this array." },
-          parent_frames: { $type: "array", $items: "string", $description: "The parent frame of each transform, in child_frames order." },
-          positions: { $type: "array", $items: "f64", $description: "3 entries per transform (x, y, z, m): the child frame's origin in the parent frame, in child_frames order." },
-          orientations: { $type: "array", $items: "f64", $description: "4 entries per transform, a unit quaternion [x, y, z, w]: the child frame's orientation in the parent frame, in child_frames order." },
+          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+          transforms: {
+            $type: "array",
+            $description: "The transforms of this message, at its timestamp: each places its child frame in its parent frame, frame, and names a child frame no other transform of the message names.",
+            $items: {
+              $type: "object",
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+            },
+          },
         },
       },
     ],

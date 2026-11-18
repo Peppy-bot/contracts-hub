@@ -5,7 +5,7 @@
     tag: "v1",
     description: [
       "Editing the world of a simulation engine while it runs: listing the assets the engine can place, loading a scene, spawning, moving, pushing and removing objects, and relocating a robot. Any engine that keeps a scene graph can implement it; a commander only needs the contract, not the engine.",
-      "Asset ids come from get_assets_list and carry their kind as a prefix (\"scene/<id>\", \"object/<id>\" or \"template/<id>\"). A template is a place that load_template builds anew at each seed: a room or one of several rooms of one kind, the furniture laid out by rules and the props drawn, so each seed gives another layout and other props, and the same seed the same world. Object ids are minted by the implementer on spawn, and by the implementer that places the objects of a loaded scene as objects of the same set. Each object also has a name. A spawned object has the name spawn_object gave it, until the object is removed. An object the loaded scene placed, a scene object, has the placement id the scene authors, such as \"mantel_clock_01\", which each load of that scene gives it again, where its object id is new. A name is lowercase letters, digits and \"_\". No two objects share a name, and each placement id of the loaded scene stays taken, also after its scene object is removed. get_objects_list reports what stands in the scene and where, and get_object reports one object at one instant, its landmarks in the world frame and its state, for a caller that sets the world up, checks its setup and checks an event it asked for; the engine's object_state contract reports the same objects with their velocities, as a stream, for evaluation. Robot names come from get_robots_list. Positions are world-frame x, y, z in meters, headings are a yaw in radians about the world's +z, orientations are unit quaternions [x, y, z, w] in the world frame, forces are world-frame newtons, masses are kilograms.",
+      "Asset ids come from get_assets_list and carry their kind as a prefix (\"scene/<id>\", \"object/<id>\" or \"template/<id>\"). A template is a place that load_template builds anew at each seed: a room or one of several rooms of one kind, the furniture laid out by rules and the props drawn, so each seed gives another layout and other props, and the same seed the same world. Object ids are minted by the implementer on spawn, and by the implementer that places the objects of a loaded scene as objects of the same set. Each object also has a name. A spawned object has the name spawn_object gave it, until the object is removed. An object the loaded scene placed, a scene object, has the placement id the scene authors, such as \"mantel_clock_01\", which each load of that scene gives it again, where its object id is new. A name is lowercase letters, digits and \"_\". No two objects share a name, and each placement id of the loaded scene stays taken, also after its scene object is removed. get_objects_list reports what stands in the scene and where, and get_object reports one object at one instant, its landmarks in the world frame and its state, for a caller that sets the world up, checks its setup and checks an event it asked for; the engine's object_state contract reports the same objects with their velocities, as a stream, for evaluation. Robot names come from get_robots_list. Every position, orientation and vector of this contract names its frame and its timestamp: its frame is world, the one frame of the simulation, and its timestamp the simulated instant of the value. A request in another frame is refused with `unknown_frame`, and a request's timestamp places its value in world at any time, since world does not move. Positions are x, y, z in meters, orientations unit quaternions [x, y, z, w], a heading an orientation that turns about +z alone, forces newtons, masses kilograms. An orientation whose squared norm lies 0.01 or more from 1 is refused with `rejected`, the tolerance of tf2's buffer that transforms names; the implementer normalizes each orientation it takes.",
       "Each scene entry and each object entry of a catalogue release has a version, 16 lowercase hexadecimal digits. The live version of an asset is the entry that get_assets_list gives for it. A release also holds retired versions: the entries of the releases before it that are live no more and that it keeps, so that a world that names one builds the asset as that entry gives it. The asset id of a scene or of an object is \"<kind>/<id>\", which names the live version, or \"<kind>/<id>@<version>\", which names the entry of that version, live or retired. get_asset, load_scene and spawn_object take an asset id with a version, and so does build of simulation_world, in each asset of its world document. Each other member that takes an asset id takes one with no version, and refuses one with a version as an id that names no asset: load_template, whose template id names no version, preview_asset and turntable_model of scene_view, and find_places and furnish of scene_workspace. An asset id with a version that the catalogue release does not hold is refused with version_not_held by each member that takes an asset id with a version, and the message names the version and the asset. A world can hold two versions of one asset: each object keeps the version that it was built with. Each answer that names the asset of an object or of the scene gives the asset id with no version: get_objects_list, get_object and get_scene, and the answers of scene_view, scene_workspace, object_controls, object_state, scene_lighting and scene_daylight. Only the setup record of simulation_world names the versions. So get_asset with the asset id that get_objects_list or get_object gives for an object describes the live version of its asset, also for an object of a retired version, and is refused when the catalogue lists that asset no more: get_object gives the landmarks of the object itself, and describe_workspace of scene_workspace its work surfaces. An implementer whose catalogue has no versions gives none, and refuses each asset id with a version as an id that names no asset.",
       "A snap, which spawn_object and move_object take, places an object so that one of its belt ends continues a belt end of another object. Each end is a landmark of use \"inlet\" or \"outlet\" (get_object lists an object's landmarks, get_asset an asset's) whose outer edge, on its axis behind an inlet's centre and ahead of an outlet's, is where its belt ends. The two edges meet, centred on each other, the two belts running away from the joint on either side of it, and the two belt tops level: the placed object stands upright, turned about the world's +z, its origin at the height of the other object's origin, and the implementer sets the control that raises the body of its end, a displacement along +z such as a conveyor's height, to the value that brings its end to the other's height. Things then run from one belt onto the other across an inlet snapped to an outlet when both belts run forward, and across two inlets or two outlets when one of them runs backward. A goal with a snap is refused with `rejected` for an object id that names no object, a landmark the object or the asset does not declare, a landmark whose use is neither \"inlet\" nor \"outlet\", two ends whose widths (their size across) differ by more than 0.001 m, an end that does not face up, and an end of the placed object that no control brings to the other's height within its range. An implementer that keeps no landmark refuses every snap with `rejected`. A snap that needs a control the implementer cannot set where the placed object stands fails with `precondition_failed`, and a snap whose ends the implementer finds apart once it placed the object fails with `attempt_failed`.",
       "A goal that this contract refuses with a kind fails with that kind when the implementer finds the cause only once the goal started. An implementer that lets no caller edit or inspect its scene answers each call it does not serve with `rejected`: an error reply to a service, a refusal to a goal.",
@@ -16,6 +16,7 @@
   failure_kinds: {
     seed_refused: "The seed gives no world of the world pattern: a sampler finds no value, a name that an entry of an item kind adds is a scene object name of the drawn scene, or the simulation refuses the drawn world; the message names the entry",
     version_not_held: "The catalogue release does not hold the version that the asset id names; the message names the version and the asset",
+    unknown_frame: "A frame of the request is not world, the one frame of the simulation",
   },
   interfaces: {
     services: [
@@ -72,9 +73,11 @@
           category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. Absent, or empty, lists every category." },
         },
         response_message_format: {
-          timestamp: { $type: "time", $description: "Capture time of the poses, on the implementer's clock." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
           objects: {
             $type: "array",
+            $description: "Every object, each with the pose of its origin in the answer's frame: position, and orientation, how it is turned.",
             $items: {
               $type: "object",
               object_id: { $type: "string", $description: "The id move_object, remove_object and apply_force take." },
@@ -85,36 +88,37 @@
               physics: { $type: "string", $description: "\"dynamic\", \"static\" or \"none\", as spawn_object takes it." },
               mass: { $type: "f64", $description: "Mass (kg)." },
               scale: { $type: "f64", $description: "Uniform scale; 1 = as authored." },
-              position: { $type: "array", $items: "f64", $length: 3, $description: "Where the object's origin stands: x, y, z (m)." },
-              orientation: { $type: "array", $items: "f64", $length: 4, $description: "How the object is turned: a unit quaternion [x, y, z, w]." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
             },
           },
         },
       },
       {
         name: "get_object",
-        description: "Give one object at one instant, for a caller that sets the world up, checks its setup and checks an event it asked for: its pose, its landmarks in the world frame and its state, all as of `timestamp`. Each state field is present only for an object whose asset simulates it. An object_id that names no object gets an error reply with `rejected`.",
+        description: "Give one object at one instant, for a caller that sets the world up, checks its setup and checks an event it asked for: its pose, the pose of its origin as get_objects_list gives it, its landmarks in the world frame and its state, all as of `timestamp`. Each state field is present only for an object whose asset simulates it. An object_id that names no object gets an error reply with `rejected`.",
         request_message_format: {
           object_id: { $type: "string", $description: "The id get_objects_list gives." },
         },
         response_message_format: {
-          timestamp: { $type: "time", $description: "The simulated instant of the pose, the landmarks and the state, on the implementer's clock." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
           object_id: "string",
           name: { $type: "string", $description: "The object's name, as get_objects_list gives it." },
           asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of, with no version; empty for a riser of scene_workspace." },
-          position: { $type: "array", $items: "f64", $length: 3, $description: "Where the object's origin stands: x, y, z (m), as get_objects_list gives it." },
-          orientation: { $type: "array", $items: "f64", $length: 4, $description: "How the object is turned: a unit quaternion [x, y, z, w]." },
+          position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+          orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
           scale: { $type: "f64", $description: "Uniform scale; 1 = as authored." },
           landmarks: {
             $type: "array",
-            $description: "The working parts of the object that its asset declares, in the world frame: each at the pose its body has now and sized by the scale. Empty for an asset that declares none. A riser of scene_workspace gives its base and its deck: the deck gives its size and its height.",
+            $description: "The working parts of the object that its asset declares, in the world frame: each at the pose its body has now and sized by the scale, its centre in position. Empty for an asset that declares none. A riser of scene_workspace gives its base and its deck: the deck gives its size and its height.",
             $items: {
               $type: "object",
               name: { $type: "string", $description: "Unique in the asset, such as \"base\" or \"zone_front_left\"." },
               use: { $type: "string", $description: "\"base\" (the face the object rests on), \"support\" (a face that things rest on or in, such as the inside bottom of a pan or a cooker zone), \"opening\" (the mouth of a container), \"grip\" (a handle), \"inlet\" or \"outlet\" (where a belt takes or gives things) or \"tip\" (the end of a spout or a tool)." },
               shape: { $type: "string", $description: "\"point\", \"disc\", \"rectangle\" or \"bar\"." },
               body: { $type: "string", $description: "The body of the object the landmark is fixed to; \"root\" for the object's root body." },
-              centre: { $type: "array", $items: "f64", $length: 3, $description: "Its centre: x, y, z (m)." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               normal: { $type: "array", $items: "f64", $length: 3, $description: "The unit vector it faces out of the object along: down for a base, up for a support, out of the mouth for an opening, the side a hand comes from for a grip, up from the belt for an inlet or an outlet, the way a tip points." },
               axis: { $type: "array", $items: "f64", $length: 3, $description: "A unit vector at a right angle to normal, along which the first side of size lies: the first side of a rectangle, the length of a bar, the direction of travel at an inlet or an outlet; any such vector for a disc or a point." },
               size: { $type: "array", $items: "f64", $length: 2, $description: "Along axis, then across it (m): a disc's diameter twice, a bar's length and thickness, [0, 0] for a point." },
@@ -137,13 +141,13 @@
           contents: {
             $type: "array",
             $optional: true,
-            $description: "For an asset that holds a liquid: one entry for each phase of the liquid.",
+            $description: "For an asset that holds a liquid: one entry for each phase of the liquid, with the centre of its mass in position.",
             $items: {
               $type: "object",
               phase: { $type: "string", $description: "The phase's id, such as \"yolk\"." },
               mass: { $type: "f64", $description: "Its mass now (kg). It drops as water boils off." },
               in_shell: { $type: "f64", $description: "The share of that mass inside the shell, 0 to 1; 0 for an object without a shell." },
-              centre: { $type: "array", $items: "f64", $length: 3, $description: "The centre of that mass: x, y, z (m)." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               spread: { $type: "f64", $description: "The radius around the centre, in the horizontal plane, that holds 95 % of that mass (m)." },
               below: {
                 $type: "object",
@@ -211,14 +215,17 @@
         name: "get_robots_list",
         description: "Give the robots standing in the world, one entry each, so a commander lists what it may address and a test counts what the world holds.",
         response_message_format: {
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
           robots: {
             $type: "array",
+            $description: "One entry per robot, with the pose of its base in the answer's frame: position, where its base stands, and orientation, which way it faces, a turn about +z alone.",
             $items: {
               $type: "object",
               robot: { $type: "string", $description: "The instance name that addresses this robot, which is what move_robot takes." },
               model: { $type: "string", $description: "The id of the engine's robot catalogue it stands as." },
-              position: { $type: "array", $items: "f64", $length: 3, $description: "Where its base stands: x, y, z in metres." },
-              yaw: { $type: "f64", $description: "Which way the base faces: rotation about the world's +z in radians." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
               attached: { $type: "bool", $description: "True for a robot that joined over simulation_robot, false for a robot the world stands itself, which leaves only with the simulation." },
             },
           },
@@ -278,17 +285,19 @@
           response_message_format: {
             seed: { $type: "u32", $description: "The seed of the world; 0 when the goal ends cancelled and built nothing." },
             world: { $type: "string", $description: "The name of the drawn world, <template id>_seed_<seed>; empty when the goal ends cancelled and built nothing." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
             stations: {
               $type: "array",
-              $description: "Each station of the world, where a robot stands to work a work surface: the stations of its furniture, in the order of the names of their pieces, then its fixed stations, in the order the template lists them. Empty when the goal ends cancelled and built nothing.",
+              $description: "Each station of the world, where a robot stands to work a work surface: the stations of its furniture, in the order of the names of their pieces, then its fixed stations, in the order the template lists them. Each gives position, the place in front of the side, the centre of the station on the floor, and orientation, the heading toward the work surface from the station, a turn about +z alone, in the result's frame; a station holds at every time, so the result's timestamp is 0. Empty when the goal ends cancelled and built nothing.",
               $items: {
                 $type: "object",
                 object_id: { $type: "string", $description: "The object whose work surface the station works, as get_objects_list gives it." },
                 name: { $type: "string", $description: "The name of that object: a piece of furniture or a fixture of the room." },
                 landmark: { $type: "string", $description: "The landmark of the work surface." },
                 side: { $type: "string", $description: "The side of the work surface that the station stands at: \"+x\", \"-x\", \"+y\" or \"-y\", for stand_at of scene_workspace." },
-                position: { $type: "array", $items: "f64", $length: 3, $description: "The place in front of the side: the centre of the station on the floor, x, y, z in metres." },
-                yaw: { $type: "f64", $description: "The heading toward the work surface from the station: rotation about the world's +z in radians." },
+                position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+                orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
               },
             },
           },
@@ -303,13 +312,19 @@
       },
       {
         name: "spawn_object",
-        description: "Place one instance of an \"object\" asset and report its new id and its name. An asset_id with no version takes the live version of the asset, also in a world that holds a retired version of it, and an asset_id with a version takes the entry of that version, live or retired; the object keeps the version that it was built with. The spawn is refused with `rejected` when the asset is unknown or the arguments are invalid, and with version_not_held for an asset_id with a version that the catalogue release does not hold. It fails with `precondition_failed` when the placement rules that the contract description names refuse its place, or when the object would take the world past the texture budget that the contract description names, and with `attempt_failed` when the object does not spawn. A build of simulation_world that comes before the spawn has handed its command over ends it cancelled, with a reason that names the build, and it spawns nothing. The feedback gives one message when the goal is accepted, then one whenever a field of the feedback changes, a few changes of a short period in one message, and none while nothing changes: silence means the goal makes no progress. The stream ends with the goal. The result gives the id and the name of the new object.",
+        description: "Place one instance of an \"object\" asset and report its new id and its name. An asset_id with no version takes the live version of the asset, also in a world that holds a retired version of it, and an asset_id with a version takes the entry of that version, live or retired; the object keeps the version that it was built with. The goal gives target or snap_to. The spawn is refused with `rejected` when it gives both or neither, when the asset is unknown or when the arguments are invalid, and with version_not_held for an asset_id with a version that the catalogue release does not hold. It fails with `precondition_failed` when the placement rules that the contract description names refuse its place, or when the object would take the world past the texture budget that the contract description names, and with `attempt_failed` when the object does not spawn. A build of simulation_world that comes before the spawn has handed its command over ends it cancelled, with a reason that names the build, and it spawns nothing. The feedback gives one message when the goal is accepted, then one whenever a field of the feedback changes, a few changes of a short period in one message, and none while nothing changes: silence means the goal makes no progress. The stream ends with the goal. The result gives the id and the name of the new object.",
         goal_service: {
           request_message_format: {
             asset_id: "string",
-            position: { $type: "array", $items: "f64", $length: 3 },
-            yaw: { $type: "f64", $description: "Rotation about the world's +z in radians; 0 = as authored. Ignored when orientation is present." },
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "When present, the object's orientation in the world frame, a unit quaternion [x, y, z, w], in place of yaw. A quaternion whose length differs from 1 by more than 0.001 is refused with `rejected`; inside that, the implementer normalises it." },
+            target: {
+              $type: "object",
+              $optional: true,
+              $description: "Where the object stands: the pose of its origin in world; absent when the goal gives snap_to. An empty orientation stands it as authored, as [0, 0, 0, 1] does. An orientation whose squared norm lies 0.01 or more from 1 is refused with `rejected`, the tolerance of tf2's buffer that transforms names; the implementer normalizes each orientation it takes.",
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $description: "A unit quaternion [x, y, z, w], or empty for none." },
+            },
             scale: { $type: "f64", $description: "Uniform scale; 1 = as authored." },
             physics: { $type: "string", $description: "\"dynamic\" (simulated, falls and collides), \"static\" (collides, never moves) or \"none\" (visual only)." },
             mass: { $type: "f64", $description: "Mass (kg) of the object, which only a dynamic object simulates: a finite number above zero, or 0 for the mass of a real one at its scale, the mass that the catalogue entry of the asset gives times the cube of scale. A mass of 0 for an asset to which the catalogue gives no mass is refused with `rejected`, as is a mass below zero or one that is not a finite number." },
@@ -318,7 +333,7 @@
             snap_to: {
               $type: "object",
               $optional: true,
-              $description: "When present, the object stands where the snap that the contract description defines places it, and position, yaw and orientation are not read.",
+              $description: "When present, the object stands where the snap that the contract description defines places it; absent when the goal gives target.",
               object_id: { $type: "string", $description: "The object whose belt end this one continues: an id get_objects_list gives." },
               landmark: { $type: "string", $description: "That object's landmark at its belt end, by name." },
               own_landmark: { $type: "string", $description: "The landmark of the asset that meets it, by name." },
@@ -342,20 +357,27 @@
             name: { $type: "string", $description: "The object's name: the one the request gave, or the one the implementer gave it; empty when the goal ends cancelled and built nothing." },
           },
         },
-        failure_kinds: ["version_not_held"],
+        failure_kinds: ["version_not_held", "unknown_frame"],
       },
       {
         name: "move_object",
-        description: "Teleport an object to a new position, zeroing its velocity. It keeps its orientation unless the goal carries one. The move is refused with `rejected` for an object_id that names no object, for a riser while its stand or its raise of scene_workspace lasts and for an orientation that spawn_object refuses. A riser that its stand or its raise left moves as a spawned object does. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place, and with `attempt_failed` when the object does not move. The action gives no feedback and an empty result.",
+        description: "Teleport an object to a new pose, zeroing its velocity. It keeps its orientation when the target gives none. The goal gives target or snap_to. The move is refused with `rejected` when it gives both or neither, for an object_id that names no object, for a riser while its stand or its raise of scene_workspace lasts and for an orientation that spawn_object refuses. A riser that its stand or its raise left moves as a spawned object does. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place, and with `attempt_failed` when the object does not move. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             object_id: "string",
-            position: { $type: "array", $items: "f64", $length: 3 },
-            orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "When present, the object's new orientation in the world frame, a unit quaternion [x, y, z, w], validated as spawn_object validates it. Absent keeps the orientation the object has." },
+            target: {
+              $type: "object",
+              $optional: true,
+              $description: "Where the object goes: the pose of its origin in world; absent when the goal gives snap_to. An empty orientation keeps the orientation the object has; another is validated as spawn_object validates it.",
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $description: "A unit quaternion [x, y, z, w], or empty for none." },
+            },
             snap_to: {
               $type: "object",
               $optional: true,
-              $description: "When present, the object moves where the snap that the contract description defines places it, and position and orientation are not read. An object never snaps to itself.",
+              $description: "When present, the object moves where the snap that the contract description defines places it; absent when the goal gives target. An object never snaps to itself.",
               object_id: { $type: "string", $description: "The object whose belt end this one continues: an id get_objects_list gives." },
               landmark: { $type: "string", $description: "That object's landmark at its belt end, by name." },
               own_landmark: { $type: "string", $description: "The landmark of the moved object that meets it, by name." },
@@ -363,6 +385,7 @@
           },
         },
         result_service: {},
+        failure_kinds: ["unknown_frame"],
       },
       {
         name: "remove_object",
@@ -376,27 +399,37 @@
       },
       {
         name: "apply_force",
-        description: "Push a dynamic object with a constant world-frame force for duration_s seconds. The goal completes once the push is scheduled, not when it ends. A push on an object_id that names no object or an object that cannot move, with a force that is not finite, or with a duration the implementer does not take, is refused with `rejected`. The action gives no feedback and an empty result.",
+        description: "Push a dynamic object with a constant force in world, the request's frame, for duration_s seconds. The goal completes once the push is scheduled, not when it ends. A push on an object_id that names no object or an object that cannot move, with a force that is not finite, or with a duration the implementer does not take, is refused with `rejected`. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             object_id: "string",
-            force: { $type: "array", $items: "f64", $length: 3 },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+            force: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (N), in the request's frame." },
             duration_s: "f64",
           },
         },
         result_service: {},
+        failure_kinds: ["unknown_frame"],
       },
       {
         name: "move_robot",
-        description: "Relocate one robot's base to a new world-frame position and heading, keeping its joint configuration. `robot` is the instance name the engine reports in get_robots_list; an engine hosting several moves that one and leaves the rest standing. A caller that only translates passes back the yaw get_robots_list reports. The move is refused with `resource_unavailable` for a robot that does not stand in the world, and with `rejected` for a position or a yaw the implementer does not take. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place. The action gives no feedback and an empty result.",
+        description: "Relocate one robot's base to a new pose in world, keeping its joint configuration. `robot` is the instance name the engine reports in get_robots_list; an engine hosting several moves that one and leaves the rest standing. A target with an empty orientation keeps the heading the base has. The move is refused with `resource_unavailable` for a robot that does not stand in the world, and with `rejected` for a target the implementer does not take. An orientation that turns by more than 1e-9 rad about an axis other than +z is refused with `rejected`, the message naming the part and what to send: an orientation [0, 0, sin(yaw/2), cos(yaw/2)]. An orientation whose squared norm lies 0.01 or more from 1 is refused with `rejected`, the tolerance of tf2's buffer that transforms names; the implementer normalizes each orientation it takes. It fails with `precondition_failed` when the placement rules that the contract description names refuse the place. The action gives no feedback and an empty result.",
         goal_service: {
           request_message_format: {
             robot: "string",
-            position: { $type: "array", $items: "f64", $length: 3 },
-            yaw: { $type: "f64", $description: "Which way the base faces once moved: rotation about the world's +z in radians." },
+            target: {
+              $type: "object",
+              $description: "Where the base stands once moved, and which way it faces: a pose in world whose orientation turns about +z alone; an empty orientation keeps the heading the base has.",
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $description: "A unit quaternion [x, y, z, w], or empty for none." },
+            },
           },
         },
         result_service: {},
+        failure_kinds: ["unknown_frame"],
       },
     ],
   },

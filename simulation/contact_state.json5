@@ -9,7 +9,7 @@
       "Every contact a simulation engine resolves this step, from both sides: robot link on object, finger pad on object, link on link, link on the world, object on object.",
       "A consumer decides a grasp from it (both pads on the same object, opposing normals, force above a floor), checks a collision governor against what the physics actually did, or bounds the force a behaviour applies, without holding a pairing.",
       "Ground truth is a debugging surface and stays inside the peppy framework: harness tests, recorders and the evaluation of a trained behaviour read it. No mcp_exposure/v1 document ever selects a member of this contract; an MCP endpoint serves the real robot and the simulation alike and the real world has no contact list to publish.",
-      "One record per (body, contact point): a contact appears twice, once from each side, so \"everything touching X\" is one filter on body. A side is named as object_state names a spawned object, by its object_id; any other body by the implementer's body name; a geom of the world body by the geom's own name (a floor plane \"floor\", a backdrop piece \"backdrop/table/0\"), \"world\" only when it has none. World frame, metres, newtons. normal points out of body toward other; force is the normal contact force; penetration is how deep the two surfaces overlap, 0 when they only touch. A step with no contact carries an empty list.",
+      "One record per (body, contact point): a contact appears twice, once from each side, so \"everything touching X\" is one filter on body. A side is named as object_state names a spawned object, by its object_id; any other body by the implementer's body name; a geom of the world body by the geom's own name (a floor plane \"floor\", a backdrop piece \"backdrop/table/0\"), \"world\" only when it has none. World frame, metres, newtons: each snapshot gives frame world and its timestamp, the simulated instant of the step. normal points out of body toward other; force is the normal contact force; penetration is how deep the two surfaces overlap, 0 when they only touch. A step with no contact carries an empty list.",
     ],
   },
   interfaces: {
@@ -21,14 +21,16 @@
         // occasional drops are acceptable.
         qos_profile: "sensor_data",
         message_format: {
-          timestamp: { $type: "time", $description: "Implementer-side capture time of this snapshot." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
           contacts: {
             $type: "array",
+            $description: "One record per side of each contact point: the contact point in position, in the snapshot's frame.",
             $items: {
               $type: "object",
               body: { $type: "string", $description: "This side of the contact." },
               other: { $type: "string", $description: "The other side." },
-              position: { $type: "array", $items: "f64", $length: 3, $description: "The contact point, world frame, metres." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               normal: { $type: "array", $items: "f64", $length: 3, $description: "Unit normal out of body toward other." },
               force: { $type: "f64", $description: "Normal contact force, newtons, >= 0." },
               penetration: { $type: "f64", $description: "Overlap of the two surfaces along the normal, metres, >= 0." },

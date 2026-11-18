@@ -29,13 +29,45 @@ Create a new `.json5` file under the relevant category:
 
 The description of a contract is a list of paragraphs, and each topic, service and action has a `description` of one string, right after its `name`. A field of a message format can have a `$description` beside its `$type`: `{ $type: "f64", $description: "<text>" }`. Peppy refuses a contract without its description, or with a member without its description, and reads no rule from a description: `$enum`, marks and failure kinds stay the rules. Notes for the maintainers and the implementers stay comments.
 
+## Geometry fields
+
+Every point, orientation, pose and velocity of a contract or a pairing is written with the same fields in every contract and pairing, as `geometry_msgs` names them:
+
+| Value | Fields |
+|---|---|
+| point | `position` |
+| orientation | `orientation` |
+| pose | `position`, `orientation` |
+| twist | `linear_velocity`, `angular_velocity` |
+
+- Each value names its frame and its time: the record that holds it gives `frame` and `timestamp` beside the value's fields, in its `header`, or in a record that encloses it. A record of many values at one instant gives one `frame` and one `timestamp` and an array of objects that hold the values' fields, so an array of points is an array of `{ position }`, since peppy has no array of arrays.
+- `frame` is a frame as `transforms` names frames: a link of the robot's URDF, `odom` or `map`, or `world` in a simulation contract. The robot frame is the root link of the robot's URDF, and its name differs from robot to robot: `describe_sensors` of `sensor_mounts` gives it in `robot_frame`.
+- `timestamp` is the time on the clock of `transforms`. A command gives 0 to be placed at the latest time, and a report gives 0 for a value that holds at every time, as tf2 names the latest time `TimePointZero` and stamps a static answer 0. Peppy allows `$optional` at the root of a message format alone, so a record gives every field.
+- `position` is [x, y, z] in m, and `orientation` a unit quaternion [x, y, z, w]; a command's `orientation` may be empty where its member says what an empty one means, and has four entries where its member needs one. A twist is the velocity of the moving frame's origin, `linear_velocity` in m/s and `angular_velocity` in rad/s, both in the frame of its record, as REP 105 places an odometry's twist.
+- A value in an item of a record that has its own `position` and `orientation` is relative to that record's pose: a collision object's shapes are posed relative to the object, and a shape's `mesh_vertices` relative to the shape. The workflow director refuses a `$ref` to such a value.
+- Two records hold `child_frame`: an odometry record `{ frame, child_frame, timestamp, pose, twist }`, as `nav_msgs/Odometry` gives its pose in `frame` and its twist in `child_frame`, and a transform record `{ frame, child_frame, position, orientation }` under one `timestamp`, as each transform of `transforms` is.
+- A sensor message's `header` holds `frame`, the sensor's frame, `timestamp` and `capture_index`, the capture counter.
+- A planar contract takes these fields too, with z 0 and turns about +z, and refuses another pose or twist with `rejected`.
+
+```json5
+// The fields, as each contract and pairing writes them.
+frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
+timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+orientation: { $type: "array", $items: "f64", $description: "A unit quaternion [x, y, z, w], or empty for none." },  // in a goal or a request whose member says what an empty one means
+orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },  // in a result, a response, feedback or a topic, and in a goal or a request whose member needs one
+linear_velocity: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m/s)." },
+angular_velocity: { $type: "array", $items: "f64", $length: 3, $description: "About x, y, z (rad/s)." },
+```
+
 ## Marks
 
 A mark is a name that a contract gives to a member (`marks: ["<mark>"]` on a topic, a service or an action, after its `failure_kinds`) or to a field of a message format (`{ $type: "string", $marks: ["<mark>"] }`). The side that owns a mark reads it and acts on it. Peppy acts only on the marks that it owns, and keeps each other mark as written for its clients.
 
 Peppy owns one mark, `moves_robot`. It is on each member of a contract that an instance of a robot or a device serves, when the member can move a part of that robot, the gripper included, or change the state of that device, such as `move_to_home` of `postures`. Each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) before each call of a member with this mark. A member that only stops a motion, such as `stop` of `limb_motion`, a member that only reads or checks, and each member of the simulation contracts have no mark.
 
-The workflow side owns five marks, which the workflow director reads to check a workflow: `robot_frame` on a field that holds a position or a pose in the robot frame, and `item_id` on a field that holds an item id, so a workflow passes their values only by `$ref` to a field with the same mark, a position only from the same role and an item id only from the same node instance; `reaches_for_item` on a member that reaches for an item, such as `grab_item` of `item_manipulation`, so a lane that calls it checks first that the robot reaches its work zone, with a `kind: "reach"` assumption, or the item, with a reach check; `checks_reach` on the boolean field of a result that tells whether the robot reaches every position of the request, such as `all_workable` of `check_positions` of `workspace`, so a call of the member with `as` and a `done_when` that is this field of its result is a reach check: before a member with the mark `reaches_for_item` on every path of the lane, with positions read from the same result or observation as the item, it checks in the run that the robot reaches the item; and `location` on a string field that receives the name of a location that the node knows through `locations:v1`, so a workflow gives it only a `{ $location }` of a location it declares.
+The workflow side owns four marks, which the workflow director reads to check a workflow: `item_id` on a field that holds an item id, so a workflow passes its value only by `$ref` to a field with the same mark from the same node instance; `reaches_for_item` on a member that reaches for an item, such as `grab_item` of `item_manipulation`, so a lane that calls it checks first that the robot reaches its work zone, with a `kind: "reach"` assumption, or the item, with a reach check; `checks_reach` on the boolean field of a result that tells whether the robot reaches every point of the request, such as `all_workable` of `check_positions` of `workspace`, so a call of the member with `as` and a `done_when` that is this field of its result is a reach check: before a member with the mark `reaches_for_item` on every path of the lane, with points read from the same result or observation as the item, it checks in the run that the robot reaches the item; and `location` on a string field that receives the name of a location that the node knows through `locations:v1`, so a workflow gives it only a `{ $location }` of a location it declares.
 
 The mark list, `marks.json5`, names each mark, its owner and its meaning. A client side adds a mark of its own with one entry that names the client side as its owner. The `check-marks` job of the **Tests** workflow refuses a contract with a mark that the list does not name, so a misspelled mark fails the CI and never removes a check without notice. To run the check, with the environment of [Testing the automation](#testing-the-automation):
 
