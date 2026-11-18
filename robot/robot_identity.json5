@@ -6,6 +6,7 @@
     description: [
       "Who a robot is: the name it stands under, the model it is and the core node hosting it, and the description of that model.",
       "A model's description is one URDF and one SRDF, with the collision meshes the URDF names: its links, joints and their limits in the URDF, and in the SRDF its arm and gripper groups, its named states and the pairs of its links that collision checks skip. Each arm group is a chain from the arm's base link to its grasp link, and its name is the name limb_motion and limb_state address the arm by; each gripper group holds the joints of a gripper's fingers, under the name the gripper answers to.",
+      "The root link of the URDF is the robot frame of transforms. The implementer also serves, from the description it holds, sensor_mounts and the transforms of the model's fixed joints on transforms' static_transforms.",
       "A distinct contract from robot_ready: identity, not readiness, so a consumer that tells robots apart needs no readiness link and the answer holds for the robot's whole session, ready or not.",
     ],
   },

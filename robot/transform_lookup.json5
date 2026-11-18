@@ -1,0 +1,39 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "transform_lookup",
+    tag: "v1",
+    description: [
+      "Lookups in a robot's tree of frames, for a node that holds no tree: where a source frame stands in a target frame, at a time or at the latest time. The frames, the transforms and the lookups are those of transforms.",
+      "The implementer holds the transforms that the publishers of transforms bound to it publish: every static transform, and the stamps of each moving transform within the cache window its launcher sets, as transforms defines it. It answers each request from them, as transforms defines a lookup. A node that needs the place of a frame in another asks for that pair: two answers that it composes can come from two starts of one transform. Timestamps and waits are on the clock the implementer's instance reads, the simulation clock in a simulation.",
+      "A request is checked in this order: `rejected` for a value lookup_transform does not take, then the lookup. A lookup that fails gives an error reply with the failure kind of the first of its failures in the order transforms gives them, and its message names the cause: the frame that no transform it has received names, with every frame it holds, the two frames that share no frame, the transform with the requested time and the range of stamps the implementer holds of it, or the child frame with its two publishers, or every transform of a cycle.",
+      "No member has a mark.",
+    ],
+  },
+  failure_kinds: {
+    unknown_frame: "A frame of the request is named by no transform the implementer has received that passed the checks of transforms",
+    no_chain: "The source frame and the target frame are in trees that share no frame",
+    extrapolation: "A moving transform on the chain has no value at the time: the implementer holds no stamp of it, or the time is before the oldest stamp it holds of it or after its newest",
+    broken_tree: "A frame whose transform to its parent the chain needs has transforms from two publishers, or the chain runs through a cycle",
+  },
+  interfaces: {
+    services: [
+      {
+        name: "lookup_transform",
+        description: "Give where the source frame stands in the target frame at the time of the request, or at the latest time when the request gives none. The implementer answers requests one at a time, in the order they arrive, so a request can wait behind the waits of the requests before it. It answers as soon as the lookup succeeds, and with the failure of the lookup once timeout_s has passed since it took the request. A lookup of a frame in itself places it at the origin, whether or not a transform names the frame.",
+        request_message_format: {
+          target_frame: { $type: "string", $description: "The frame the answer places the source frame in, as transforms names frames; not empty." },
+          source_frame: { $type: "string", $description: "The frame the answer places, as transforms names frames; not empty." },
+          time: { $type: "time", $optional: true, $description: "The time of the lookup; absent for the latest time, as transforms defines a lookup at the latest time." },
+          timeout_s: { $type: "f64", $description: "How long the implementer waits for the lookup to succeed (s), from 0 to 1; 0 answers at once." },
+        },
+        response_message_format: {
+          position: { $type: "array", $items: "f64", $length: 3, $description: "The source frame's origin in the target frame: x, y, z (m)." },
+          orientation: { $type: "array", $items: "f64", $length: 4, $description: "The source frame's orientation in the target frame, a unit quaternion [x, y, z, w]." },
+          timestamp: { $type: "time", $optional: true, $description: "The time the answer holds at: the request's time when it gives one; at the latest time, the oldest of the newest stamps of the moving transforms on the chain, or for a frame in itself the newest stamp of its own moving transform; absent for a lookup at the latest time whose answer holds at every time: a chain of static transforms alone, or a frame in itself whose own transform is static or absent." },
+        },
+        failure_kinds: ["unknown_frame", "no_chain", "extrapolation", "broken_tree"],
+      },
+    ],
+  },
+}
