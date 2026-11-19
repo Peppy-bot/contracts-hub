@@ -6,7 +6,7 @@
     description: [
       "The locations a skill knows: the named places of a work cell, or of the world in simulation, that a workflow names with `{ $location }` in a field with the mark `location`.",
       "A node with such a field implements this contract. teach replaces the locations the node knows with the ones given, and list gives them. The applier of worlds teaches the locations of a world to each robot of the world after it builds the world, and the workflow director lists them before a run and refuses a run that names a location the skill of its role does not know. People and programs teach through the locations member of the director, which refuses a teach on a robot with a lease, or through this contract with `peppy node call`, which no lease guards: teach has no mark `moves_robot`, and a provider reads no lease.",
-      "Each location names its frame and holds at every time, so its record holds no timestamp: its frame is world in a simulation, or a frame of its robot's tree as transforms names frames, such as map. Its position is the position of the pose or the landmark, or the center of the surface or of the region, and its orientation gives the axes of the location: z is the normal of a landmark or a surface (up), x runs along the axis of a landmark or the first edge of a surface, and y completes the right hand. The node maps a location in world into its own frame from the stand of its robot, and places one in a frame of its robot's tree by its tree at the latest time, each time it uses the location.",
+      "Each location names its frame and holds at every time, so its record holds no timestamp: its frame is world in a simulation, or a frame of its robot's tree as transforms names frames, such as map. A location that teach takes with no frame lies in the robot frame. Its position is the position of the pose or the landmark, or the center of the surface or of the region, and its orientation gives the axes of the location: z is the normal of a landmark or a surface (up), x runs along the axis of a landmark or the first edge of a surface, and y completes the right hand. The node maps a location in world into its own frame from the stand of its robot, and places one in a frame of its robot's tree by its tree at the latest time, each time it uses the location.",
     ],
   },
   failure_kinds: {
@@ -27,7 +27,7 @@
               $type: "object",
               name: "string",
               kind: { $type: "string", $enum: ["pose", "landmark", "surface", "region"], $description: "What the location is: a pose, the landmark of an object, a level surface or a region of space." },
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, the robot frame." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
               size: { $type: "array", $items: "f64", $length: 3, $description: "The extent of the location in meters, size[0] along its x: a surface's along its x and y (0 along z), a region's along its own axes, a landmark's along its axis and across it as get_object of scene_manipulation gives it (0 along z), and zero for a pose." },

@@ -198,7 +198,7 @@
     actions: [
       {
         name: "locations",
-        description: "Teaches or lists the locations of the skills of `robot`: each instance of the robot that implements locations:v1, as the fleet listing names them. With teach, the director teaches each of them the locations given, each as teach of locations:v1 takes it, and gives the locations each knows after; without, it gives the locations each knows. Each location is a record whose values hold at every time, so it holds no timestamp. A teach on a robot with a lease is refused with precondition_failed, naming the holder and the name of the lease, so no teach changes the locations of a robot of a run or of an apply; a teach holds the robot while it runs, under a lease named `locations`, and no run of the director binds the robot until the teach ends. Refused with rejected for a robot the listing does not hold, with resource_unavailable before the first fleet listing and for a robot with no instance of locations:v1, and with the kind of a refusal of a skill, naming the instance. The action gives no feedback, and the result gives the locations that each skill of the robot knows.",
+        description: "Teaches or lists the locations of the skills of `robot`: each instance of the robot that implements locations:v1, as the fleet listing names them. With teach, the director teaches each of them the locations given, each as teach of locations:v1 takes it, and gives the locations each knows after; without, it gives the locations each knows. Each location is a record whose values hold at every time, so it holds no timestamp. A location that teach takes with no frame lies in the robot frame. A teach on a robot with a lease is refused with precondition_failed, naming the holder and the name of the lease, so no teach changes the locations of a robot of a run or of an apply; a teach holds the robot while it runs, under a lease named `locations`, and no run of the director binds the robot until the teach ends. Refused with rejected for a robot the listing does not hold, with resource_unavailable before the first fleet listing and for a robot with no instance of locations:v1, and with the kind of a refusal of a skill, naming the instance. The action gives no feedback, and the result gives the locations that each skill of the robot knows.",
         goal_service: {
           request_message_format: {
             robot: "string",
@@ -209,7 +209,7 @@
                 $type: "object",
                 name: "string",
                 kind: { $type: "string", $enum: ["pose", "landmark", "surface", "region"] },
-                frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+                frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, the robot frame." },
                 position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
                 orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
                 size: { $type: "array", $items: "f64", $length: 3 },
