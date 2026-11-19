@@ -24,7 +24,7 @@
         qos_profile: "sensor_data",
         message_format: {
           frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+          timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           arm_names: { $type: "array", $items: "string", $description: "The implementer's fixed set of arm names (e.g. \"left_arm\"), in its fixed order." },
           joints_per_arm: { $type: "array", $items: "u32", $description: "Joint count of each arm, index-aligned with arm_names." },
           joint_positions: { $type: "array", $items: "f64", $description: "Measured joint positions (rad for revolute joints, m for prismatic), each arm's vector concatenated in arm_names order per the slicing rule of this contract." },

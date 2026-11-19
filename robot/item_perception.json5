@@ -22,7 +22,7 @@
     actions: [
       {
         name: "scan_items",
-        description: "Look at the scene and report every item that the implementer can see and act on, with an identifier minted for each. The action gives no feedback. The result gives, for each item, its identifier, label, point, confidence and region in the picture, and the camera and the picture that the scan looked at. A scene with no items completes the scan with empty arrays. A cancelled scan gives the reason of the cancel, and all its arrays are empty.",
+        description: "Look at the scene and report every item that the implementer can see and act on, with an identifier minted for each. The action gives no feedback. The result gives, for each item, its identifier, label, point, confidence and region in the picture, and the camera and the picture that the scan looked at. A scene with no items completes the scan with empty arrays. A cancelled scan gives the reason of the cancel, its arrays empty, and in timestamp the time of the cancel.",
         goal_service: {
           request_message_format: {
             timeout_s: { $type: "f64", $description: "Upper bound on the scan (s); the implementer returns as soon as it has looked. 0 = the implementer's default." },
@@ -33,7 +33,7 @@
             item_ids: { $type: "array", $items: "string", $marks: ["item_id"], $description: "One entry per item found, in the implementer's order; labels, points, confidences and regions are index aligned with this array. Identifiers are the ones identify_item and item_manipulation address." },
             labels: { $type: "array", $items: "string", $description: "What the implementer recognised each item as, in whatever vocabulary it uses; empty where it has no name for the item. Labels may repeat: two items of one kind get one label each and distinct identifiers, and callers tell them apart by their points." },
             frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-            timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
             points: {
               $type: "array",
               $description: "The point of each item, in frame at timestamp, in item_ids order.",
@@ -66,9 +66,10 @@
             label: { $type: "string", $description: "What the implementer recognised the item as, in whatever vocabulary it uses. Empty when it has no name for the item." },
             item_point: {
               $type: "object",
-              $description: "Where the item is, in the robot frame, at the capture time of the picture the search looked at.",
+              $optional: true,
+              $description: "Where the item is, in the robot frame, at the capture time of the picture the search looked at. Absent when the search holds no item, as after a cancel.",
               frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-              timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+              timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
             },
             item_pose: {
@@ -76,7 +77,7 @@
               $optional: true,
               $description: "Where the item is and how it is turned, the same frame, time and position as item_point. Absent when the implementer located the item without resolving how it is turned. A caller that passes item_id to grab_item leaves the approach to the implementer; one that grasps by pose supplies its own.",
               frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-              timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+              timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
             },

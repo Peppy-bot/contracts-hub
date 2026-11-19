@@ -22,7 +22,7 @@
         qos_profile: "sensor_data",
         message_format: {
           frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+          timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           contacts: {
             $type: "array",
             $description: "One record per side of each contact point: the contact point in position, in the snapshot's frame.",

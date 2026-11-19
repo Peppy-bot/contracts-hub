@@ -16,7 +16,7 @@
       "Pose rule for the results: a result reports where each arm ended, as limb_state reports it, or no pose:",
       "Each pose is the grasp-point pose of an arm in the robot frame, which the result names in frame, at the result's timestamp, the time the implementer measured it. The description of limb_state defines the grasp point, and transforms defines the robot frame.",
       "The implementer measures the pose of every arm when the goal completes or ends cancelled, after the moves of all its arms ended.",
-      "When an arm has no fresh measured pose then, arm_names and grasp_points are empty, frame is the robot frame, and timestamp is 0, since the result holds no measured value: the implementer never measured the joints of that arm, or their last measurement is stale.",
+      "When an arm has no fresh measured pose then, arm_names and grasp_points are empty, frame is the robot frame, and timestamp is the time of the check that found no fresh pose: the implementer never measured the joints of that arm, or their last measurement is stale.",
       "After a cancel or a stop, an arm that was still moving can come to rest away from the reported pose.",
     ],
   },
@@ -37,7 +37,7 @@
         result_service: {
           response_message_format: {
             frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-            timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
             arm_names: { $type: "array", $items: "string", $description: "The implementer's arm names (e.g. \"left_arm\") in its fixed order, or none, per the pose rule of this contract." },
             grasp_points: {
               $type: "array",
@@ -64,7 +64,7 @@
         result_service: {
           response_message_format: {
             frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-            timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
             arm_names: { $type: "array", $items: "string", $description: "The implementer's arm names (e.g. \"left_arm\") in its fixed order, or none, per the pose rule of this contract." },
             grasp_points: {
               $type: "array",

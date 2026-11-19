@@ -19,7 +19,7 @@
             $type: "object",
             $description: "The camera's frame, the capture time and the capture counter of the picture.",
             frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-            timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
             capture_index: { $type: "u32", $description: "The capture counter of the picture." },
           },
           encoding: { $type: "string", $description: "The encoding of data, for example \"rgb8\", \"bgr8\", \"yuyv\" or \"mjpeg\"." },

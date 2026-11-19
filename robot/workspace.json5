@@ -7,7 +7,7 @@
       "Where a robot can work: where its arms reach and where the camera it finds items with sees, from the robot's design and that camera's field of view.",
       "It knows nothing of the world around the robot: a surface is a flat, level plane at a given height, with nothing on it and nothing in the way. Every member reads; none moves the robot. check_arm_move of limb_motion asks whether one given pose has a plan from where an arm is now; this contract asks where the robot can work at all, from its design alone.",
       "The robot frame is the robot frame of transforms: the root link of the robot's URDF. Positions are in meters.",
-      "A check_positions request names one frame and one time for all its points: frame, as transforms names frames, and timestamp, on the clock of transforms, or 0 for the latest time. When it takes a request, the implementer places the points by its tree at that timestamp, as transforms defines a lookup: a point in the robot frame at timestamp 0 names where the robot frame stood at the request, fixed to the floor, and one with the timestamp of a report names where the robot frame stood then. A request it cannot place gets an error reply with the failure kind of the lookup, its message naming the cause as transform_lookup's does. describe_workspace gives its bounds in the robot frame, which it names in frame, with the timestamp 0, since they hold at every time.",
+      "A check_positions request names one frame and one time for all its points: frame, as transforms names frames, and timestamp, on the clock of transforms. When it takes a request, the implementer places the points by its tree at that timestamp, as transforms defines a lookup: a point in the robot frame with the timestamp of a report names where the robot frame stood then. A command with no timestamp is placed by the latest transforms when the implementer accepts it; a point in the robot frame with no timestamp names where the robot frame stands then. A request it cannot place gets an error reply with the failure kind of the lookup, its message naming the cause as transform_lookup's does. describe_workspace gives its bounds in the robot frame, which it names in frame, and they hold at every time. A report leaves out the timestamp of values that hold at every time, as the transforms of fixed joints do.",
       "The definitions, the same for every implementer:",
       "Grasp point. The gripper's grasp point, on the jaw closing axis midway between the pads, as limb_motion defines it.",
       "Reachable. Some arm brings its grasp point within 0.01 m of the point with its gripper's approach axis within 0.05 rad (about 3 degrees) of straight down or straight forward (along the robot frame's -Z or +X). The roll the gripper ends at about that direction is not checked.",
@@ -35,7 +35,7 @@
         },
         response_message_format: {
           frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+          timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
           perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot (sensor_mounts names it), or \"\" for a robot without one." },
           workable: { $type: "bool", $description: "Whether the robot can work the surface." },
           area: { $type: "f64", $description: "Area of the workable part (m^2)." },
@@ -49,7 +49,7 @@
         description: "Tell whether the robot can work each of the given points: whether an arm reaches it and the perception camera sees it.",
         request_message_format: {
           frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-          timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+          timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
           points: {
             $type: "array",
             $description: "The points, in frame at timestamp, which the implementer places in the robot frame. An empty list, a value that is not a finite number and a point that, placed in the robot frame, has a coordinate more than 1000 m from the robot's base point get an error reply with `rejected`.",
@@ -64,11 +64,11 @@
           all_workable: { $type: "bool", $marks: ["checks_reach"], $description: "Whether the robot can work every point." },
           results: {
             $type: "array",
-            $description: "One entry per point, in the request's order, with the point as the implementer placed it: in the robot frame, at the time of the robot frame's place it is in, 0 when that place holds at every time, so the point sent back is placed at the same spot.",
+            $description: "One entry per point, in the request's order, with the point as the implementer placed it: in the robot frame, at the time of the robot frame's place it is in, with no timestamp when that place holds at every time, so the point sent back is placed at the same spot.",
             $items: {
               $type: "object",
               frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-              timestamp: { $type: "time", $description: "The time of the record on the clock of transforms; 0 names the latest time in a command and every time in a report." },
+              timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               workable: { $type: "bool", $description: "Whether the robot can work it." },
               reachable: { $type: "bool", $description: "Whether an arm reaches it." },
