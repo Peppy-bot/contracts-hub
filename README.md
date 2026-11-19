@@ -54,8 +54,9 @@ Every point, orientation, pose and velocity of a contract or a pairing takes one
 
 ```json5
 // The fields, as each contract and pairing writes them.
-frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },  // in a goal or a request of a simulation contract, where an absent one names world, and in a request whose member says when it reads it
+frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },  // in a goal or a request of a simulation contract, where an absent one names world, and in a request whose member says when it reads it
+frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a sensor's values are in frame through the sensor's own geometry." },  // in a sensor message's header and in a camera's depth_to_color
 child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
 timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },  // in a command, and in a report whose member names values that hold at every time
 timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },  // in every other report

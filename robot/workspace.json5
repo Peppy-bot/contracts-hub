@@ -34,7 +34,7 @@
           surface_height: { $type: "f64", $description: "Height of the surface above the robot's base point (m). A value that is not a finite number and a height more than 1000 m from the robot's base point get an error reply with `rejected`." },
         },
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
           perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot (sensor_mounts names it), or \"\" for a robot without one." },
           workable: { $type: "bool", $description: "Whether the robot can work the surface." },
@@ -48,7 +48,7 @@
         name: "check_positions",
         description: "Tell whether the robot can work each of the given points: whether an arm reaches it and the perception camera sees it.",
         request_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
           points: {
             $type: "array",
@@ -67,7 +67,7 @@
             $description: "One entry per point, in the request's order, with the point as the implementer placed it: in the robot frame, at the time of the robot frame's place it is in, with no timestamp when that place holds at every time, so the point sent back is placed at the same spot.",
             $items: {
               $type: "object",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               workable: { $type: "bool", $description: "Whether the robot can work it." },

@@ -29,7 +29,7 @@
           timeout_s: { $type: "f64", $description: "How long the implementer waits for the lookup to succeed (s), from 0 to 1; 0 answers at once." },
         },
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
           timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
           position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },

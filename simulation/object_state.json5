@@ -23,7 +23,7 @@
         // occasional drops are acceptable.
         qos_profile: "sensor_data",
         message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           objects: {
             $type: "array",
@@ -49,7 +49,7 @@
         name: "get_object_states",
         description: "Give the latest capture, on demand, in the stream's records and from the same state. Answered before the first streamed snapshot, and once a scene_manipulation goal has completed, the snapshot includes its edit. An empty scene answers no objects. An implementer that has no object state to report gives an error reply: with `rejected` when it does not inspect its scene, and with `precondition_failed` when it is not ready yet.",
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           objects: {
             $type: "array",

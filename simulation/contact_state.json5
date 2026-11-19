@@ -21,7 +21,7 @@
         // occasional drops are acceptable.
         qos_profile: "sensor_data",
         message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           contacts: {
             $type: "array",

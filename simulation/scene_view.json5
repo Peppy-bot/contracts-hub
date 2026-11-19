@@ -21,14 +21,14 @@
           viewpoint: {
             $type: "object",
             $description: "Where the viewpoint is.",
-            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
           },
           target: {
             $type: "object",
             $description: "The point the view looks at.",
-            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
           },
@@ -41,7 +41,7 @@
           camera: {
             $type: "object",
             $description: "The camera that took the picture, in the form locate_in_view takes. Its width and height are the picture's, and its timestamp the simulated instant the picture shows.",
-            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
             position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
             orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
@@ -85,7 +85,7 @@
           camera: {
             $type: "object",
             $description: "The camera that took the picture.",
-            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
             orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
@@ -101,7 +101,7 @@
           },
         },
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           capture_age_s: { $type: "f64", $description: "The simulated time from the camera's timestamp to the rays (s); 0 for a camera with no timestamp. A thing that moves can stand elsewhere than the picture shows." },
           centre: {
@@ -167,7 +167,7 @@
           camera: {
             $type: "object",
             $description: "The camera that took the picture, as locate_in_view takes it.",
-            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
             orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
@@ -186,7 +186,7 @@
           },
         },
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           capture_age_s: { $type: "f64", $description: "The simulated time from the camera's timestamp to the rays (s); 0 for a camera with no timestamp. A thing that moves can stand elsewhere than the picture shows." },
           rays: {

@@ -36,7 +36,7 @@
             target: {
               $type: "object",
               $description: "The grasp-point pose to take the item at, given in frame at timestamp. Read only when item_id is empty; a goal that names an item_id sends an empty frame and a zero position here, with no timestamp and no orientation. A target with no orientation leaves the orientation to the implementer: it approaches the position however it judges best, the same freedom it has when the goal names an item_id instead.",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w], or absent for none." },
@@ -85,7 +85,7 @@
             target: {
               $type: "object",
               $description: "The grasp-point pose when the jaws open, given in frame at timestamp. It is where the gripper lets go, not a waypoint on the way there. The implementer lowers the item to it and, when the item comes to rest on something on the way, lets go there instead: final_point says where the jaws opened. A target with no orientation leaves the orientation to the implementer, which is what a caller means when it cares where the item ends up and not which way it faces. Not read when the goal names a target_item_id; a goal that names one sends an empty frame and a zero position here, with no timestamp and no orientation.",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w], or absent for none." },
@@ -103,7 +103,7 @@
               $type: "object",
               $optional: true,
               $description: "Where the measured grasp point stood when the jaws opened, in the robot frame, at the time of that measurement. Absent when success is false.",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
             },

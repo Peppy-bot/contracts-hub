@@ -36,7 +36,7 @@
         },
         result_service: {
           response_message_format: {
-            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
             arm_names: { $type: "array", $items: "string", $description: "The implementer's arm names (e.g. \"left_arm\") in its fixed order, or none, per the pose rule of this contract." },
             grasp_points: {
@@ -63,7 +63,7 @@
         },
         result_service: {
           response_message_format: {
-            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
             arm_names: { $type: "array", $items: "string", $description: "The implementer's arm names (e.g. \"left_arm\") in its fixed order, or none, per the pose rule of this contract." },
             grasp_points: {

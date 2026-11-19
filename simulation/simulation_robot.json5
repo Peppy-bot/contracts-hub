@@ -37,7 +37,7 @@
               $type: "object",
               $optional: true,
               $description: "Where the robot's base stands on the floor: a pose in world, whose orientation turns about +z alone and gives the way the base faces. A placement with no frame names world, and a frame other than world is refused with `unknown_frame`. An orientation that turns by more than 1e-9 rad about an axis other than +z is refused with `rejected`, the message naming the part and what to send: an orientation [0, 0, sin(yaw/2), cos(yaw/2)]. An orientation whose squared norm lies 0.01 or more from 1 is refused with `rejected`, the tolerance of tf2's buffer that transforms names; the implementer normalizes each orientation it takes. The timestamp, given or left out, places the pose in world at any time. Absent, the engine places the robot on a free spot of its own choosing.",
-              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },

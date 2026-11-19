@@ -31,7 +31,7 @@
             $description: "The transforms of this message, at its timestamp: each places its child frame in its parent frame, frame, and names a child frame no other transform of the message names.",
             $items: {
               $type: "object",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
@@ -54,7 +54,7 @@
             $description: "The transforms of this message, at its timestamp: each places its child frame in its parent frame, frame, and names a child frame no other transform of the message names.",
             $items: {
               $type: "object",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },

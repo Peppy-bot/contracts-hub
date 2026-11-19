@@ -52,7 +52,7 @@
               $items: {
                 $type: "object",
                 link_name: { $type: "string", $description: "As describe_arms names it, such as its grasp_link." },
-                frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+                frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
                 timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
                 position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
                 tolerance_m: "f64",
@@ -64,7 +64,7 @@
               $items: {
                 $type: "object",
                 link_name: "string",
-                frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+                frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
                 timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
                 orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
                 tolerance_rad: { $type: "f64", $description: "The largest angle (rad) of the rotation from orientation to the link's orientation." },
@@ -77,7 +77,7 @@
               $items: {
                 $type: "object",
                 link_name: "string",
-                frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+                frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
                 timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
                 orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
                 tolerance_rad: { $type: "f64", $description: "The largest angle (rad) of the rotation from orientation to the link's orientation." },
@@ -91,7 +91,7 @@
         },
         result_service: {
           response_message_format: {
-            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             arms: {
               $type: "array",
@@ -125,7 +125,7 @@
             arm_name: { $type: "string", $description: "The limb name." },
             start_joint_positions: { $type: "array", $items: "f64", $description: "Where the path starts; empty: where the arm stands." },
             link_name: { $type: "string", $description: "The link that follows the lines, as describe_arms names it: the arm's grasp_link, or a link fixed to it." },
-            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             waypoints: {
               $type: "array",
@@ -141,7 +141,7 @@
         },
         result_service: {
           response_message_format: {
-            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             start_joint_positions: { $type: "array", $items: "f64", $description: "The start the path used: the goal's, or where the arm stood, each joint outside a limit by no more than the implementer's start tolerance moved onto it." },
             waypoints: {
@@ -229,7 +229,7 @@
               $type: "object",
               id: "string",
               operation: { $type: "string", $enum: ["add", "move", "remove"] },
-              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $optional: true, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w]." },
@@ -283,7 +283,7 @@
         name: "get_planning_scene",
         description: "Everything the scene holds: each object that no link carries in frame, the robot frame, at timestamp, the time of the answer, placed there at the latest time from the root of its frame's chain where the scene holds it; each attached object in its frame, the link that carries it; each shape relative to its object's pose. When it cannot place an object, the request is refused with the failure kind of the lookup, its message naming the object and the cause as transform_lookup's does.",
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           objects: {
             $type: "array",
@@ -319,7 +319,7 @@
             $items: {
               $type: "object",
               id: "string",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               touch_links: { $type: "array", $items: "string" },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
@@ -366,7 +366,7 @@
         // next.
         qos_profile: "sensor_data",
         message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           voxel_size_m: { $type: "f64", $description: "The side of the map's cubes (m), as get_planning_scene reports it." },
           centers: {

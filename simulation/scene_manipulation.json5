@@ -73,7 +73,7 @@
           category: { $type: "string", $optional: true, $description: "A category get_asset_categories reports. Absent, or empty, lists every category." },
         },
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           objects: {
             $type: "array",
@@ -101,7 +101,7 @@
           object_id: { $type: "string", $description: "The id get_objects_list gives." },
         },
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           object_id: "string",
           name: { $type: "string", $description: "The object's name, as get_objects_list gives it." },
@@ -215,7 +215,7 @@
         name: "get_robots_list",
         description: "Give the robots standing in the world, one entry each, so a commander lists what it may address and a test counts what the world holds.",
         response_message_format: {
-          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           robots: {
             $type: "array",
@@ -285,7 +285,7 @@
           response_message_format: {
             seed: { $type: "u32", $description: "The seed of the world; 0 when the goal ends cancelled and built nothing." },
             world: { $type: "string", $description: "The name of the drawn world, <template id>_seed_<seed>; empty when the goal ends cancelled and built nothing." },
-            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             stations: {
               $type: "array",
@@ -320,7 +320,7 @@
               $type: "object",
               $optional: true,
               $description: "Where the object stands: the pose of its origin in world; absent when the goal gives snap_to. A target with no orientation stands it as authored, as [0, 0, 0, 1] does. An orientation whose squared norm lies 0.01 or more from 1 is refused with `rejected`, the tolerance of tf2's buffer that transforms names; the implementer normalizes each orientation it takes.",
-              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w], or absent for none." },
@@ -369,7 +369,7 @@
               $type: "object",
               $optional: true,
               $description: "Where the object goes: the pose of its origin in world; absent when the goal gives snap_to. A target with no orientation keeps the orientation the object has; another is validated as spawn_object validates it.",
-              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w], or absent for none." },
@@ -403,7 +403,7 @@
         goal_service: {
           request_message_format: {
             object_id: "string",
-            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             force: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (N), in the request's frame." },
             duration_s: "f64",
@@ -421,7 +421,7 @@
             target: {
               $type: "object",
               $description: "Where the base stands once moved, and which way it faces: a pose in world whose orientation turns about +z alone; a target with no orientation keeps the heading the base has.",
-              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w], or absent for none." },

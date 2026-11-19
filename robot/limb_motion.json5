@@ -105,7 +105,7 @@
             target: {
               $type: "object",
               $description: "Target grasp-point pose, given in frame at timestamp, which the implementer places by its tree when it accepts the goal. A target with no orientation names none: the grasp point aims to keep the turn it starts with. An arm with six or more joints keeps it exactly or has no line to the position; one with fewer ends as near it as its joints allow.",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w], or absent for none." },
@@ -122,7 +122,7 @@
             final_pose: {
               $type: "object",
               $description: "Measured grasp-point pose when the action ended, in the robot frame, at the time of that measurement.",
-              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
               timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
@@ -175,7 +175,7 @@
           target: {
             $type: "object",
             $description: "As for move_arm: a target with no orientation names none.",
-            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
             orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w], or absent for none." },
