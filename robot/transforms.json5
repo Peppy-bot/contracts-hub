@@ -42,16 +42,15 @@
       },
       {
         name: "static_transforms",
-        description: "The transform of every fixed joint of the model, each holding at every time. A report leaves out the timestamp of values that hold at every time, as the transforms of fixed joints do. The implementer of robot_identity publishes one once it holds the model, and the newest replaces the one before.",
+        description: "The transform of every fixed joint of the model, each holding at every time, so the message holds no timestamp. The implementer of robot_identity publishes one once it holds the model, and the newest replaces the one before.",
         // A consumer needs every fixed transform the moment it subscribes, and
         // each message replaces the one before it.
         qos_profile: "reliable",
         retention: { latest: 1 },
         message_format: {
-          timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
           transforms: {
             $type: "array",
-            $description: "The transforms of this message, at its timestamp: each places its child frame in its parent frame, frame, and names a child frame no other transform of the message names.",
+            $description: "The transforms of this message: each places its child frame in its parent frame, frame, and names a child frame no other transform of the message names.",
             $items: {
               $type: "object",
               frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
