@@ -207,10 +207,9 @@
               object_id: { $type: "string", $description: "The object, for an object in the world; \"\" for an asset." },
               asset_id: { $type: "string", $description: "The \"object/<id>\" asset the item is an instance of." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
-              turn_rad: { $type: "f64", $description: "The turn about +z (rad) from the orientation the item has: as authored for an asset, as it stands for an object in the world." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
               arm: { $type: "string", $description: "The arm that reaches it, by the name limb_motion addresses it under." },
-              stays: { $type: "bool", $description: "Whether the item keeps the place it stands at: position and orientation are then where it stands, and turn_rad is 0." },
+              stays: { $type: "bool", $description: "Whether the item keeps the place it stands at: position and orientation are then where it stands." },
             },
           },
           unplaced: {
