@@ -31,35 +31,38 @@ The description of a contract is a list of paragraphs, and each topic, service a
 
 ## Geometry fields
 
-Every point, orientation, pose and velocity of a contract or a pairing is written with the same fields in every contract and pairing, as `geometry_msgs` names them:
+Every point, orientation, pose and velocity of a contract or a pairing takes one of seven shapes, written with the same fields in every contract and pairing, as `geometry_msgs` names them:
 
-| Value | Fields |
+| Shape | Fields |
 |---|---|
 | point | `position` |
-| orientation | `orientation` |
+| quaternion | `orientation` |
 | pose | `position`, `orientation` |
 | twist | `linear_velocity`, `angular_velocity` |
+| point_stamped | `frame`, `timestamp`, `position` |
+| pose_stamped | `frame`, `timestamp`, `position`, `orientation` |
+| twist_stamped | `frame`, `timestamp`, `linear_velocity`, `angular_velocity` |
 
-- Each value names its frame and its time: the record that holds it gives `frame` and `timestamp` beside the value's fields, in its `header`, or in a record that encloses it. A record of many values at one instant gives one `frame` and one `timestamp` and an array of objects that hold the values' fields, so an array of points is an array of `{ position }`, since peppy has no array of arrays.
-- `frame` is a frame as `transforms` names frames: a link of the robot's URDF, `odom` or `map`, or `world` in a simulation contract, whose goals and requests may leave `frame` out for `world`. The robot frame is the root link of the robot's URDF, and its name differs from robot to robot: `describe_sensors` of `sensor_mounts` gives it in `robot_frame`.
+- Each value names its frame and its time: the record that holds it is a stamped shape, which gives `frame` and `timestamp` beside the value's fields, or gives them in its `header` or in a record that encloses it. A record of many values at one instant gives one `frame` and one `timestamp` and an array of objects that hold the values' fields: an array of points is an array of `{ position }`, as the `$items` of an array is a primitive type or an object.
+- `frame` is a frame as `transforms` names frames: a link of the robot's URDF, `odom` or `map`, or `world`, the frame of a simulation, which the simulation contracts, `locations` and the workflow director take. A goal or a request of a simulation contract may leave `frame` out for `world`. The robot frame is the root link of the robot's URDF, and its name differs from robot to robot: `describe_sensors` of `sensor_mounts` gives it in `robot_frame`.
 - `timestamp` is the time on the clock of `transforms` at which the values hold. A command may leave it out, to be placed at the latest time, as tf2 names the latest time `TimePointZero`. A report gives it, apart from where its member says the values hold at every time, as tf2 stamps a static answer 0 (a static transform, a camera's depth-to-colour pose, a location, the bounds of a workspace, a pose that follows from joint positions alone): there the report leaves it out. An empty result is a value at a time and gives its timestamp, and a record a result does not hold is absent as a whole.
 - `position` is [x, y, z] in m, and `orientation` a unit quaternion [x, y, z, w]; a command's `orientation` may be left out where its member says what an absent one means, and is required where its member needs one. A twist is the velocity of the moving frame's origin, `linear_velocity` in m/s and `angular_velocity` in rad/s, both in the frame of its record, as REP 105 places an odometry's twist.
 - A value in an item of a record that has its own `position` and `orientation` is relative to that record's pose: a collision object's shapes are posed relative to the object, and a shape's `mesh_vertices` relative to the shape. The workflow director refuses a `$ref` to such a value.
-- Two records hold `child_frame`: an odometry record `{ frame, child_frame, timestamp, pose, twist }`, as `nav_msgs/Odometry` gives its pose in `frame` and its twist in `child_frame`, and a transform record `{ frame, child_frame, position, orientation }` under one `timestamp`, as each transform of `transforms` is.
-- A field that a member reads in some requests alone is optional, and the member says when it reads it: an object that `apply_collision_objects` removes leaves out its `frame`, pose and `shapes`, and a reference of `scene_workspace` gives `point` in the form of a point alone.
+- Each transform of `transforms` and the answer of `lookup_transform` hold `child_frame`, the frame whose pose in `frame` the record gives: a transform is `{ frame, child_frame, position, orientation }` under its message's one `timestamp`, and the answer `{ frame, child_frame, timestamp, position, orientation }`.
+- A field that a member reads in some requests alone is optional, and the member says when it reads it: an object that `apply_collision_objects` removes leaves out its `frame`, pose and `shapes`, and a reference of `scene_workspace` gives `point` in the form of a point alone. The one exception is the `target` of `grab_item` and `place_item` of `item_manipulation`, which the owner of `item_manipulation` keeps required: a goal that names an item sends an empty `frame` and a zero `position` there.
 - A sensor message's `header` holds `frame`, the sensor's frame, `timestamp` and `capture_index`, the capture counter.
-- A planar contract takes these fields too, with z 0 and turns about +z, and refuses another pose or twist with `rejected`.
 
 ```json5
 // The fields, as each contract and pairing writes them.
 frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },
-frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },  // in a goal or a request of a simulation contract, where an absent one names world
+frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; a twist beside a child_frame is in child_frame, and a sensor's values are in frame through the sensor's own geometry." },  // in a goal or a request of a simulation contract, where an absent one names world, and in a request whose member says when it reads it
 child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
 timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },  // in a command, and in a report whose member names values that hold at every time
 timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },  // in every other report
 position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
 orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w], or absent for none." },  // in a goal or a request whose member says what an absent one means
 orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },  // in a result, a response, feedback or a topic, and in a goal or a request whose member needs one
+orientation: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "A unit quaternion [x, y, z, w]." },  // in a request whose member says when it reads it, as apply_collision_objects' move
 linear_velocity: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m/s)." },
 angular_velocity: { $type: "array", $items: "f64", $length: 3, $description: "About x, y, z (rad/s)." },
 ```
