@@ -1,0 +1,29 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "sensor_mounts",
+    tag: "v1",
+    description: [
+      "Where a robot carries its sensors: the robot frame, and for each of its sensors, such as a camera, the contract it streams on, the sensor's frame in the robot's tree, and the part that carries it.",
+      "camera_geometry gives a camera's own geometry and says that where the camera sits on the robot is not the camera's to know; this contract names the camera's frame in the robot's tree, and transforms places it. A consumer places a measurement in the robot frame, which describe_sensors names, or in any other frame of the robot, by a lookup of the sensor's frame in transforms at the time of the measurement as the sensor's contract gives it, a picture's timestamp for a camera. transform_lookup answers such a lookup for a node that holds no tree.",
+      "Sensor frame. The frame that the sensor's contract defines, which sensor_kinds names: for a camera the colour optical frame as camera_geometry defines it. It is a link of the robot's URDF, on a fixed joint to the link of the part that carries the sensor.",
+      "The implementer is robot_identity's, and answers from the robot's model, for as long as it runs.",
+      "No member has a mark.",
+    ],
+  },
+  interfaces: {
+    services: [
+      {
+        name: "describe_sensors",
+        description: "Give the robot frame, and every sensor the robot's design carries, such as a camera: its name, the contract it streams on, its frame and the part that carries it. A sensor of the design that no node streams is listed too, under the name its node runs under once one streams it. A robot without sensors answers with empty arrays.",
+        response_message_format: {
+          robot_frame: { $type: "string", $description: "The robot frame of transforms: the root link of the robot's URDF." },
+          sensor_names: { $type: "array", $items: "string", $description: "The names the robot's sensors run under (chest, wrist_left), in the robot's fixed order. sensor_kinds, sensor_frames and carried_by are index-aligned with this array." },
+          sensor_kinds: { $type: "array", $items: "string", $description: "The contract each sensor streams on, which defines its frame, such as \"rgb_camera\" or \"rgbd_camera\", in sensor_names order." },
+          sensor_frames: { $type: "array", $items: "string", $description: "The frame of each sensor in transforms, a link of the robot's URDF, in sensor_names order." },
+          carried_by: { $type: "array", $items: "string", $description: "The part that carries each sensor, by the name its contract addresses it under, such as an arm's name, or \"\" for a sensor fixed to the base, in sensor_names order." },
+        },
+      },
+    ],
+  },
+}
