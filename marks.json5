@@ -23,11 +23,6 @@
       meaning: "The member can move a part of the robot whose instance serves it, the gripper included, or change the state of the device whose instance serves it, such as the level of a hob, so each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) before each call of it.",
     },
     {
-      name: "robot_frame",
-      owner: "workflow",
-      meaning: "The field holds a position or a pose in the robot frame of the robot whose instance serves the member, so the workflow director takes its value only from a `$ref` to a field with this mark of a call or an observation of the same role, never from a literal of a workflow.",
-    },
-    {
       name: "item_id",
       owner: "workflow",
       meaning: "The field holds an item id, valid only on the node instance that gives it, so the workflow director takes its value only from a `$ref` to a field with this mark of a call or an observation on the same instance.",
@@ -35,12 +30,12 @@
     {
       name: "reaches_for_item",
       owner: "workflow",
-      meaning: "The member reaches for an item, so the workflow director refuses a workflow whose lane calls it without a `kind: \"reach\"` assumption whose check reads an observation of its role, and without a reach check (`checks_reach`) before it on every path of the lane whose positions are read from the same result or observation as each item id and position of the call.",
+      meaning: "The member reaches for an item, so the workflow director refuses a workflow whose lane calls it without a `kind: \"reach\"` assumption whose check reads an observation of its role, and without a reach check (`checks_reach`) before it on every path of the lane whose points are read from the same result or observation as each item id and target of the call.",
     },
     {
       name: "checks_reach",
       owner: "workflow",
-      meaning: "The boolean field of the result of a member tells whether the robot reaches every position of the request, so the workflow director takes a call of the member with `as` and a `done_when` that is this field of its result, alone or as a term of `&&`, as a reach check: before a member with the mark `reaches_for_item` on every path of the lane, with positions read from the same result or observation as the item, it checks in the run that the robot reaches the item, and fails its step when the robot does not reach.",
+      meaning: "The boolean field of the result of a member tells whether the robot reaches every point of the request, so the workflow director takes a call of the member with `as` and a `done_when` that is this field of its result, alone or as a term of `&&`, as a reach check: before a member with the mark `reaches_for_item` on every path of the lane, with points read from the same result or observation as the item, it checks in the run that the robot reaches the item, and fails its step when the robot does not reach.",
     },
     {
       name: "location",

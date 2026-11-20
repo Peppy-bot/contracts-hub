@@ -5,7 +5,7 @@
     tag: "v1",
     description: [
       "The reading of every sensor the simulated model declares, streamed on the engine's state cadence: the touch pads, force/torque cells, frame and joint probes a robot's model carries.",
-      "The implementer publishes what the model computes and interprets nothing: a consumer knows the kind and reads the values in the engine's units and frames for it.",
+      "The implementer publishes what the model computes and interprets nothing: a consumer knows the kind and reads the values in the engine's units and frames for it. A frame sensor, such as MuJoCo's framepos and framequat, reads in world, the one frame of the simulation, at the snapshot's timestamp, or in the frame of the reference object that the model names for it (MuJoCo's reftype and refname).",
       "Ground truth is a debugging surface and stays inside the peppy framework (see object_state); no mcp_exposure/v1 document ever selects a member of this contract. A real robot's sensors reach the stack on their own contracts and pairings.",
       "One record per declared sensor, in the model's order, every step; a model with no sensor sends an empty list.",
     ],

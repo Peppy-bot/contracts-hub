@@ -19,7 +19,7 @@
       "run, resume and abort report progress at each event of the run and at least every 5 s of wall time. The first progress of run is run_starts, which names the run (`r<N>`) and gives its run/v1 document. A cancel of run or resume, and the loss of its sender, aborts the run. The goal completes only for a completed run, with the run result; it ends cancelled for an aborted run, with the run and its result; and it fails for each other end with the kind that names it, its last progress giving the run result or, for a suspended run, the suspension. A suspended run has no running goal and waits for resume or abort. run_events gives the events of every run, and the end of a run (run_ends) only after the director released each lease of the run. A request that does not parse, or that gives both a run_document and roles, or neither or both of a workflow and a bundle, is refused with rejected and starts no run; every other run starts, and a check that refuses it ends it with run_refused.",
       "The fields of an event are empty where they do not apply: step names `<role>.<id>` (an item of a for_each adds `#<index>`), failure_kind is the kind of a failed step, an incident, a failed lane and the end of the run, and details is JSON of the types of workflow_documents: the run document at run_starts, the assumptions to confirm at to_confirm, the differences from the lock at differences, each value of the work cell and each watch value that no test covered at uncovered, each check of a run of a trial with its value at checks_to_judge, the named result at step_ends, the incident record at incident, the lane state at lane_suspends, lane_resumes and lane_ends, the suspension at run_suspends, the run result at run_ends, and the state of the run at progress.",
       "A failed step gives a failure kind: a kind of peppy, a kind of the contract of its call, or a kind that only the director gives: condition_failed (a fail_when is true), bound_reached (a loop hit its bound first), invariant_violated (an invariant is false), breaker_open (a repeat_until reached the max_failures of its breaker), stale_observation (a topic read is older than its max_age_s, or the topic has given no message in its max_age_s since the run started), stopped (another client stopped the goal), anomaly (the anomaly monitor gives an anomaly), alert (a bound physical robot raised an alert:v1 alert of severity 2 or 3, or an alert set of its nodes went stale), signal_unreachable (every lane that can emit a signal that a wait_for awaits has ended) and clock_stopped (the simulation clock stood still for 10 s of wall time while a lane ran).",
-      "The anomaly monitor of a run is a service of an allowed contract whose request is { robot: string, step: string } and whose response is { anomaly: bool, kind: string, severity: low | medium | high, description: string, frame: bytes }. A member that names a run the director does not know gets an error reply, or a refusal, with rejected; one that the state of the run does not admit, with precondition_failed.",
+      "The anomaly monitor of a run is a service of an allowed contract whose request is { robot: string, step: string } and whose response is { anomaly: bool, kind: string, severity: low | medium | high, description: string, data: bytes }. A member that names a run the director does not know gets an error reply, or a refusal, with rejected; one that the state of the run does not admit, with precondition_failed.",
     ],
   },
   failure_kinds: {
@@ -33,6 +33,10 @@
     trial_not_signed_off: "The trial ended and did not sign off its bundle: its runs did not meet the thresholds of the bundle, or could not meet them any more",
     trial_halted: "A halt ended the trial",
     trial_interrupted: "The leases of the trial ended with no halt, or the director stopped during the trial",
+    unknown_frame: "A skill refused the teach: a location's frame is named by no transform the skill has received that passed the checks of transforms",
+    no_chain: "A skill refused the teach: a location's frame and the skill's robot frame are in trees that share no frame",
+    extrapolation: "A skill refused the teach: a moving transform on the chain of a location's frame has no value at the latest time, since the skill holds no stamp of it",
+    broken_tree: "A skill refused the teach: a frame whose transform to its parent the chain of a location's frame needs has transforms from two publishers, or the chain runs through a cycle",
   },
   interfaces: {
     services: [
@@ -194,7 +198,7 @@
     actions: [
       {
         name: "locations",
-        description: "Teaches or lists the locations of the skills of `robot`: each instance of the robot that implements locations:v1, as the fleet listing names them. With teach, the director teaches each of them the locations given, each as teach of locations:v1 takes it, and gives the locations each knows after; without, it gives the locations each knows. A teach on a robot with a lease is refused with precondition_failed, naming the holder and the name of the lease, so no teach changes the locations of a robot of a run or of an apply; a teach holds the robot while it runs, under a lease named `locations`, and no run of the director binds the robot until the teach ends. Refused with rejected for a robot the listing does not hold, with resource_unavailable before the first fleet listing and for a robot with no instance of locations:v1, and with the kind of a refusal of a skill, naming the instance. The action gives no feedback, and the result gives the locations that each skill of the robot knows.",
+        description: "Teaches or lists the locations of the skills of `robot`: each instance of the robot that implements locations:v1, as the fleet listing names them. With teach, the director teaches each of them the locations given, each as teach of locations:v1 takes it, and gives the locations each knows after; without, it gives the locations each knows. Each location is a record whose values hold at every time, so it holds no timestamp. A location that teach takes with no frame lies in the robot frame. A teach on a robot with a lease is refused with precondition_failed, naming the holder and the name of the lease, so no teach changes the locations of a robot of a run or of an apply; a teach holds the robot while it runs, under a lease named `locations`, and no run of the director binds the robot until the teach ends. Refused with rejected for a robot the listing does not hold, with resource_unavailable before the first fleet listing and for a robot with no instance of locations:v1, and with the kind of a refusal of a skill, naming the instance. The action gives no feedback, and the result gives the locations that each skill of the robot knows.",
         goal_service: {
           request_message_format: {
             robot: "string",
@@ -205,8 +209,9 @@
                 $type: "object",
                 name: "string",
                 kind: { $type: "string", $enum: ["pose", "landmark", "surface", "region"] },
-                position: { $type: "array", $items: "f64", $length: 3 },
-                orientation: { $type: "array", $items: "f64", $length: 4 },
+                frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, the robot frame." },
+                position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+                orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
                 size: { $type: "array", $items: "f64", $length: 3 },
               },
             },
@@ -226,8 +231,9 @@
                     $type: "object",
                     name: "string",
                     kind: { $type: "string", $enum: ["pose", "landmark", "surface", "region"] },
-                    position: { $type: "array", $items: "f64", $length: 3 },
-                    orientation: { $type: "array", $items: "f64", $length: 4 },
+                    frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+                    position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+                    orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
                     size: { $type: "array", $items: "f64", $length: 3 },
                   },
                 },
@@ -235,6 +241,7 @@
             },
           },
         },
+        failure_kinds: ["unknown_frame", "no_chain", "extrapolation", "broken_tree"],
       },
       {
         name: "run",

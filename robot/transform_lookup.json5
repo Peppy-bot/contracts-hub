@@ -4,8 +4,8 @@
     name: "transform_lookup",
     tag: "v1",
     description: [
-      "Lookups in a robot's tree of frames, for a node that holds no tree: where a source frame stands in a target frame, at a time or at the latest time. The frames, the transforms and the lookups are those of transforms.",
-      "The implementer holds the transforms that the publishers of transforms bound to it publish: every static transform, and the stamps of each moving transform within the cache window its launcher sets, as transforms defines it. It answers each request from them, as transforms defines a lookup. A node that needs the place of a frame in another asks for that pair: two answers that it composes can come from two starts of one transform. Timestamps and waits are on the clock the implementer's instance reads, the simulation clock in a simulation.",
+      "Lookups in a robot's tree of frames, for a node that holds no tree: where a source frame stood at a time, in a target frame as it stands at a time, each time or the latest time. A node that places a command stamped at a time asks for the command's frame at that time in its own frame at the latest time. The frames, the transforms and the lookups are those of transforms.",
+      "The implementer holds the transforms that the publishers of transforms bound to it publish: every static transform, and the stamps of each moving transform within the cache window of its instance, as transforms defines it. It answers each request from them, as transforms defines a lookup. A node that needs the place of a frame in another asks for that pair: two answers that it composes can come from two starts of one transform. Timestamps and waits are on the clock the implementer's instance reads, the simulation clock in a simulation.",
       "A request is checked in this order: `rejected` for a value lookup_transform does not take, then the lookup. A lookup that fails gives an error reply with the failure kind of the first of its failures in the order transforms gives them, and its message names the cause: the frame that no transform it has received names, with every frame it holds, the two frames that share no frame, the transform with the requested time and the range of stamps the implementer holds of it, or the child frame with its two publishers, or every transform of a cycle.",
       "No member has a mark.",
     ],
@@ -13,24 +13,27 @@
   failure_kinds: {
     unknown_frame: "A frame of the request is named by no transform the implementer has received that passed the checks of transforms",
     no_chain: "The source frame and the target frame are in trees that share no frame",
-    extrapolation: "A moving transform on the chain has no value at the time: the implementer holds no stamp of it, or the time is before the oldest stamp it holds of it or after its newest",
+    extrapolation: "A moving transform on the chain has no value at its time, source_timestamp between the source frame and the root of its chain and target_timestamp between that root and the target frame: the implementer holds no stamp of it, or the time is before the oldest stamp it holds of it or after its newest",
     broken_tree: "A frame whose transform to its parent the chain needs has transforms from two publishers, or the chain runs through a cycle",
   },
   interfaces: {
     services: [
       {
         name: "lookup_transform",
-        description: "Give where the source frame stands in the target frame at the time of the request, or at the latest time when the request gives none. The implementer answers requests one at a time, in the order they arrive, so a request can wait behind the waits of the requests before it. It answers as soon as the lookup succeeds, and with the failure of the lookup once timeout_s has passed since it took the request. A lookup of a frame in itself places it at the origin, whether or not a transform names the frame.",
+        description: "Give where the source frame stood at source_timestamp, in the target frame as it stands at target_timestamp, each absent for the latest time. Where both are absent or both give the same time, the answer is the lookup at that time, as transforms defines a lookup. Where they differ, the answer goes through the root of the source frame's chain at source_timestamp, the frame that holds still across a move of the robot (odom or map on a mobile base, the robot frame on a fixed one): the source frame in that root at source_timestamp, then the root in the target frame at target_timestamp, as tf2's advanced lookupTransform goes through a fixed frame. So a pose in the robot frame stamped before a base move, looked up with no target_timestamp, names the same place on the floor after it. The implementer answers requests one at a time, in the order they arrive, so a request can wait behind the waits of the requests before it. It answers as soon as the lookup succeeds, and with the failure of the lookup once timeout_s has passed since it took the request. A lookup of a frame in itself places it at the origin, whether or not a transform names the frame. The answer is a transform record: the target frame in frame, the source frame in child_frame, and in timestamp the time of the target frame's place, as tf2 stamps the output of its advanced lookup: target_timestamp when the request gives it, and at the latest time the oldest of the newest stamps of the moving transforms on the chain, or for a frame in itself the newest stamp of its own moving transform. A report leaves out the timestamp of values that hold at every time, as the transforms of fixed joints do: an answer at the latest time from a chain of static transforms alone, or for a frame in itself whose own transform is static or absent, gives no timestamp, where tf2 gives the stamp 0.",
         request_message_format: {
           target_frame: { $type: "string", $description: "The frame the answer places the source frame in, as transforms names frames; not empty." },
           source_frame: { $type: "string", $description: "The frame the answer places, as transforms names frames; not empty." },
-          time: { $type: "time", $optional: true, $description: "The time of the lookup; absent for the latest time, as transforms defines a lookup at the latest time." },
+          source_timestamp: { $type: "time", $optional: true, $description: "The time of the source frame's place on the clock of transforms, or absent for the latest time, as transforms defines a lookup at the latest time." },
+          target_timestamp: { $type: "time", $optional: true, $description: "The time of the target frame's place on the clock of transforms, or absent for the latest time, as transforms defines a lookup at the latest time." },
           timeout_s: { $type: "f64", $description: "How long the implementer waits for the lookup to succeed (s), from 0 to 1; 0 answers at once." },
         },
         response_message_format: {
-          position: { $type: "array", $items: "f64", $length: 3, $description: "The source frame's origin in the target frame: x, y, z (m)." },
-          orientation: { $type: "array", $items: "f64", $length: 4, $description: "The source frame's orientation in the target frame, a unit quaternion [x, y, z, w]." },
-          timestamp: { $type: "time", $optional: true, $description: "The time the answer holds at: the request's time when it gives one; at the latest time, the oldest of the newest stamps of the moving transforms on the chain, or for a frame in itself the newest stamp of its own moving transform; absent for a lookup at the latest time whose answer holds at every time: a chain of static transforms alone, or a frame in itself whose own transform is static or absent." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+          child_frame: { $type: "string", $description: "The frame whose pose in frame the record gives, as transforms names frames." },
+          timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+          position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+          orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
         },
         failure_kinds: ["unknown_frame", "no_chain", "extrapolation", "broken_tree"],
       },

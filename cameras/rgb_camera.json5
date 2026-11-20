@@ -4,7 +4,7 @@
     name: "rgb_camera",
     tag: "v1",
     description: [
-      "A color camera: a device or a simulated camera that streams color frames and takes the usual image controls, exposure, white balance, gain, brightness and contrast. A camera that also streams depth implements rgbd_camera.",
+      "A color camera: a device or a simulated camera that streams color frames and takes the usual image controls, exposure, white balance, gain, brightness and contrast. A camera that also streams depth implements rgbd_camera. Each picture names the camera's frame in its header's frame: the frame that sensor_mounts' describe_sensors gives for the name the implementer runs under, which the implementer reads once at its start, or that name where no robot carries the camera. A consumer places a picture's points by the frame its header names, as sensor_mounts says.",
       "Each control value is in the unit and the range of the device. Where the camera also implements camera_profile, get_camera_profile gives the unit, the range and the default of each control. A camera gives an error reply to a control that its device does not have. Each setter answers with the value that the camera applies after the call, which can differ from the requested value: the device can clamp it. A setter answers -1 when the camera has no value of the control to report, as some devices do in auto mode.",
     ],
   },
@@ -12,18 +12,20 @@
     topics: [
       {
         name: "video_stream",
-        description: "The color frames of the camera, as it captures them. frame holds one image of width by height pixels in encoding.",
+        description: "The color pictures of the camera, as it captures them. data holds one image of width by height pixels in encoding.",
         qos_profile: "sensor_data",
         message_format: {
           header: {
             $type: "object",
-            timestamp: "time",
-            frame_id: { $type: "u32", $description: "The capture counter of the frame, not a coordinate frame." },
+            $description: "The camera's frame, the capture time and the capture counter of the picture.",
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a sensor's values are in frame through the sensor's own geometry." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+            capture_index: { $type: "u32", $description: "The capture counter of the picture." },
           },
-          encoding: { $type: "string", $description: "The encoding of frame, for example \"rgb8\", \"bgr8\", \"yuyv\" or \"mjpeg\"." },
+          encoding: { $type: "string", $description: "The encoding of data, for example \"rgb8\", \"bgr8\", \"yuyv\" or \"mjpeg\"." },
           width: "u32",
           height: "u32",
-          frame: {
+          data: {
             $type: "array",
             $items: "u8",
           },

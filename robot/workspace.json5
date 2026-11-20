@@ -7,6 +7,7 @@
       "Where a robot can work: where its arms reach and where the camera it finds items with sees, from the robot's design and that camera's field of view.",
       "It knows nothing of the world around the robot: a surface is a flat, level plane at a given height, with nothing on it and nothing in the way. Every member reads; none moves the robot. check_arm_move of limb_motion asks whether one given pose has a plan from where an arm is now; this contract asks where the robot can work at all, from its design alone.",
       "The robot frame is the robot frame of transforms: the root link of the robot's URDF. Positions are in meters.",
+      "A check_positions request names one frame and one time for all its points: frame, as transforms names frames, and timestamp, on the clock of transforms. A command with no frame lies in the robot frame. When it takes a request, the implementer places the points by its tree at that timestamp, as transforms defines a lookup: a point in the robot frame with the timestamp of a report names where the robot frame stood then. A command with no timestamp is placed by the latest transforms when the implementer accepts it; a point in the robot frame with no timestamp names where the robot frame stands then. A request it cannot place gets an error reply with the failure kind of the lookup, its message naming the cause as transform_lookup's does. describe_workspace gives its bounds in the robot frame, which it names in frame; they hold at every time, so its answer holds no timestamp.",
       "The definitions, the same for every implementer:",
       "Grasp point. The gripper's grasp point, on the jaw closing axis midway between the pads, as limb_motion defines it.",
       "Reachable. Some arm brings its grasp point within 0.01 m of the point with its gripper's approach axis within 0.05 rad (about 3 degrees) of straight down or straight forward (along the robot frame's -Z or +X). The roll the gripper ends at about that direction is not checked.",
@@ -15,9 +16,14 @@
       "Workable. Reachable and in view; reachable alone for a robot without a perception camera, or for one that has no camera geometry for it.",
       "A surface is measured on a grid of points 0.0 to 1.0 m ahead of the robot every 0.02 m and 0.30 m to either side every 0.05 m, each at a target 0.04 m above the surface. It is workable when its workable points cover at least 0.03 m^2, each point standing for 0.001 m^2.",
       "A request the implementer refuses gets an error reply with `rejected`. An implementer that cannot read its perception camera's geometry gives an error reply with `precondition_failed`.",
-      "The positions in the robot frame have the mark `robot_frame` (marks.json5). The workflow side reads it: a workflow passes a position only from a field with this mark of a result or an observation of the same role, never as a literal.",
-      "The field all_workable of check_positions has the mark `checks_reach` (marks.json5). The workflow side reads it: a lane that calls check_positions with `positions` read from the same result as the item that it reaches for, with `as` and a `done_when` that is all_workable of its result, before it reaches for that item, checks in the run that the robot reaches the item.",
+      "The field all_workable of check_positions has the mark `checks_reach` (marks.json5). The workflow side reads it: a lane that calls check_positions with `points` read from the same result as the item that it reaches for, with `as` and a `done_when` that is all_workable of its result, before it reaches for that item, checks in the run that the robot reaches the item.",
     ],
+  },
+  failure_kinds: {
+    unknown_frame: "A frame of the request is named by no transform the implementer has received that passed the checks of transforms",
+    no_chain: "A frame of the request and the frame the implementer places it in are in trees that share no frame",
+    extrapolation: "A moving transform on the chain has no value at the request's time: the implementer holds no stamp of it, or the time is before the oldest stamp it holds of it or after its newest",
+    broken_tree: "A frame whose transform to its parent the chain needs has transforms from two publishers, or the chain runs through a cycle",
   },
   interfaces: {
     services: [
@@ -28,6 +34,7 @@
           surface_height: { $type: "f64", $description: "Height of the surface above the robot's base point (m). A value that is not a finite number and a height more than 1000 m from the robot's base point get an error reply with `rejected`." },
         },
         response_message_format: {
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot (sensor_mounts names it), or \"\" for a robot without one." },
           workable: { $type: "bool", $description: "Whether the robot can work the surface." },
           area: { $type: "f64", $description: "Area of the workable part (m^2)." },
@@ -40,17 +47,28 @@
         name: "check_positions",
         description: "Tell whether the robot can work each of the given points: whether an arm reaches it and the perception camera sees it.",
         request_message_format: {
-          positions: { $type: "array", $items: "f64", $marks: ["robot_frame"], $description: "The points, 3 entries each (x, y, z, m) in the robot frame. An empty list, a length that is not a multiple of 3, a value that is not a finite number and a coordinate more than 1000 m from the robot's base point get an error reply with `rejected`." },
+          frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, the robot frame." },
+          timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+          points: {
+            $type: "array",
+            $description: "The points, in frame at timestamp, which the implementer places in the robot frame. An empty list, a value that is not a finite number and a point that, placed in the robot frame, has a coordinate more than 1000 m from the robot's base point get an error reply with `rejected`.",
+            $items: {
+              $type: "object",
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+            },
+          },
         },
         response_message_format: {
           perception_camera: { $type: "string", $description: "As in describe_workspace." },
           all_workable: { $type: "bool", $marks: ["checks_reach"], $description: "Whether the robot can work every point." },
           results: {
             $type: "array",
-            $description: "One entry per point, in the request's order.",
+            $description: "One entry per point, in the request's order, with the point as the implementer placed it: in the robot frame, at the time of the robot frame's place it is in, with no timestamp when that place holds at every time, so the point sent back is placed at the same spot.",
             $items: {
               $type: "object",
-              position: { $type: "array", $items: "f64", $length: 3, $marks: ["robot_frame"], $description: "The point, as asked." },
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+              timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               workable: { $type: "bool", $description: "Whether the robot can work it." },
               reachable: { $type: "bool", $description: "Whether an arm reaches it." },
               arm: { $type: "string", $description: "The arm that reaches it, by the name limb_motion addresses it under; \"\" when none does." },
@@ -61,6 +79,7 @@
             },
           },
         },
+        failure_kinds: ["unknown_frame", "no_chain", "extrapolation", "broken_tree"],
       },
     ],
   },

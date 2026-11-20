@@ -8,7 +8,7 @@
     tag: "v1",
     description: [
       "A color and depth (RGB-D) camera: a device or a simulated camera that streams synchronized color and depth frames, such as an Intel RealSense D4xx. A camera that streams only color implements rgb_camera.",
-      "Color and depth share a frame_id (a capture-pair counter, not a coordinate frame) so consumers can correlate paired frames without timestamp matching. Frame alignment stays visible as data through each stream header's align_mode field.",
+      "Color and depth share a capture_index, a capture-pair counter, so consumers pair a color picture with its depth picture without timestamp matching. Each picture names the camera's frame in its header's frame: the frame that sensor_mounts' describe_sensors gives for the name the implementer runs under, which the implementer reads once at its start, or that name where no robot carries the camera. A consumer places a picture's points by the frame its header names, as sensor_mounts says. A depth picture names the same frame: with align_mode \"none\" its samples are in the depth imager's own optical frame, which camera_geometry's get_depth_to_color_extrinsics places in the camera's frame. Frame alignment stays visible as data through each stream header's align_mode field.",
       "The contract only carries what every RGB-D device can honor: the controls act on the color stream. Device-specific hardware knobs (depth sensor gain, laser projector power, runtime re-alignment) are native services on the implementing node, not contract members. Each control value is in the unit and the range of the device, which get_camera_profile of camera_profile gives where the camera also implements it. Each setter answers with the value that the camera applies after the call; the device can clamp the requested value.",
     ],
   },
@@ -16,19 +16,21 @@
     topics: [
       {
         name: "video_stream",
-        description: "The color frames of the camera, as it captures them. frame holds one image of width by height pixels in encoding.",
+        description: "The color pictures of the camera, as it captures them. data holds one image of width by height pixels in encoding.",
         qos_profile: "sensor_data",
         message_format: {
           header: {
             $type: "object",
-            timestamp: "time",
-            frame_id: "u32",
-            align_mode: { $type: "string", $description: "How the color and depth frames are aligned, e.g. \"none\", \"depth_to_color\" or \"color_to_depth\"." },
+            $description: "The camera's frame, the capture time and the capture counter of the picture.",
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a sensor's values are in frame through the sensor's own geometry." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+            capture_index: { $type: "u32", $description: "The capture-pair counter, shared by the color picture and the depth picture of one capture." },
+            align_mode: { $type: "string", $description: "How the color and depth pictures are aligned, e.g. \"none\", \"depth_to_color\" or \"color_to_depth\"." },
           },
-          encoding: { $type: "string", $description: "The encoding of frame, e.g. \"rgb8\", \"bgr8\", \"yuyv\" or \"mjpeg\"." },
+          encoding: { $type: "string", $description: "The encoding of data, e.g. \"rgb8\", \"bgr8\", \"yuyv\" or \"mjpeg\"." },
           width: "u32",
           height: "u32",
-          frame: {
+          data: {
             $type: "array",
             $items: "u8",
           },
@@ -36,19 +38,21 @@
       },
       {
         name: "depth_stream",
-        description: "The depth frames of the camera, as it captures them. frame holds one depth sample per pixel, width by height, in encoding. A sample times the depth_unit of depth_stream_info is the depth in meters, and 0 marks a pixel that the camera measured nothing at.",
+        description: "The depth pictures of the camera, as it captures them. data holds one depth sample per pixel, width by height, in encoding. A sample times the depth_unit of depth_stream_info is the depth in meters, and 0 marks a pixel that the camera measured nothing at.",
         qos_profile: "sensor_data",
         message_format: {
           header: {
             $type: "object",
-            timestamp: "time",
-            frame_id: "u32",
-            align_mode: { $type: "string", $description: "How the color and depth frames are aligned, e.g. \"none\", \"depth_to_color\" or \"color_to_depth\"." },
+            $description: "The camera's frame, the capture time and the capture counter of the picture.",
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames; a sensor's values are in frame through the sensor's own geometry." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+            capture_index: { $type: "u32", $description: "The capture-pair counter, shared by the color picture and the depth picture of one capture." },
+            align_mode: { $type: "string", $description: "How the color and depth pictures are aligned, e.g. \"none\", \"depth_to_color\" or \"color_to_depth\"." },
           },
-          encoding: { $type: "string", $description: "The encoding of frame, e.g. \"z16\" (u16 little-endian)." },
+          encoding: { $type: "string", $description: "The encoding of data, e.g. \"z16\" (u16 little-endian)." },
           width: "u32",
           height: "u32",
-          frame: {
+          data: {
             $type: "array",
             $items: "u8",
           },

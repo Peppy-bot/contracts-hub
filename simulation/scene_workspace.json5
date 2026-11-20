@@ -6,16 +6,16 @@
     description: [
       "Where a robot standing in a simulated world can work, measured in that world: the work surfaces its arms reach and its perception camera sees, with what stands in the way, whether given objects are workable where they stand, where on a work surface the objects of a task fit, the stand of a robot at a work surface of any object of the world, on the floor or on a riser, the raise of an object on a riser, and where the furniture of a room goes for robots to work it.",
       "It is for a caller that sets a simulated world up and checks its setup; it moves nothing but the robot that stand_at stands, the object that raise_object raises with what it carries, and the risers that they place, and a robot's task still finds its items through the robot's own perception. get_objects_list of scene_manipulation says where objects stand; this contract says whether a robot can work them there, and where on a surface it could. The workspace contract of a robot answers the same questions from the robot's design alone, in the robot frame, with the same definitions. name_location keeps a place of the task under a name, for the setup record of the simulation (simulation_world).",
-      "Positions are world-frame x, y, z in metres, headings a yaw in radians about the world's +z, orientations unit quaternions [x, y, z, w] in the world frame. Robot names come from get_robots_list, object ids from get_objects_list, asset ids from get_assets_list. A robot's own frame is the robot frame of transforms.",
+      "Every position, orientation and vector of this contract is in world, the one frame of the simulation, and an answer names world in frame and the simulated instant of its values in timestamp, and an answer whose values hold at every time holds no timestamp. A request with no frame names world, a request in another frame is refused with `unknown_frame`, and a request's timestamp, given or left out, places its value in world at any time, since world does not move. Positions are x, y, z in metres, orientations unit quaternions [x, y, z, w], and a heading an orientation that turns about +z alone. Robot names come from get_robots_list, object ids from get_objects_list, asset ids from get_assets_list. A robot's own frame is the robot frame of transforms.",
       "A work surface is a level face of an object on which items can rest and that a robot works at: the top of a table, one level of a shelf, a belt. The asset of the object declares it (get_asset of scene_manipulation gives the work_surfaces of each object): a landmark of use support and shape rectangle that faces up, what the face is in plain words (its kind) and the sides of the rectangle that a robot works it from, each a side of the frame of the landmark's body, +x, -x, +y or -y. A work surface follows its body, so the top of a desk whose height control raises it stands where the control holds it. Only an object carries a work surface: a face of the world's own geometry (its floor plane and the fixed parts of the scene that are not objects) is no work surface, and a request names it by a point. Nothing in a measurement depends on what the face is.",
       "A riser is a platform that the implementer builds to measure for one stand or one raise, as a carpenter builds one: a flat deck on legs, its origin on the floor under the centre of its deck. It is an instance of no asset, and get_assets_list of scene_manipulation lists no riser. The deck of a stand holds the base of the robot (stand_at says what the base is) and 0.05 m more behind it and at each side: its front edge stands under the front of the base, and it is centred across the base. The deck of a raise holds the footprint of the object (raise_object says what the footprint is) and 0.05 m more on each side: it is centred under the footprint, and its sides lie along the sides of the footprint. Each side of a deck is rounded up to 0.01 m, and is at least 0.20 m. The height of a riser is the height of the top of its deck above the floor, from 0.10 m to 0.80 m. A riser has two landmarks, which get_object of scene_manipulation gives: base, under its feet, and deck, a rectangle of use support that faces up, whose centre stands the height of the riser above its origin and whose size gives the side of the deck along the x of the riser, then its side along the y. The x of a riser lies along the heading of the robot of its stand, or along the x of the own frame of the object of its raise. No stand and no raise is refused for the size of the deck of its riser.",
       "stand_at and raise_object take a raise, \"floor\" or \"best\". An absent or empty raise is \"floor\", and another value is refused with `rejected`. \"floor\" stands the robot on the floor, or puts the object back on the floor and takes its riser away. \"best\" lets the implementer choose the height. For the stand of a robot that rests on its own base, it measures the workable area of the robot at its work surface, as describe_workspace measures it, at the place where the stand puts the robot at each height. At each height it also measures the room below the arms of the robot at two postures: the start pose, and the posture of the ready state of each arm with each gripper at its open state, as the description of the robot gives them (its states start, ready and open). The room at a posture is the least height above the top of the parts of the arms and of the grippers of the robot that stand over the work surface. A part that stands beside the work surface or behind it does not count, and a posture with no part over the work surface sets no limit. For a robot whose description gives an arm no ready state, it measures the room at the start pose alone. A height keeps the room when the room is 0.10 m or more at each posture, the same for each robot model. It measures on the floor, and on a riser of each height from 0.10 m to 0.80 m in steps of 0.05 m, then on a riser of each height in steps of 0.01 m between a height that does not keep the room and the next of these heights, which keeps it, then on a riser of each height in steps of 0.01 m within 0.04 m of the best of these heights, from 0.10 m to 0.80 m. When the floor is the best of them, it measures no height near it, because no riser is lower than 0.10 m. It does not measure a height whose place the placement rules refuse. It takes the height with the largest area among the heights that keep the room and whose area is 0.03 m^2 or more, the least area of a workable surface; when no height does both, it takes the height with the largest area of all. A tie goes to the higher height, and the floor is the lowest. Each centimetre of height gives one centimetre of room where the robot stands at the same place, and a higher robot can work less of the surface, because its arms reach farther down. For the raise of an object, it searches the same heights for the robots that stand at the object, and raise_object says which height it takes. The same world and the same call give the same height, the same deck and the same place. An implementer that builds no riser refuses each raise of \"best\" with `rejected`.",
       "A riser that a stand or a raise places belongs to it: get_objects_list of scene_manipulation lists it with the source \"riser\", an empty asset_id, the category \"fixtures\" and the name of its robot or its object followed by \"_riser\" (or by \"_riser_2\", \"_riser_3\" and so on when an object holds that name), and move_object and remove_object of scene_manipulation refuse it with `rejected` while its stand or its raise lasts. A new stand of the robot, or a new raise of the object, takes it away first. A stand or a raise also ends when its robot moves by another call (move_robot of scene_manipulation) or leaves, and when its object, or the object of the work surface of the stand, moves, leaves or moves a part by a control: its riser then stays where it stands, with its deck and its height, as a spawned object of no asset. A riser stands on the floor alone; nothing but its robot or its object stands on it when it is placed. load_scene, load_template and clear_scene of scene_manipulation take every riser away with the other objects, and each robot that stands where the riser of its last stand put it, also once that stand ended in another way, comes down by the height of that riser, onto the floor under it, so that its next stand stands it from the floor; load_template moves it to its spot from there.",
-      "A request names a face by a reference, an object with three fields, object_id, landmark and point, each present, that gives one of three forms and leaves the other fields empty (\"\" or an empty point):",
+      "A request names a face by a reference, an object with three fields, object_id, landmark and point, that gives one of three forms and leaves the other fields empty (\"\") or, for point, out:",
       "A work surface: object_id and landmark, a landmark that the asset of the object declares a work surface.",
       "The highest face of an object: object_id alone, the top of the object's bounding box.",
-      "A point: point alone, [x, y, z], the first face that a ray cast straight down from 0.01 m above the point meets, on the object or the part of the world that it meets. The ray passes through robots, and through what it meets from inside. A point on a face names that face: the second step of a stair, the lower level of a shelf, the floor in front of the robot.",
-      "A reference of another form (a landmark without an object, a point beside an object, no field given), a point that does not hold 3 numbers, an object id that does not exist, a landmark that is not a work surface of the object's asset, a point that is not finite and a point whose ray meets nothing get an error reply with `rejected`.",
+      "A point: point alone, a point in world whose position is [x, y, z]: the first face that a ray cast straight down from 0.01 m above the point meets, on the object or the part of the world that it meets. The ray passes through robots, and through what it meets from inside. A point on a face names that face: the second step of a stair, the lower level of a shelf, the floor in front of the robot.",
+      "A reference of another form (a landmark without an object, a point beside an object, no field given), an object id that does not exist, a landmark that is not a work surface of the object's asset, a point that is not finite and a point whose ray meets nothing get an error reply with `rejected`, and a point in another frame than world one with `unknown_frame`.",
       "The definitions, the same as the workspace contract's:",
       "Grasp point. The gripper's grasp point, on the jaw closing axis midway between the pads.",
       "Reachable. Some arm brings its grasp point within 0.01 m of the point with its gripper's approach axis within 0.05 rad (about 3 degrees) of straight down or straight forward (along the world's -z, or the robot's +x). The reach is tried at eight rolls about that direction, a 45 degree step apart, solved with the arm and finger joints at the pose the robot's model starts in and each other joint of the robot (a lift, a torso, a head) where it stands, and the roll the gripper ends at is not checked. What stands in the way of the arm is not asked.",
@@ -28,11 +28,14 @@
       "A question of describe_workspace, check_objects or find_places gets an error reply: with `resource_unavailable` for a robot that does not stand in the world; with `rejected` for a robot model whose arms or perception camera cannot be measured (a model without arms, an arm that declares no grasp point, two cameras that could each be the perception camera, a perception camera whose field of view a sensor size sets), an object id that does not exist, an object without a bounding box (one with neither colliding geometry nor a soft surface), a reference that names no face, and every question to an implementer that lets no caller inspect its world; and with `precondition_failed` from an implementer that cannot read its scene now. stand_at and raise_object say how they are refused or fail.",
     ],
   },
+  failure_kinds: {
+    unknown_frame: "A frame of the request is not world, the one frame of the simulation",
+  },
   interfaces: {
     services: [
       {
         name: "describe_workspace",
-        description: "Tell where the robot can work each surface: the faces the request names or, for a request that names none, each work surface of an object of the world some of whose rectangle the measurement grid in front of the robot covers.",
+        description: "Tell where the robot can work each surface: the faces the request names or, for a request that names none, each work surface of an object of the world some of whose rectangle the measurement grid in front of the robot covers. The answer gives frame world and the simulated instant of the measurement.",
         request_message_format: {
           robot: { $type: "string", $description: "The robot, by the name get_robots_list gives." },
           surfaces: {
@@ -43,15 +46,28 @@
               $type: "object",
               object_id: "string",
               landmark: "string",
-              point: { $type: "array", $items: "f64" },
+              point: {
+                $type: "object",
+                $optional: true,
+                $description: "The point of a reference of the form of a point, in world; absent in the other forms.",
+                frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, world." },
+                timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+                position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              },
             },
           },
         },
         response_message_format: {
           robot: { $type: "string", $description: "The robot, as asked." },
           perception_camera: { $type: "string", $description: "The name the perception camera runs under on the robot, or \"\" for a robot without one." },
-          robot_position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot's base stands." },
-          robot_yaw: { $type: "f64", $description: "The heading the robot's base faces." },
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+          timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+          robot_pose: {
+            $type: "object",
+            $description: "Where the robot's base stands and the heading it faces, in the answer's frame: its orientation turns about +z alone.",
+            position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+          },
           surfaces: {
             $type: "array",
             $description: "The faces the request names, in the request's order; for a request that names none, the work surfaces the grid covers, in the order of the objects of get_objects_list and of the work surfaces of each asset, or an empty list when it covers none.",
@@ -63,8 +79,20 @@
               top: { $type: "f64", $description: "Height of its top as the rays found it (m)." },
               workable: { $type: "bool", $description: "Whether the robot can work it." },
               area: { $type: "f64", $description: "Area of its workable part (m^2)." },
-              center: { $type: "array", $items: "f64", $description: "The centre of the largest rectangle of workable grid points, on the top: x, y, z. Empty when no point is workable." },
-              corners: { $type: "array", $items: "f64", $description: "The rectangle's four corners on the top, 3 entries each (x, y, z), counter-clockwise seen from above from the one nearest the robot on its right: put objects inside them. Empty when no point is workable." },
+              center: {
+                $type: "object",
+                $optional: true,
+                $description: "The centre of the largest rectangle of workable grid points, on the top. Absent when no point is workable.",
+                position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              },
+              corners: {
+                $type: "array",
+                $description: "The rectangle's four corners on the top, counter-clockwise seen from above from the one nearest the robot on its right: put objects inside them. Empty when no point is workable.",
+                $items: {
+                  $type: "object",
+                  position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+                },
+              },
               robot_parts_over_top: {
                 $type: "array",
                 $description: "The parts of the robot that stand over the top or rest on it, at its current pose and at its start pose: each part with a piece of colliding geometry over the cell of a measured grid point of the top that reaches more than 0.005 m above the top, whose lowest point is less than 0.30 m above it and no more than 0.005 m below it. A piece that reaches further below stands beside the face, as the body of a robot that stands at a table does. A part at both poses is one entry when its corners and its clearance at the two poses differ by less than 0.001 m, and one entry per pose otherwise. Each part of the robot in the order the robot's limbs come in, its arms first, then its grippers, then \"body\"; at each part, the current pose first. Empty when the rays found no top.",
@@ -72,7 +100,14 @@
                   $type: "object",
                   part: { $type: "string", $description: "The part (see the contract description)." },
                   poses: { $type: "array", $items: "string", $description: "The poses it stands there at: [\"current\"], [\"start\"] or [\"current\", \"start\"]." },
-                  corners: { $type: "array", $items: "f64", $length: 12, $description: "The four corners on the top, 3 entries each (x, y, z), of the smallest rectangle seen from above that holds the part's pieces of colliding geometry over the top. Its sides run along the robot's x and y, and the corners come in the order of the surface's." },
+                  corners: {
+                    $type: "array",
+                    $description: "The four corners on the top of the smallest rectangle seen from above that holds the part's pieces of colliding geometry over the top. Its sides run along the robot's x and y, and the corners come in the order of the surface's.",
+                    $items: {
+                      $type: "object",
+                      position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+                    },
+                  },
                   clearance: { $type: "f64", $description: "The height of the lowest point of those pieces above the top (m); 0 for a part that rests on the top, within 0.001 m of it or below it." },
                 },
               },
@@ -80,6 +115,7 @@
             },
           },
         },
+        failure_kinds: ["unknown_frame"],
       },
       {
         name: "check_objects",
@@ -89,16 +125,18 @@
           object_ids: { $type: "array", $items: "string", $description: "The objects, by the ids get_objects_list gives. An empty list gets an error reply with `rejected`." },
         },
         response_message_format: {
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+          timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           perception_camera: { $type: "string", $description: "As in describe_workspace." },
           all_workable: { $type: "bool", $description: "Whether the robot can work every object." },
           objects: {
             $type: "array",
-            $description: "One entry per object, in the request's order.",
+            $description: "One entry per object, in the request's order, with the centre of its bounding box in position, in the answer's frame, world, at the simulated instant of the measurement.",
             $items: {
               $type: "object",
               object_id: "string",
               asset_id: { $type: "string", $description: "The \"object/<id>\" asset the object is an instance of; empty for a riser, which is an instance of no asset." },
-              position: { $type: "array", $items: "f64", $length: 3, $description: "The centre of its bounding box: x, y, z." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               resting_on: { $type: "string", $description: "The object it rests on: followed down through the free objects it rests on, the first that stands fixed or whose asset declares a work surface (a book on a book on a table rests on the table). When that chain reaches a floor first (the world's floor, which is the scene's ground, or an object that stands fixed where it is touched within 0.01 m of z = 0, the height of the rooms' floors, such as a room's floor slab or a doorway's threshold), the lowest object of the chain above the floor (a cup on a side table that can move rests on the side table); \"\" for an object that rests on a floor itself or on nothing, and for one that stands fixed, part of the furniture." },
               workable: { $type: "bool", $description: "Whether the robot can work it." },
               reachable: { $type: "bool", $description: "Whether an arm reaches it." },
@@ -107,7 +145,12 @@
               in_view: { $type: "bool", $description: "Whether the perception camera sees it." },
               view: { $type: "string", $description: "\"seen\", \"outside_field\", \"out_of_depth\", \"hidden\", or \"no_camera\" for a robot without a perception camera." },
               hidden_by: { $type: "string", $description: "What stands in the way when view is \"hidden\"; \"\" otherwise." },
-              suggested_position: { $type: "array", $items: "f64", $description: "A workable point on the top of the object it rests on, the nearest to it in plan: x, y, z. That top is the work surface of that object nearest below the object (the one with the highest top at most 0.01 m above the object's bottom, or the nearest one when none lies that low), or the top of that object's bounding box when its asset declares no work surface. Empty when the object is workable, rests on no object, or that top has no workable point; empty too when the nearest workable point is the one under the object on the top it stands on, since what keeps it from being workable then (what hides it, or the height of its centre) stays where it is." },
+              suggested_point: {
+                $type: "object",
+                $optional: true,
+                $description: "A workable point on the top of the object it rests on, the nearest to it in plan. That top is the work surface of that object nearest below the object (the one with the highest top at most 0.01 m above the object's bottom, or the nearest one when none lies that low), or the top of that object's bounding box when its asset declares no work surface. Absent when the object is workable, rests on no object, or that top has no workable point; absent too when the nearest workable point is the one under the object on the top it stands on, since what keeps it from being workable then (what hides it, or the height of its centre) stays where it is.",
+                position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              },
               message: { $type: "string", $description: "One line that says why it is workable or not, and where to move it." },
             },
           },
@@ -115,43 +158,58 @@
       },
       {
         name: "find_places",
-        description: "Find where each item of a task fits on one work surface, for the robot to work it: a place for every item, found in one call. It moves and spawns nothing. At its place, an item rests on the top, inside the rectangle of workable grid points that describe_workspace gives for the surface (center and corners); sinks into nothing that the placement rule of spawn_object and move_object checks: not into the robot at its current pose or at its start pose, not into an object or a fixed part of the world, and not into the other items of the request, from which it stands at least margin apart seen from above; is reachable, as check_objects measures it; and is in view of the perception camera, as check_objects measures it, and no item of the request at its place hides it; a robot without a perception camera is judged on reach alone. The room an item takes, and the room what stands around it takes, is the box seen from above in the robot's own frame that holds each piece of their colliding geometry, so a place can leave more room than the exact shapes need. An item may be turned about the vertical to fit. An item in the world that stands on the top already keeps its place when that place meets every condition. The same world and the same request always give the same answer. Besides the error replies of the contract description, a request gets an error reply with `rejected` for an asset id that is not an object of the catalogue, an item that is not one of the two forms of items, a near that does not hold 0 or 2 numbers, an object named twice, the object the surface belongs to named as an item, an empty items and a margin that is not a finite number from 0, and with `attempt_failed` when the implementer cannot fetch the files of an asset it places.",
+        description: "Find where each item of a task fits on one work surface, for the robot to work it: a place for every item, found in one call. It moves and spawns nothing. At its place, an item rests on the top, inside the rectangle of workable grid points that describe_workspace gives for the surface (center and corners); sinks into nothing that the placement rule of spawn_object and move_object checks: not into the robot at its current pose or at its start pose, not into an object or a fixed part of the world, and not into the other items of the request, from which it stands at least margin apart seen from above; is reachable, as check_objects measures it; and is in view of the perception camera, as check_objects measures it, and no item of the request at its place hides it; a robot without a perception camera is judged on reach alone. The room an item takes, and the room what stands around it takes, is the box seen from above in the robot's own frame that holds each piece of their colliding geometry, so a place can leave more room than the exact shapes need. An item may be turned about the vertical to fit. An item in the world that stands on the top already keeps its place when that place meets every condition. The same world and the same request always give the same answer. Besides the error replies of the contract description, a request gets an error reply with `rejected` for an asset id that is not an object of the catalogue, an item that is not one of the two forms of items, an object named twice, the object the surface belongs to named as an item, an empty items and a margin that is not a finite number from 0, and with `attempt_failed` when the implementer cannot fetch the files of an asset it places.",
         request_message_format: {
           robot: { $type: "string", $description: "The robot, by the name get_robots_list gives." },
+          frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, world." },
+          timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
           surface: {
             $type: "object",
             $description: "The face, by a reference (see the contract description).",
             object_id: "string",
             landmark: "string",
-            point: { $type: "array", $items: "f64" },
+            point: {
+              $type: "object",
+              $optional: true,
+              $description: "The point of a reference of the form of a point, in world; absent in the other forms.",
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, world." },
+              timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+            },
           },
           items: {
             $type: "array",
-            $description: "The items of the task, each in one of two forms: an object in the world, which gives object_id, with asset_id \"\" and scale 0; or an object to spawn, which gives asset_id, an \"object/<id>\" asset, and scale, a uniform scale that is a finite number above zero, with object_id \"\". near is a world-frame [x, y] where the caller prefers the item to stand, or empty for no preference.",
+            $description: "The items of the task, each in one of two forms: an object in the world, which gives object_id, with asset_id \"\" and scale 0; or an object to spawn, which gives asset_id, an \"object/<id>\" asset, and scale, a uniform scale that is a finite number above zero, with object_id \"\". near, when an item gives it, is the point the caller prefers the item to stand nearest in plan, in the request's frame. The request's frame is world whether or not an item gives near: another frame, an empty one included, gets an error reply with `unknown_frame`.",
             $items: {
               $type: "object",
               object_id: "string",
               asset_id: "string",
               scale: "f64",
-              near: { $type: "array", $items: "f64" },
+              near: {
+                $type: "object",
+                $optional: true,
+                $description: "The point the caller prefers the item to stand nearest in plan, in the request's frame. Absent for no preference.",
+                position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              },
             },
           },
           margin: { $type: "f64", $description: "The least gap seen from above between two items (m), for example 0.02." },
         },
         response_message_format: {
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+          timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
           places: {
             $type: "array",
-            $description: "The items that have a place, in the request's order.",
+            $description: "The items that have a place, in the request's order: each with position, where its origin stands when it rests on the top at its place, and orientation, its whole orientation there, in the answer's frame, as spawn_object and move_object take a target.",
             $items: {
               $type: "object",
               item: { $type: "u32", $description: "The item's index in the request's items, from 0." },
               object_id: { $type: "string", $description: "The object, for an object in the world; \"\" for an asset." },
               asset_id: { $type: "string", $description: "The \"object/<id>\" asset the item is an instance of." },
-              position: { $type: "array", $items: "f64", $length: 3, $description: "Where the item's origin stands when it rests on the top at its place, as spawn_object and move_object take a position." },
-              yaw: { $type: "f64", $description: "The turn about the world's +z (rad) from the orientation the item has: as authored for an asset, as it stands for an object in the world." },
-              orientation: { $type: "array", $items: "f64", $length: 4, $description: "The item's whole orientation at its place, as spawn_object and move_object take it." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
               arm: { $type: "string", $description: "The arm that reaches it, by the name limb_motion addresses it under." },
-              stays: { $type: "bool", $description: "Whether the item keeps the place it stands at: position and orientation are then where it stands, and yaw is 0." },
+              stays: { $type: "bool", $description: "Whether the item keeps the place it stands at: position and orientation are then where it stands." },
             },
           },
           unplaced: {
@@ -166,6 +224,7 @@
             },
           },
         },
+        failure_kinds: ["unknown_frame"],
       },
       {
         name: "name_location",
@@ -182,7 +241,7 @@
     actions: [
       {
         name: "stand_at",
-        description: "Stand the robot at one side of a work surface of an object of the world, by the robot's stance, wherever it stands now, and end once it stands there. The edge of a side is that side of the work surface's rectangle where its object stands. A robot that rests on its own base stands on the floor, the lowest point of its colliding geometry at its start pose at z = 0, the height of the rooms' floors, on the line out of the centre of the edge along the side's outward normal, facing the edge, at the nearest place along that line up to 1.0 m out of the edge where it sinks into nothing at all, at the pose it holds and at its start pose, but the floor that holds it up, so it touches nothing else where it starts: it moves on along the line while it sinks only into the object of the work surface and into the objects that lie on its top, and the place where it first sinks into anything else is refused. Then it settles. With a raise of \"best\" (see the contract description), such a robot stands at the height where it works its work surface best, on the floor or on a riser that the stand builds and places under its base: its base is the box seen from above, along its own axes, of the colliding geometry of the robot at its start pose that reaches within 0.05 m of its lowest point (its feet, its wheels or the foot of its pedestal), the riser turns with the robot, the front edge of its deck under the front of the base and its deck centred across the base, and the robot and its riser move together along the line, the robot sinking into nothing but its riser and the riser into nothing but the floor, and moving on while they sink only into the object of the work surface, the riser of a raise of that object and the objects on its top. When the largest workable area is less than 0.03 m^2, the least area of a workable surface, the robot stands at the lowest height whose place the placement rules accept, the floor first, and the result says that it does not work its surface. A robot whose base is fixed where it is placed is clamped on the edge of the top at the centre of the side, facing across the top: on the last point of the top that rays cast straight down find from the centre of the rectangle out along the side's outward normal, as the measurement finds a top, at the height of the top plus the height that keeps the robot, in the pose it holds, clear of the top. A raise of \"best\" clamps such a robot as \"floor\" does, because no riser goes under a clamp, and stands a robot without colliding geometry, which no riser holds up, as \"floor\" does. An empty side takes the side, of those the work surface lists, whose place passes the placement rules and that has the most free floor in front of it, measured out of its edge up to 1.5 m; a tie goes to the first of the work surface's sides. With a raise of \"best\", the place of a side passes them when it passes them at one height or more. An offset in the request moves either robot from that place on its own axes. The implementer reads the robot's stance and geometry, never its model: two models of one stance and one geometry stand at one place. The robot keeps its joint positions and the targets its limbs last received, as move_robot of scene_manipulation keeps them. Every implementer refuses an offset that is not finite and a raise that is neither \"floor\" nor \"best\" with `rejected`, and an implementer that lets no caller inspect its world refuses the stand with `rejected`. The other checks read the world as it stands when the stand runs, so a stand that does not pass them fails once it started: with `resource_unavailable` for a robot that does not stand in the world; with `rejected` for an object that does not stand in the world, a landmark that is not a work surface of the object's asset, a side that the work surface does not list, and a raise of \"best\" for a robot that rests on its own base on colliding geometry and whose workspace cannot be measured, as describe_workspace refuses it; and with `precondition_failed` for a place that the implementer's placement rules refuse (another robot too near, or the robot or its riser sinking into what stands around it), naming what stands in the way, for a raise of \"best\" when they refuse the place at each height, naming what stands in the way of the place on the floor, for an empty side when no listed side has a place that passes them, and when the riser would take the world past the texture budget that scene_manipulation describes, the message naming the budget, the memory of the world and what the riser adds; and with `attempt_failed` when the maps of the deck of the riser do not come. A refused or failed stand moves nothing. The action gives no feedback. The result gives where the robot stands at the end, by robot_position and robot_yaw, the side it stands at, its riser with its height and its deck, the workable area of the robot at its work surface there and whether it works that surface.",
+        description: "Stand the robot at one side of a work surface of an object of the world, by the robot's stance, wherever it stands now, and end once it stands there. The edge of a side is that side of the work surface's rectangle where its object stands. A robot that rests on its own base stands on the floor, the lowest point of its colliding geometry at its start pose at z = 0, the height of the rooms' floors, on the line out of the centre of the edge along the side's outward normal, facing the edge, at the nearest place along that line up to 1.0 m out of the edge where it sinks into nothing at all, at the pose it holds and at its start pose, but the floor that holds it up, so it touches nothing else where it starts: it moves on along the line while it sinks only into the object of the work surface and into the objects that lie on its top, and the place where it first sinks into anything else is refused. Then it settles. With a raise of \"best\" (see the contract description), such a robot stands at the height where it works its work surface best, on the floor or on a riser that the stand builds and places under its base: its base is the box seen from above, along its own axes, of the colliding geometry of the robot at its start pose that reaches within 0.05 m of its lowest point (its feet, its wheels or the foot of its pedestal), the riser turns with the robot, the front edge of its deck under the front of the base and its deck centred across the base, and the robot and its riser move together along the line, the robot sinking into nothing but its riser and the riser into nothing but the floor, and moving on while they sink only into the object of the work surface, the riser of a raise of that object and the objects on its top. When the largest workable area is less than 0.03 m^2, the least area of a workable surface, the robot stands at the lowest height whose place the placement rules accept, the floor first, and the result says that it does not work its surface. A robot whose base is fixed where it is placed is clamped on the edge of the top at the centre of the side, facing across the top: on the last point of the top that rays cast straight down find from the centre of the rectangle out along the side's outward normal, as the measurement finds a top, at the height of the top plus the height that keeps the robot, in the pose it holds, clear of the top. A raise of \"best\" clamps such a robot as \"floor\" does, because no riser goes under a clamp, and stands a robot without colliding geometry, which no riser holds up, as \"floor\" does. An empty side takes the side, of those the work surface lists, whose place passes the placement rules and that has the most free floor in front of it, measured out of its edge up to 1.5 m; a tie goes to the first of the work surface's sides. With a raise of \"best\", the place of a side passes them when it passes them at one height or more. An offset in the request moves either robot from that place on its own axes. The implementer reads the robot's stance and geometry, never its model: two models of one stance and one geometry stand at one place. The robot keeps its joint positions and the targets its limbs last received, as move_robot of scene_manipulation keeps them. Every implementer refuses an offset that is not finite and a raise that is neither \"floor\" nor \"best\" with `rejected`, and an implementer that lets no caller inspect its world refuses the stand with `rejected`. The other checks read the world as it stands when the stand runs, so a stand that does not pass them fails once it started: with `resource_unavailable` for a robot that does not stand in the world; with `rejected` for an object that does not stand in the world, a landmark that is not a work surface of the object's asset, a side that the work surface does not list, and a raise of \"best\" for a robot that rests on its own base on colliding geometry and whose workspace cannot be measured, as describe_workspace refuses it; and with `precondition_failed` for a place that the implementer's placement rules refuse (another robot too near, or the robot or its riser sinking into what stands around it), naming what stands in the way, for a raise of \"best\" when they refuse the place at each height, naming what stands in the way of the place on the floor, for an empty side when no listed side has a place that passes them, and when the riser would take the world past the texture budget that scene_manipulation describes, the message naming the budget, the memory of the world and what the riser adds; and with `attempt_failed` when the maps of the deck of the riser do not come. A refused or failed stand moves nothing. The action gives no feedback. The result gives where the robot stands at the end, by robot_pose, in the result's frame at its timestamp, the side it stands at, its riser with its height and its deck, the workable area of the robot at its work surface there and whether it works that surface.",
         goal_service: {
           request_message_format: {
             robot: { $type: "string", $description: "The robot, by the name get_robots_list gives." },
@@ -205,8 +264,14 @@
         },
         result_service: {
           response_message_format: {
-            robot_position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot's base now stands: for a robot that rests on its own base, the point it settles from." },
-            robot_yaw: { $type: "f64", $description: "The heading the base now faces." },
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+            robot_pose: {
+              $type: "object",
+              $description: "Where the robot's base now stands, for a robot that rests on its own base the point it settles from, and the heading it now faces, a turn about +z alone.",
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+            },
             side: { $type: "string", $description: "The side of the work surface it stands at: the one the request named, or the one an empty side took; empty when the goal ends cancelled before the robot moved." },
             riser: { $type: "string", $description: "The object id of the riser that the robot stands on, as get_objects_list gives it; empty for a robot that stands on the floor or is clamped on a top." },
             raise_m: { $type: "f64", $description: "The height of that riser, in metres; 0 for none." },
@@ -246,12 +311,14 @@
       },
       {
         name: "furnish",
-        description: "Place the furniture of a request in the loaded scene by rules and a seed, and end with where each piece goes, at which scale, where each robot of its stations stands, and the steps that set the layout up. It moves nothing: the caller sets the layout up with spawn_object and stand_at of this contract and scene_manipulation, in the order of the steps. The walls of the scene are those that get_asset of scene_manipulation gives for it, and its free floor is its floor, or, for a scene without one, the open floor on which a robot that joins stands: a square 30 m wide, centred on the origin and entered there. Each piece of the answer stands on the free floor, its box seen from above inside it; sinks into nothing by the placement rule of spawn_object (the walls, the other pieces, every object and each robot that the layout avoids: every robot that stands, but those that the stations name); leaves each doorway clear over its width and 1.0 m into the room; does not enter the zone of a window, the opening along its wall and in height, from the wall's inner face to 0.3 m in front of it; keeps each station of every other piece clear; and has its turn by its rule. Each station is clear of the walls, of every object, of every piece but its own and of every other station, its base (the robot's base, or the centre of a station of a size) stands at least 1.5 m from that of every other station, from each robot that the layout avoids and from each spot promised to a robot that joins; in a scene whose room has a ceiling, its work surface stays out of the sun of the scene's authored daylight (the date and the hour of its site, at its place) while that sun stands over the horizon, so that no ray toward that sun from a point of the top of the work surface leaves the room through an opening of its walls, a window or a doorway (a scene open to the sky has no such rule); and a walkway walkway_m wide joins the entry of the free floor to it: a path of cells of a grid of 0.1 m over the free floor, each next to the one before it along x or y, from a cell whose square touches the entry to a cell whose square touches the room of the station, where a square walkway_m wide centred on each cell meets no wall but at its doorways, no piece and no object between the floor and 2.0 m. Robots block no walkway and no doorway, and the piece of a station blocks no walkway to its own station. While a piece that the search places after it has a station, a piece leaves clear the square of a cell that touches the entry, through which a walkway to that station leaves the entry. The robot of each station works its surface from its side at the scale of the piece, as the work surface rule measures it in a world that holds the robot and the piece alone, the robot where stand_at stands it: the hundredth from the item's min to its max whose smallest workable area, over the robot stations of the piece, is the largest, tried every 0.05 from the first hundredth, then every 0.01 within 0.04 of the best, a tie going to the scale nearest 1. The measurement stands the robot's joints outside its arms where they stand in the world, each to 0.001 m or rad. What each measurement gives is kept for every later call and every expand of simulation_world, by the robot's model, the asset, the scale, the landmark, the side and where the robot's joints outside its arms stand. The steps spawn the pieces in the order of the search and stand each robot as soon as the piece of its station stands; a step waits while a robot that a station names and that has not stood yet stands in its way (where the piece of a spawn goes, or in the room of the station of a stand or within 1.5 m of its base), and a layout whose steps wait for each other is not given. The search places the pieces in the order of their rules (a piece after the piece that its beside or its facing names, else in the order of the request, so list the largest first), each at the candidates of its rule (every 0.05 m along a wall, the corners, a grid of 0.1 m over the free floor), in an order that the seed and the piece's name give. When a piece has no candidate left, the search backs up to the latest piece placed before it that a miss of those candidates, or of a layout of the pieces after it (with the piece placed or left without a place), names: a miss that each of several things in the way makes alone names the piece placed first of them, and no piece when a part of the room (a wall, an object, a robot, a doorway, a window or a promised spot) is one of them. It stops after 20000 candidates; the answer is the first layout found with the most pieces placed. The same world, request and seed always give the same answer. The feedback gives one message when the goal is accepted, then one whenever a field changes: the progress of the files of the pieces, then each measurement of a scale as it starts. A cancel ends the goal cancelled, at the latest after the measurement that runs. The goal fails with `rejected`, before any search, for a request without an item; an asset that is not an object of the catalogue; a name that is not a name (lowercase letters, digits and _), that two items hold, or that an object of the world holds; a rule of another kind, a rule that gives a field its kind does not use, or that names an item the request lacks, the item itself or a wall that the scene lacks; against_wall, in_corner or beside in a scene without walls; beside an item whose rule is not against_wall or in_corner; a rule but free on an object without a front; a cycle of beside and facing; a station on a landmark that is not a work surface of the asset, on a side that it does not list or that is none of the four; a station that names a robot and a size, or neither; two stations that name one robot; a piece with a station whose physics is not static; a scale min above its max, a scale max above 10, a scale range of a piece without a robot station whose min and max differ, and a scale range of a piece with a robot station that holds no hundredth; a near that is neither empty nor two finite numbers; a scale, a size, a distance or a walkway_m that is not a finite number above 0, and a gap that is not a finite number of at least 0. It fails with `resource_unavailable` for a robot of a station that does not stand, and with `attempt_failed` when the files of an asset do not come.",
+        description: "Place the furniture of a request in the loaded scene by rules and a seed, and end with where each piece goes, at which scale, where each robot of its stations stands, and the steps that set the layout up. It moves nothing: the caller sets the layout up with spawn_object and stand_at of this contract and scene_manipulation, in the order of the steps. The walls of the scene are those that get_asset of scene_manipulation gives for it, and its free floor is its floor, or, for a scene without one, the open floor on which a robot that joins stands: a square 30 m wide, centred on the origin and entered there. Each piece of the answer stands on the free floor, its box seen from above inside it; sinks into nothing by the placement rule of spawn_object (the walls, the other pieces, every object and each robot that the layout avoids: every robot that stands, but those that the stations name); leaves each doorway clear over its width and 1.0 m into the room; does not enter the zone of a window, the opening along its wall and in height, from the wall's inner face to 0.3 m in front of it; keeps each station of every other piece clear; and has its turn by its rule. Each station is clear of the walls, of every object, of every piece but its own and of every other station, its base (the robot's base, or the centre of a station of a size) stands at least 1.5 m from that of every other station, from each robot that the layout avoids and from each spot promised to a robot that joins; in a scene whose room has a ceiling, its work surface stays out of the sun of the scene's authored daylight (the date and the hour of its site, at its place) while that sun stands over the horizon, so that no ray toward that sun from a point of the top of the work surface leaves the room through an opening of its walls, a window or a doorway (a scene open to the sky has no such rule); and a walkway walkway_m wide joins the entry of the free floor to it: a path of cells of a grid of 0.1 m over the free floor, each next to the one before it along x or y, from a cell whose square touches the entry to a cell whose square touches the room of the station, where a square walkway_m wide centred on each cell meets no wall but at its doorways, no piece and no object between the floor and 2.0 m. Robots block no walkway and no doorway, and the piece of a station blocks no walkway to its own station. While a piece that the search places after it has a station, a piece leaves clear the square of a cell that touches the entry, through which a walkway to that station leaves the entry. The robot of each station works its surface from its side at the scale of the piece, as the work surface rule measures it in a world that holds the robot and the piece alone, the robot where stand_at stands it: the hundredth from the item's min to its max whose smallest workable area, over the robot stations of the piece, is the largest, tried every 0.05 from the first hundredth, then every 0.01 within 0.04 of the best, a tie going to the scale nearest 1. The measurement stands the robot's joints outside its arms where they stand in the world, each to 0.001 m or rad. What each measurement gives is kept for every later call and every expand of simulation_world, by the robot's model, the asset, the scale, the landmark, the side and where the robot's joints outside its arms stand. The steps spawn the pieces in the order of the search and stand each robot as soon as the piece of its station stands; a step waits while a robot that a station names and that has not stood yet stands in its way (where the piece of a spawn goes, or in the room of the station of a stand or within 1.5 m of its base), and a layout whose steps wait for each other is not given. The search places the pieces in the order of their rules (a piece after the piece that its beside or its facing names, else in the order of the request, so list the largest first), each at the candidates of its rule (every 0.05 m along a wall, the corners, a grid of 0.1 m over the free floor), in an order that the seed and the piece's name give. When a piece has no candidate left, the search backs up to the latest piece placed before it that a miss of those candidates, or of a layout of the pieces after it (with the piece placed or left without a place), names: a miss that each of several things in the way makes alone names the piece placed first of them, and no piece when a part of the room (a wall, an object, a robot, a doorway, a window or a promised spot) is one of them. It stops after 20000 candidates; the answer is the first layout found with the most pieces placed. The same world, request and seed always give the same answer. The feedback gives one message when the goal is accepted, then one whenever a field changes: the progress of the files of the pieces, then each measurement of a scale as it starts. A cancel ends the goal cancelled, at the latest after the measurement that runs. The goal fails with `rejected`, before any search, for a request without an item; an asset that is not an object of the catalogue; a name that is not a name (lowercase letters, digits and _), that two items hold, or that an object of the world holds; a rule of another kind, a rule that gives a field its kind does not use, or that names an item the request lacks, the item itself or a wall that the scene lacks; against_wall, in_corner or beside in a scene without walls; beside an item whose rule is not against_wall or in_corner; a rule but free on an object without a front; a cycle of beside and facing; a station on a landmark that is not a work surface of the asset, on a side that it does not list or that is none of the four; a station that names a robot and a size, or neither; two stations that name one robot; a piece with a station whose physics is not static; a scale min above its max, a scale max above 10, a scale range of a piece without a robot station whose min and max differ, and a scale range of a piece with a robot station that holds no hundredth; a near that is not finite; a scale, a size, a distance or a walkway_m that is not a finite number above 0, and a gap that is not a finite number of at least 0. It fails with `resource_unavailable` for a robot of a station that does not stand, and with `attempt_failed` when the files of an asset do not come. The request's frame is world whether or not a piece gives near: a goal in another frame, an empty one included, is refused with `unknown_frame`.",
         goal_service: {
           request_message_format: {
+            frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, world." },
+            timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
             items: {
               $type: "array",
-              $description: "The pieces of furniture, largest first. Every field of an item, of its rule and of its stations is present, the fields that its form does not use empty (\"\", 0 or an empty array).",
+              $description: "The pieces of furniture, largest first. Every field of an item, of its rule and of its stations but near is present, the fields that its form does not use empty (\"\", 0 or an empty array), and near is absent where the item gives none.",
               $items: {
                 $type: "object",
                 name: { $type: "string", $description: "The name the piece spawns under: lowercase letters, digits and _, held by no other item and by no object of the world." },
@@ -265,10 +332,15 @@
                 physics: { $type: "string", $description: "The physics the piece spawns with, as spawn_object takes it: static for a piece with a station." },
                 rule: {
                   $type: "object",
-                  $description: "Where the piece goes, by kind: against_wall, its back (the side opposite its front) against the wall on_wall names, or any wall for an empty on_wall; in_corner, its back against one wall and one side against a wall that meets it; free, walkway room on every side, nearest near ([x, y]) when near is not empty; beside, against the same wall as the item that item names, whose rule is against_wall or in_corner, side by side on either side of it, gap_m apart; facing, front to front with the item that item names, distance_m between the two fronts. against_wall, in_corner and beside turn the front away from the wall at its back, facing turns it toward the other's front, and free takes the four quarter turns about the vertical. The front is the side of the asset's root that get_assets_list gives as its front.",
+                  $description: "Where the piece goes, by kind: against_wall, its back (the side opposite its front) against the wall on_wall names, or any wall for an empty on_wall; in_corner, its back against one wall and one side against a wall that meets it; free, walkway room on every side, nearest near when the rule gives near; beside, against the same wall as the item that item names, whose rule is against_wall or in_corner, side by side on either side of it, gap_m apart; facing, front to front with the item that item names, distance_m between the two fronts. against_wall, in_corner and beside turn the front away from the wall at its back, facing turns it toward the other's front, and free takes the four quarter turns about the vertical. The front is the side of the asset's root that get_assets_list gives as its front.",
                   kind: "string",
                   on_wall: { $type: "string", $description: "The id of a wall of the scene, for against_wall; else empty." },
-                  near: { $type: "array", $items: "f64", $description: "The world-frame [x, y] a free piece stands nearest; else empty." },
+                  near: {
+                    $type: "object",
+                    $optional: true,
+                    $description: "The point a free piece stands nearest in plan, in the request's frame. Absent for no preference and for a piece of another kind.",
+                    position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+                  },
                   item: { $type: "string", $description: "The name of the other item, for beside and facing; else empty." },
                   gap_m: { $type: "f64", $description: "The gap between the two pieces, for beside, at least 0; else 0." },
                   distance_m: { $type: "f64", $description: "The distance between the two fronts, for facing, above 0; else 0." },
@@ -303,27 +375,28 @@
         },
         result_service: {
           response_message_format: {
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
             places: {
               $type: "array",
-              $description: "The pieces that have a place, in the order of the request.",
+              $description: "The pieces that have a place, in the order of the request: each with position, where its origin stands, resting on the floor, and orientation, its turn about +z from the orientation it is authored in, as spawn_object takes a target, in the result's frame; a place holds at every time, so the result holds no timestamp.",
               $items: {
                 $type: "object",
                 name: { $type: "string", $description: "The item's name." },
                 asset: { $type: "string", $description: "The item's asset." },
-                position: { $type: "array", $items: "f64", $length: 3, $description: "Where the piece's origin stands, for spawn_object: it rests on the floor there." },
-                yaw: { $type: "f64", $description: "Its turn about the world's +z from the orientation it is authored in, for spawn_object." },
+                position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+                orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
                 scale: { $type: "f64", $description: "The scale it spawns at." },
                 physics: { $type: "string", $description: "The physics it spawns with." },
                 stations: {
                   $type: "array",
-                  $description: "Its stations, in the order of the request: where the robot of each stands, as stand_at stands it there, or the centre of a station of a size.",
+                  $description: "Its stations, in the order of the request: in position, where the robot of each stands, as stand_at stands it there, or the centre of a station of a size, and in orientation the heading the robot faces there, toward the piece, a turn about +z alone.",
                   $items: {
                     $type: "object",
                     landmark: "string",
                     side: "string",
                     robot: { $type: "string", $description: "The robot; empty for a station of a size." },
-                    position: { $type: "array", $items: "f64", $length: 3, $description: "Where the robot's base stands, or the centre of the station." },
-                    yaw: { $type: "f64", $description: "The heading the robot faces there, toward the piece." },
+                    position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+                    orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
                   },
                 },
               },
@@ -351,6 +424,7 @@
             },
           },
         },
+        failure_kinds: ["unknown_frame"],
       },
     ],
   },
