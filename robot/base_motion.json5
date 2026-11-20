@@ -1,0 +1,103 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "base_motion",
+    tag: "v1",
+    description: [
+      "Planned moves of a robot's mobile base: a drive at one velocity for a time, and a move to a pose near the robot.",
+      "The implementer plans and executes each and returns a result; they are distinct from the setpoints a leader streams on the drive_link pairing. base_state reports the base's motion, its odometry, its limits and its rest. The base checks no obstacle: it drives as the goal says, and whatever stands in the way is the caller's to know; base_navigation's goals keep clear of obstacles.",
+      "Each goal names its frame and its time: move_base's target is a pose_stamped and drive_base's velocity a twist_stamped, in a frame as transforms names frames, or with no frame in the robot frame, at a timestamp on the clock of transforms, or with no timestamp for the latest time. When it accepts a goal, the implementer places it by its tree at its timestamp, as transforms defines a lookup. A command with no timestamp is placed by the latest transforms when the implementer accepts it; a target in the robot frame with no timestamp names where the robot frame stands then, fixed to the floor, and one with the timestamp of a report names where the robot frame stood then. A goal it cannot place is refused with the failure kind of the lookup, its message naming the cause as transform_lookup's does. move_base places its target in odom, the odometry frame of base_state, and steers to it there; drive_base places its velocity in the robot frame, base_state's base_footprint, and drives that velocity for the life of the goal. Each result gives final_pose, the robot frame's pose in odom when the goal ended. A position is x, y, z in meters, and a turn about +z is counterclockwise seen from above. The durations and timeouts a goal names are on the clock the implementer's instance reads, the simulation clock in a simulation.",
+      "Every move keeps each axis of its motion, x and y of its linear velocity and its turn, and the acceleration and deceleration of each, within describe_base's linear_limits and angular_limits, through base_state's limiter, and comes to rest as base_state brings a base to rest. A differential base, whose range along y is 0 to 0, moves along +X and turns; an omnidirectional base moves in any direction of the floor while it turns. move_base steers by base_state's odometry, so a pose is as exact as that odometry; on a base whose odometry is commanded, the move runs on the velocities the base executes alone.",
+      "base_state's limiter executes 0 on an axis commanded below its deadband, so an axis that drive_base commands smaller in magnitude than its deadband does not move. While the robot frame stands outside a move_base goal's tolerances, move_base commands each axis that closes the error of the leg it is on at least at that axis's deadband once the command of the leg before it has come to 0, so a slow move still reaches its target.",
+      "drive_base and move_base have the mark `moves_robot`: each MCP server, `peppy node call` and each lease holder asks the daemon (`robot_leases.check_move`) whether it may move the robot before it calls one. robot_stop's stop ends them.",
+      "One goal of this contract runs at a time. A goal is checked in this order. It is refused with `rejected` for a value it does not take: a duration or a timeout outside its range, a tolerance that is not positive, and a number that is not finite. An orientation whose squared norm lies 0.01 or more from 1 is refused with `rejected`, the tolerance of tf2's buffer that transforms names; the implementer normalizes each orientation it takes. Then the implementer places the goal, as the contract's description says. A target whose position, placed in odom, has a z farther than 1e-9 m from 0, or whose orientation, placed in odom, turns by more than 1e-9 rad about an axis other than +z, is refused with `rejected`, the message naming the part, its value placed in odom, and what to send: a target in odom or the robot frame with a position [x, y, 0] and an orientation [0, 0, sin(yaw/2), cos(yaw/2)]. A velocity that, placed in the robot frame, has a linear_velocity whose z, or an angular_velocity whose x or y, lies farther than 1e-9 from 0 is refused likewise, the message saying to send a velocity in the robot frame of [vx, vy, 0] and [0, 0, wz]. A goal is refused with `rejected` as well for a drive_base velocity whose linear_velocity, placed in the robot frame, lies outside describe_base's linear_limits min_velocity and max_velocity along x or y, or whose turn lies outside its angular_limits min_rate and max_rate, and for a move_base whose motion describe_base's limits cannot run within 60 s. It is refused with `resource_unavailable` while the base's motion sensing is silent, as base_state defines silence; with `precondition_failed` while base_states' mode is not standing or moving, the message naming the mode and what brings the base to standing; with `leader_streaming` while the leader of drive_link streams, as drive_link defines it; and with `precondition_failed` while another goal of this contract runs, while the base comes to rest from an earlier goal of this contract, and while another goal of the implementer holds the base, as drive_link defines that hold. The message of a refusal names its cause and what to do.",
+      "A goal ends early when its caller cancels it or is gone, and when robot_stop's stop ends it: it then ends cancelled, with a reason that names the cause. Such a goal brings the base to rest and ends once the base rests, or once its settle_timeout_s has passed since the cancel or the stop, whichever comes first; its result gives where the robot frame stood then. A goal fails with `resource_unavailable` when the base's motion sensing falls silent, when its odometry starts over, and when the implementer's clock goes back, the base coming to rest. A goal fails with `attempt_failed` when base_states' mode leaves standing and moving, as when a walking base falls, the message naming the mode; the base's command is then 0, and the mode says what the base does. A goal fails with `attempt_failed` when it cannot go on for another reason. A failed goal gives no result.",
+    ],
+  },
+  failure_kinds: {
+    leader_streaming: "A leader of drive_link drives the base",
+    unknown_frame: "A frame of the request is named by no transform the implementer has received that passed the checks of transforms",
+    no_chain: "A frame of the request and the frame the implementer places it in are in trees that share no frame",
+    extrapolation: "A moving transform on the chain has no value at the request's time: the implementer holds no stamp of it, or the time is before the oldest stamp it holds of it or after its newest",
+    broken_tree: "A frame whose transform to its parent the chain needs has transforms from two publishers, or the chain runs through a cycle",
+  },
+  interfaces: {
+    actions: [
+      {
+        name: "drive_base",
+        description: "Drive the base at one velocity for a time, then bring it to rest. base_state's limiter moves the command toward the velocity, holds it for hold_duration_s from the step at which the command reaches it, then brings the base to rest. The goal completes once the base rests, as base_state defines rest, and fails with `timeout` when the base does not rest by settle_timeout_s after the command reaches 0; the message gives the base's velocity then. The action gives no feedback. The result gives the robot frame's pose in odom where the base came to rest, and how long the action took.",
+        goal_service: {
+          request_message_format: {
+            velocity: {
+              $type: "object",
+              $description: "The velocity to drive at, a twist of the robot frame given in frame at timestamp, which the implementer places in the robot frame at acceptance. There, linear_velocity is x forward, negative to drive backward, y leftward, negative to drive rightward, and z up, x and y each within describe_base's linear_limits min_velocity and max_velocity along its axis, so y is 0 on a differential base, and z is 0; angular_velocity turns about +z alone, counterclockwise seen from above, within describe_base's angular_limits min_rate and max_rate.",
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, the robot frame." },
+              timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+              linear_velocity: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m/s)." },
+              angular_velocity: { $type: "array", $items: "f64", $length: 3, $description: "About x, y, z (rad/s)." },
+            },
+            hold_duration_s: { $type: "f64", $description: "How long the command holds the velocity once it reaches it (s), above 0 and at most 60." },
+            settle_timeout_s: { $type: "f64", $description: "How long (s, 0 to 60) after the command reaches 0 the base may take to rest before the drive fails. Rest reads 0.2 s of base_states, as base_state defines it, so a value below 0.2 s fails the drive unless the base already rests when the command reaches 0." },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            final_pose: {
+              $type: "object",
+              $description: "The robot frame's pose in odom when the drive ended, at rest or at the end of its settle timeout after a cancel or a stop: frame is odom, timestamp the time of that pose, the position's z is 0, and the orientation turns about +z alone.",
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+              timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+            },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
+          },
+        },
+        failure_kinds: ["leader_streaming", "unknown_frame", "no_chain", "extrapolation", "broken_tree"],
+        marks: ["moves_robot"],
+      },
+      {
+        name: "move_base",
+        description: "Move the robot frame to a target pose and bring the base to rest there: a target in base_footprint with no timestamp, position [1.2, 0, 0] and orientation [0, 0, 0, 1] drives 1.2 m ahead, and one with position [0, 0, 0] and orientation [0, 0, 0.7071, 0.7071] turns a quarter turn to the left. A differential base turns toward the target, drives to it and turns to the target's heading, and turns in place when the target lies within settle_position_tolerance_m of where the robot stood when the goal was accepted; an omnidirectional base drives straight to the target while it turns to the target's heading. While it drives, it turns toward the target again whenever the target's bearing grows past settle_orientation_tolerance_rad or past the implementer's bearing bound, whichever is smaller, and a base whose linear_limits min_velocity along x is below 0 drives backward to a target it has passed. The move completes once, at or after the planned end of its motion, move_base commands 0 on every axis and the base rests with the robot frame within both tolerances of the target, and fails with `timeout` when it does not by settle_timeout_s after the planned end; the message says how far the base stands from the target. The base then rests where it stands either way. Feedback gives what remains of the move. The result gives the robot frame's pose in odom when the move ended and how long the action took.",
+        goal_service: {
+          request_message_format: {
+            target: {
+              $type: "object",
+              $description: "The pose to move the robot frame to, given in frame at timestamp, which the implementer places in odom at acceptance: there its position's z is 0 and its orientation turns about +z alone, and the base turns the shorter way to its heading.",
+              frame: { $type: "string", $optional: true, $description: "The frame of the record's values, as transforms names frames; absent, the robot frame." },
+              timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+            },
+            duration_s: { $type: "f64", $description: "Requested duration of the motion (s), 0 to 60; floored at the duration describe_base's limits allow. 0 = fastest." },
+            settle_position_tolerance_m: { $type: "f64", $description: "The move completes once the robot frame's origin rests within this distance (m) of the target." },
+            settle_orientation_tolerance_rad: { $type: "f64", $description: "The move completes once the geodesic angle between the robot frame's orientation and the target's rests within this angle (rad); pi or more leaves the heading free." },
+            settle_timeout_s: { $type: "f64", $description: "How long (s, 0 to 60) after the planned end the base may take to rest within both tolerances before the move fails. With 0 the move fails at its planned end unless the base already rests within both tolerances then." },
+          },
+        },
+        feedback_topic: {
+          qos_profile: "standard",
+          message_format: {
+            distance_remaining_m: { $type: "f64", $description: "Distance from the robot frame's origin to the target (m)." },
+            angle_remaining_rad: { $type: "f64", $description: "Magnitude of the shorter angle from the robot frame's heading to the target's (rad, in [0, pi])." },
+          },
+        },
+        result_service: {
+          response_message_format: {
+            final_pose: {
+              $type: "object",
+              $description: "The robot frame's pose in odom when the move ended, at rest or at the end of its settle timeout after a cancel or a stop: frame is odom, timestamp the time of that pose, the position's z is 0, and the orientation turns about +z alone.",
+              frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+              timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+            },
+            action_time: { $type: "f64", $description: "Wall-clock duration of the action (s)." },
+          },
+        },
+        failure_kinds: ["leader_streaming", "unknown_frame", "no_chain", "extrapolation", "broken_tree"],
+        marks: ["moves_robot"],
+      },
+    ],
+  },
+}
