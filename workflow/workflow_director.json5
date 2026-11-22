@@ -17,7 +17,8 @@
       "A trial runs a bundle on the physical robots of one stack, a person preparing and judging each run. The director refuses a trial (trial_refused), naming the cause, unless each bound robot is physical, the bundle has an envelope and matches its digests, each value of its work cell is inside the envelope, each assumption of the workflow has a check, and the stack matches the lock of the bundle with no version policy. It takes the lease of each bound robot for the whole trial, under the name `trial <id>`, and opens each for a take-over while the operator prepares the work cell, so that the operator can move the robots. Each run has four steps: the operator prepares the work cell and calls next_run, which closes the leases and starts the run; the director checks the run as an unattended run on physical robots, using the leases of the trial, and the operator compares each check with the work cell (judge_checks); the run runs unattended, cannot suspend, and only its fallbacks handle incidents; the operator judges its ending (judge_ending). The trial ends after its last run that counts, or once the thresholds of the bundle cannot be met. After its last run that counts, it signs off the bundle when its runs meet the thresholds, and keeps a sign-off record. A trial that ends early, by any cause, signs off nothing. A halt refuses every new trial and ends a running one halted; a restart of the director ends a running trial interrupted.",
       "A caller that offers leases to the director (robot_leases.offer) before it calls run lends them to that run: the run takes the leases of the robots it binds, and gives each back, closed, before it ends. A run binds a robot with no robot commander of its own, and never a robot that another run of the director binds.",
       "run, resume and abort report progress at each event of the run and at least every 5 s of wall time. The first progress of run is run_starts, which names the run (`r<N>`) and gives its run/v1 document. A cancel of run or resume, and the loss of its sender, aborts the run. The goal completes only for a completed run, with the run result; it ends cancelled for an aborted run, with the run and its result; and it fails for each other end with the kind that names it, its last progress giving the run result or, for a suspended run, the suspension. A suspended run has no running goal and waits for resume or abort. run_events gives the events of every run, and the end of a run (run_ends) only after the director released each lease of the run. A request that does not parse, or that gives both a run_document and roles, or neither or both of a workflow and a bundle, is refused with rejected and starts no run; every other run starts, and a check that refuses it ends it with run_refused.",
-      "The fields of an event are empty where they do not apply: step names `<role>.<id>` (an item of a for_each adds `#<index>`), failure_kind is the kind of a failed step, an incident, a failed lane and the end of the run, and details is JSON of the types of workflow_documents: the run document at run_starts, the assumptions to confirm at to_confirm, the differences from the lock at differences, each value of the work cell and each watch value that no test covered at uncovered, each check of a run of a trial with its value at checks_to_judge, the named result at step_ends, the incident record at incident, the lane state at lane_suspends, lane_resumes and lane_ends, the suspension at run_suspends, the run result at run_ends, and the state of the run at progress.",
+      "The fields of an event are empty where they do not apply: step names `<role>.<id>` (an item of a for_each adds `#<index>`), failure_kind is the kind of a failed step, an incident, a failed lane and the end of the run, and details is JSON of the types of workflow_documents: the run document at run_starts, the assumptions to confirm at to_confirm, the differences from the lock at differences, each value of the work cell and each watch value that no test covered at uncovered, each check of a run of a trial with its value at checks_to_judge, the feedback message of the call at step_reports, the named result at step_ends, the incident record at incident, the lane state at lane_suspends, lane_resumes and lane_ends, the suspension at run_suspends, the run result at run_ends, and the state of the run at progress.",
+      "A step whose call is a goal of an action whose feedback message has a string field with the mark `activity` (marks.json5) at its top gives step_reports between its step_starts and its step_ends: one event each time the sentence of that field changes, the sentence as its message. A feedback message with the same sentence as the one before gives no event, and a call of a service, or of an action with no such field, gives none. step_reports changes no decision of the run, and replay does not compare it, as it does not compare progress.",
       "A failed step gives a failure kind: a kind of peppy, a kind of the contract of its call, or a kind that only the director gives: condition_failed (a fail_when is true), bound_reached (a loop hit its bound first), invariant_violated (an invariant is false), breaker_open (a repeat_until reached the max_failures of its breaker), stale_observation (a topic read is older than its max_age_s, or the topic has given no message in its max_age_s since the run started), stopped (another client stopped the goal), anomaly (the anomaly monitor gives an anomaly), alert (a bound physical robot raised an alert:v1 alert of severity 2 or 3, or an alert set of its nodes went stale), signal_unreachable (every lane that can emit a signal that a wait_for awaits has ended) and clock_stopped (the simulation clock stood still for 10 s of wall time while a lane ran).",
       "The anomaly monitor of a run is a service of an allowed contract whose request is { robot: string, step: string } and whose response is { anomaly: bool, kind: string, severity: low | medium | high, description: string, data: bytes }. A member that names a run the director does not know gets an error reply, or a refusal, with rejected; one that the state of the run does not admit, with precondition_failed.",
     ],
@@ -268,7 +269,7 @@
             role: "string",
             event: {
               $type: "string",
-              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
+              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_reports", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
             },
             step: "string",
             failure_kind: "string",
@@ -294,7 +295,7 @@
             role: "string",
             event: {
               $type: "string",
-              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
+              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_reports", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
             },
             step: "string",
             failure_kind: "string",
@@ -320,7 +321,7 @@
             role: "string",
             event: {
               $type: "string",
-              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
+              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_reports", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
             },
             step: "string",
             failure_kind: "string",
@@ -370,7 +371,7 @@
             role: "string",
             event: {
               $type: "string",
-              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
+              $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_reports", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends", "progress"],
             },
             step: "string",
             failure_kind: "string",
@@ -394,7 +395,7 @@
           role: "string",
           event: {
             $type: "string",
-            $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends"],
+            $enum: ["run_starts", "to_confirm", "differences", "uncovered", "checks_to_judge", "initialization_starts", "actions_start", "step_starts", "step_reports", "step_ends", "lane_suspends", "lane_resumes", "lane_ends", "incident", "run_suspends", "run_ends"],
           },
           step: "string",
           failure_kind: "string",
