@@ -42,5 +42,10 @@
       owner: "workflow",
       meaning: "The field is a string that receives the name of a location that the node knows through locations:v1, so the workflow director takes its value only from a `{ $location }` of a location the workflow declares, never from a literal and never from a `$ref`, and the node that serves the member implements locations:v1.",
     },
+    {
+      name: "activity",
+      owner: "workflow",
+      meaning: "The string field at the top of the feedback message of an action holds one sentence that says what the robot does now, for the person who follows the run, so the workflow director gives an event step_reports with that sentence as its message each time the sentence of a call of a step changes.",
+    },
   ],
 }
