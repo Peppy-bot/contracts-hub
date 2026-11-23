@@ -6,11 +6,11 @@
     name: "object_state",
     tag: "v1",
     description: [
-      "The ground truth of the objects a simulation engine spawned through scene_manipulation: what each one is, where it is right now and how fast it moves.",
-      "One record, read two ways from the same state: the stream (object_states) publishes the implementer's captures on its own state cadence, and get_object_states answers its latest capture on demand, for example to a scene commander that refreshes its list after an edit. That capture can be one the stream never carried: an implementer captures again when a scene edit completes. A consumer can judge a task from this (the cube came to rest in the tray) without holding a pairing. Object ids are the ones scene_manipulation minted; a snapshot carries one record per spawned object, whatever its physics, and an empty list when nothing is spawned. Only spawned objects are listed, never the robot's links or the scene's backdrop.",
+      "The ground truth of the objects a simulation engine spawned through scene_manipulation and of the robots that stand in its scene through simulation_robot: what each one is, where it is right now and how fast it moves.",
+      "One record, read two ways from the same state: the stream (object_states) publishes the implementer's captures on its own state cadence, and get_object_states answers its latest capture on demand, for example to a scene commander that refreshes its list after an edit. That capture can be one the stream never carried: an implementer captures again when a scene edit completes. A consumer can judge a task from this (the cube came to rest in the tray) without holding a pairing. Object ids are the ones scene_manipulation minted; a snapshot carries one record per spawned object, whatever its physics, and an empty list when nothing is spawned. It carries one record per robot standing in the scene, from the feedback of its attach goal that reports it standing until it leaves, and an empty list when none stands. A robot is placed by its robot frame, the root link of its description, as transforms defines the robot frame; its other links and the scene's backdrop are not listed.",
       "Every snapshot is complete: a dropped message needs no replay, the next one replaces it. A snapshot's timestamp is when the implementer captured it, never when it was requested or sent, on the same clock for both reads. An edit made while that clock stands still (simulated time between steps) is captured at the same instant as the snapshot before it.",
       "Ground truth is a debugging surface and stays inside the peppy framework: harness tests, recorders, scene commanders and the evaluation of a trained behaviour (did the cube end up in the tray) read it. No mcp_exposure/v1 document ever selects a member of this contract. An MCP endpoint is the one surface a model drives on the real robot and in simulation alike, and the real world has no ground truth to publish, so a resource or tool built on this contract would exist only in simulation and split the two.",
-      "Each snapshot gives frame world, the one frame of the simulation, and its timestamp; each object's pose and velocity are in that frame: position in metres, orientation a unit quaternion [x, y, z, w]. Velocities are world axes, taken at the object's origin: linear in m/s, angular in rad/s. Static and visual-only objects report a fixed pose and zero velocities. Mass (kg) and scale are the ones the object took at its spawn, the mass that spawn_object of scene_manipulation gives a spawn with mass 0 among them; only a dynamic object simulates its mass.",
+      "Each snapshot gives frame world, the one frame of the simulation, and its timestamp; each object's and each robot's pose and velocity are in that frame: position in metres, orientation a unit quaternion [x, y, z, w]. Velocities are world axes, taken at the origin of the object or of the robot frame: linear in m/s, angular in rad/s. Static and visual-only objects report a fixed pose and zero velocities. A robot whose robot frame is fixed to the world, such as an arm on a stand, reports its placement and zero velocities. Mass (kg) and scale are the ones the object took at its spawn, the mass that spawn_object of scene_manipulation gives a spawn with mass 0 among them; only a dynamic object simulates its mass.",
       "What an object touches is not here: contact_state lists every contact the engine resolves, from both sides, naming a spawned object by the same object_id, so a consumer joins the two on that string.",
     ],
   },
@@ -18,7 +18,7 @@
     topics: [
       {
         name: "object_states",
-        description: "One snapshot of every spawned object, captured at timestamp and streamed on the state cadence of the implementer.",
+        description: "One snapshot of every spawned object and every standing robot, captured at timestamp and streamed on the state cadence of the implementer.",
         // High-frequency stream where only the latest snapshot matters;
         // occasional drops are acceptable.
         qos_profile: "sensor_data",
@@ -41,13 +41,26 @@
               angular_velocity: { $type: "array", $items: "f64", $length: 3, $description: "About x, y, z (rad/s)." },
             },
           },
+          robots: {
+            $type: "array",
+            $description: "One record per standing robot, in the implementer's order.",
+            $items: {
+              $type: "object",
+              robot: { $type: "string", $description: "The name the robot stands under, as its attach goal named it." },
+              model: { $type: "string", $description: "The id of the engine's robot catalogue that its attach goal named." },
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+              linear_velocity: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m/s)." },
+              angular_velocity: { $type: "array", $items: "f64", $length: 3, $description: "About x, y, z (rad/s)." },
+            },
+          },
         },
       },
     ],
     services: [
       {
         name: "get_object_states",
-        description: "Give the latest capture, on demand, in the stream's records and from the same state. Answered before the first streamed snapshot, and once a scene_manipulation goal has completed, the snapshot includes its edit. An empty scene answers no objects. An implementer that has no object state to report gives an error reply: with `rejected` when it does not inspect its scene, and with `precondition_failed` when it is not ready yet.",
+        description: "Give the latest capture, on demand, in the stream's records and from the same state. Answered before the first streamed snapshot, and once a scene_manipulation goal has completed, the snapshot includes its edit. An empty scene answers no objects and no robots. An implementer that has no object state to report gives an error reply: with `rejected` when it does not inspect its scene, and with `precondition_failed` when it is not ready yet.",
         response_message_format: {
           frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
           timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
@@ -61,6 +74,19 @@
               physics: { $type: "string", $description: "\"dynamic\", \"static\" or \"none\", as spawned." },
               mass: "f64",
               scale: "f64",
+              position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+              orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+              linear_velocity: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m/s)." },
+              angular_velocity: { $type: "array", $items: "f64", $length: 3, $description: "About x, y, z (rad/s)." },
+            },
+          },
+          robots: {
+            $type: "array",
+            $description: "One record per standing robot, in the implementer's order.",
+            $items: {
+              $type: "object",
+              robot: { $type: "string", $description: "The name the robot stands under, as its attach goal named it." },
+              model: { $type: "string", $description: "The id of the engine's robot catalogue that its attach goal named." },
               position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
               orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
               linear_velocity: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m/s)." },
