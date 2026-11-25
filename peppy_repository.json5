@@ -11,6 +11,11 @@
         path: "robot/base_motion.json5"
       }
     },
+    base_navigation: {
+      v1: {
+        path: "robot/base_navigation.json5"
+      }
+    },
     base_state: {
       v1: {
         path: "robot/base_state.json5"
