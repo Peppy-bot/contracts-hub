@@ -1,0 +1,178 @@
+{
+  peppy_schema: "contract/v1",
+  manifest: {
+    name: "room_map",
+    tag: "v1",
+    description: [
+      "Maps of rooms and the place of a robot's mobile base in them: the implementer maps a room while the base drives, saves the map under a name, loads a saved map, and keeps the base localized in it.",
+      "A mapping node implements it, where the robot's sensors can map and its odometry is measured, as base_state's describe_base names it in odometry_source. It maps and localizes with one 2-D lidar of lidar_2d fixed to the base, its carried_by in sensor_mounts empty, as slam_toolbox and AMCL read a laser's pose once; an implementer stops at its first scan from a lidar that a part carries, its error naming that lidar. set_initial_pose and reinitialize_global_localization carry the names of the services of Nav2's AMCL. Every fact about the room comes from the robot's own sensors, and no member moves the base. A scan is one reading of a sensor the implementer maps with, as base_navigation defines a reading. The mapping and the localization read no ray that ends within describe_base's footprint grown by the implementer's padding, placed where the base stood at the ray's time.",
+      "The robot frame and the odometry frame are base_state's. The map frame of a map is the odometry frame when that map's mapping started, fixed to the floor of the room from then on. The map frame of the loaded map is map in transforms. At each map_poses the implementer publishes on transforms the transform map to odom that, followed by odom to base_footprint at that map_poses' timestamp in the odometry of the scan it took, places the robot frame at its pose, stamped at that timestamp; it publishes none while it has no estimate of the robot frame in its loaded map. The transform starts over, as transforms defines it, at its first map_poses after a load_map, a start_mapping or a remove_map, and at each map_poses whose scan's odometry_start_timestamp differs from that of the map_poses before it. Every pose of this contract is in the map frame, map, and its frame says so: its position's z is 0 and its orientation turns about +z alone, as base_state's pose does. Timestamps are on the clock the implementer's instance reads, the simulation clock in a simulation, except a map's mapping_start_timestamp and map_grids' map_load_timestamp.",
+      "The loaded map is the map being built while mapping runs, and otherwise the map that load_map or finish_mapping loaded last, until remove_map removes it. There is at most one, and none when the implementer starts. A map's grid covers the rectangle of the map frame that the map's extent gives, and a pose lies inside the map when its position lies inside that rectangle; the grid of a map being built grows as mapping runs, and get_map_state gives it.",
+      "The implementer has an estimate of the robot frame in the loaded map from the moment mapping starts, set_initial_pose matches a scan, or reinitialize_global_localization starts a search, until a load_map loads a map, a start_mapping starts one, or a remove_map removes the loaded map. The base is localized while that estimate has a position_std_m and an orientation_std_rad within the implementer's limits: the search's limits while a search that reinitialize_global_localization started holds the estimate and for the update with which it localizes the base, and the matching's limits for every later update; while mapping runs, it is localized. A base moved within its map without driving keeps its estimate, which then stands where the base stood before, and stays localized while that estimate's deviations lie within the matching's limits, until set_initial_pose matches or a search localizes it. A set_initial_pose changes neither the estimate nor the localization while it waits; the estimate goes on taking the scans that arrive. The estimate takes in the base's motion from base_state's odometry between the scans it matches. The implementer takes a scan once base_states of one odometry_start_timestamp give a measurement at or before the time of the scan's earliest ray and one at or after the time of its latest ray, and carries the estimate to the scan by the odometry between them, interpolated as transforms interpolates; it takes no scan that no two base_states of one odometry enclose. When the base's odometry starts over, the estimate goes on from where it placed the base at the newest scan before, the base counted as still between that scan and the first scan of the new odometry.",
+      "Maps are saved on the machine that runs the implementer and last across its restarts. A map name is a lowercase letter, then lowercase letters, digits and `_`, at most 64 characters. A member that reads or writes the saved maps gives an error reply with `attempt_failed`, the message naming the cause, when the directory of the maps cannot be read or written.",
+      "No member has a mark.",
+      "start_mapping, set_initial_pose and reinitialize_global_localization test describe_base's odometry_source, which the implementer reads each time base_states reports a new odometry_start_timestamp, the first base_states included. A request to one of them waits for that read as a goal of base_navigation waits for it, and gets an error reply with `resource_unavailable`, before any other check, where such a goal is refused with it for that read. A request is then checked in this order: `rejected` for a value the member does not take, then `precondition_failed` for a state the member names, then `resource_unavailable`. The message of an error reply names its cause and what to do: one with `precondition_failed` names the state that gives it, and one given while no map is loaded names load_map.",
+    ],
+  },
+  failure_kinds: {
+    no_match: "No scan matched the map within the given search and the matching's limits",
+    extrapolation: "A moving transform on the chain has no value at the request's time: the implementer holds no stamp of it, or the time is before the oldest stamp it holds of it or after its newest",
+  },
+  interfaces: {
+    topics: [
+      {
+        name: "map_poses",
+        description: "Where the robot frame stands in the loaded map, as AMCL's amcl_pose gives it: frame is map, and timestamp is the time of the scan the estimate is carried to. One per scan the implementer takes while it has an estimate, none otherwise: the estimate carried by base_state's odometry to that scan, its standard deviations those of the newest update of the localization. The localization updates as the base moves and its sensors see, so updates can pause while the base stands still, and the pose then holds.",
+        // Stream where only the latest pose matters; occasional drops are acceptable.
+        qos_profile: "sensor_data",
+        message_format: {
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+          timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+          map_name: { $type: "string", $description: "The name of the loaded map." },
+          position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+          orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+          position_std_m: { $type: "f64", $description: "Standard deviation of the position estimate along its least certain direction (m)." },
+          orientation_std_rad: { $type: "f64", $description: "Standard deviation of the heading estimate, the turn about +z (rad)." },
+          localized: { $type: "bool", $description: "True while the base is localized in the loaded map; position and orientation are then the pose that base_navigation's map-frame navigations use." },
+        },
+      },
+      {
+        name: "map_grids",
+        description: "The loaded map's occupancy grid, captured at timestamp: frame is map, as the header of nav_msgs/OccupancyGrid names it, and timestamp is when the implementer built the grid. One is published at once when a map is loaded or mapping starts, as Nav2's map server publishes a map at once when it loads one, and one after each change of the grid while mapping runs, at most one per the implementer's grid period; none while no map is loaded. The grid of a new map before its mapping reads its first scan has no extent and no cell. A cell is free, occupied or unknown as the map's saved grid holds it. base_navigation's map-frame navigations plan on the newest grid.",
+        // A consumer needs the newest grid the moment it subscribes, and each
+        // grid replaces the one before it.
+        qos_profile: "reliable",
+        retention: { latest: 1 },
+        message_format: {
+          frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+          timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+          map_name: { $type: "string", $description: "The name of the loaded map." },
+          map_load_timestamp: { $type: "time", $description: "When the map was loaded, as nav_msgs/MapMetaData's map_load_time gives it: at the load_map that loaded it, a load of the map already loaded among them, or at the start_mapping of the map being built. load_map and start_mapping each give it a new value; finish_mapping keeps the value of the mapping it finishes. It is on the wall clock of the machine that runs the implementer. Nav2's map server stamps map_load_time on its node's clock." },
+          cell_size_m: { $type: "f64", $description: "The side of a cell (m), as get_map_state gives it." },
+          extent: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "[x_min, x_max, y_min, y_max] of the grid in the map frame (m), as get_map_state gives it; absent, with columns and rows 0 and no cell, while a new map's mapping has read no scan." },
+          columns: { $type: "u32", $description: "The number of cells along x." },
+          rows: { $type: "u32", $description: "The number of cells along y." },
+          cells: { $type: "array", $items: "u8", $description: "columns times rows cells, row by row from y_min, each row from x_min: 0 free, 100 occupied and 255 unknown, the values of Nav2's map server for a trinary map with its unknown -1 as 255." },
+        },
+      },
+    ],
+    services: [
+      {
+        name: "get_map_state",
+        description: "Give the implementer's map state: the loaded map and its grid, and whether mapping runs, a search runs, a set_initial_pose waits and the base is localized.",
+        response_message_format: {
+          map: {
+            $type: "object",
+            $optional: true,
+            $description: "The loaded map, its grid growing while mapping runs; absent when no map is loaded.",
+            map_name: { $type: "string", $description: "The name the map is saved under." },
+            cell_size_m: { $type: "f64", $description: "The side of a cell of the map's grid (m)." },
+            extent: { $type: "array", $items: "f64", $length: 4, $optional: true, $description: "[x_min, x_max, y_min, y_max] of the map's grid in the map frame (m); absent while a new map's mapping has read no scan." },
+            scans: { $type: "u32", $description: "The scans that arrived after start_mapping and that the mapping read, whether or not each changed the map." },
+            mapping_start_timestamp: { $type: "time", $description: "When the map's mapping started, on the wall clock of the machine that runs the implementer." },
+          },
+          mapping: { $type: "bool", $description: "True while mapping runs." },
+          searching: { $type: "bool", $description: "True while a search that reinitialize_global_localization started runs." },
+          waiting: { $type: "bool", $description: "True while a set_initial_pose waits for its scan." },
+          localized: { $type: "bool", $description: "True while the base is localized in the loaded map." },
+        },
+      },
+      {
+        name: "start_mapping",
+        description: "Start a new map, named map_name, whose map frame is the odometry frame that base_states reports now. The new map becomes the loaded map, the base is localized in it while mapping runs, and a running search ends; drive the base around the room to map it. The call gets an error reply with `rejected` for a name that is not a map name or that a saved map has; with `precondition_failed` while mapping runs, while set_initial_pose waits, and while describe_base names commanded odometry; and with `resource_unavailable` while more than 0.5 s have passed since the newest base_states arrived, and while one or more sensors it maps with are silent, as base_navigation defines a silent sensor.",
+        request_message_format: {
+          map_name: { $type: "string", $description: "The name the map is saved under." },
+        },
+      },
+      {
+        name: "finish_mapping",
+        description: "End mapping, save the map under its name, and keep it as the loaded map: the estimate goes on from mapping's, the base is localized as the matching's limits decide, and a map-frame navigation in flight goes on while the base stays localized. The call gets an error reply with `precondition_failed` while mapping does not run, and with `attempt_failed`, the message naming the cause, when the map holds no scan or cannot be saved; mapping then goes on.",
+        response_message_format: {
+          map: {
+            $type: "object",
+            $description: "The saved map, as get_map_state describes it.",
+            map_name: "string",
+            cell_size_m: "f64",
+            extent: { $type: "array", $items: "f64", $length: 4 },
+            scans: "u32",
+            mapping_start_timestamp: "time",
+          },
+        },
+      },
+      {
+        name: "list_maps",
+        description: "Give the saved maps whose description reads, sorted by name.",
+        response_message_format: {
+          maps: {
+            $type: "array",
+            $description: "Each saved map, as get_map_state describes it.",
+            $items: {
+              $type: "object",
+              map_name: "string",
+              cell_size_m: "f64",
+              extent: { $type: "array", $items: "f64", $length: 4 },
+              scans: "u32",
+              mapping_start_timestamp: "time",
+            },
+          },
+        },
+      },
+      {
+        name: "remove_map",
+        description: "Remove a saved map. Removing the loaded map unloads it: no map is then loaded, the implementer has no estimate, and a running search ends. The call gets an error reply with `rejected` for a name no saved map has, and with `precondition_failed` for the loaded map while set_initial_pose waits.",
+        request_message_format: {
+          map_name: { $type: "string", $description: "The name of the saved map." },
+        },
+      },
+      {
+        name: "load_map",
+        description: "Load a saved map as the loaded map, and end a running search; the implementer has no estimate in it until set_initial_pose or reinitialize_global_localization gives one. The call gets an error reply with `rejected` for a name no saved map has; with `precondition_failed` while mapping runs and while set_initial_pose waits; and with `attempt_failed`, the message naming the cause, when the saved map cannot be read; the loaded map and the estimate then stay as they were.",
+        request_message_format: {
+          map_name: { $type: "string", $description: "The name of the saved map." },
+        },
+        response_message_format: {
+          map: {
+            $type: "object",
+            $description: "The loaded map, as get_map_state describes it.",
+            map_name: "string",
+            cell_size_m: "f64",
+            extent: { $type: "array", $items: "f64", $length: 4 },
+            scans: "u32",
+            mapping_start_timestamp: "time",
+          },
+        },
+      },
+      {
+        name: "set_initial_pose",
+        description: "Tell the implementer where the robot frame stands in the loaded map at target's timestamp, or now when target has no timestamp, and how far from that pose to search. target is in map alone, as AMCL takes an initial pose in its global frame alone. The implementer carries the pose by base_state's odometry from its timestamp, or from the call when it has no timestamp, to the first scan of its sensors after the call, as AMCL carries an initial pose from its stamp, and finds the best match of that scan against the map within search_radius_m and search_angle_rad of the pose. When that match's pose lies within the search and its standard deviations within the matching's limits, the call answers with that pose: the estimate is then that pose, the base is localized, and a running search ends. Otherwise the call gets an error reply with `no_match`, the estimate staying as it was; with `extrapolation` when no two base_states of that scan's odometry enclose the target's timestamp, the estimate staying as it was; with `resource_unavailable` when, within the implementer's source timeout, the implementer takes no scan in the odometry the call was made in; and with `attempt_failed`, the message naming the cause, when the scan does not read as the map's scans do. The answered pose always lies within the search. In a room where no place looks like another, a robot frame that stands farther from the given pose than search_radius_m or search_angle_rad plus the implementer's matching reach gets `no_match`; in a room whose places look alike, a match can lie at a place that looks like the robot frame's own. The call gets an error reply with `rejected` for a target in a frame other than map, a pose outside the loaded map while a map is loaded, a search_radius_m or a search_angle_rad that is not positive, or a number that is not finite; a target whose position has a z farther than 1e-9 m from 0, or whose orientation turns by more than 1e-9 rad about an axis other than +z, is refused with `rejected`, the message naming the part and what to send: a position [x, y, 0] and an orientation [0, 0, sin(yaw/2), cos(yaw/2)]; an orientation whose squared norm lies 0.01 or more from 1 is refused with `rejected`, the tolerance of tf2's buffer that transforms names; the implementer normalizes each orientation it takes. It gets an error reply with `precondition_failed` while no map is loaded, while mapping runs, and while describe_base names commanded odometry; and with `resource_unavailable` while more than 0.5 s have passed since the newest base_states arrived. A set_initial_pose called while another waits waits for that one to answer, then runs.",
+        request_message_format: {
+          target: {
+            $type: "object",
+            $description: "Where the robot frame stands in the map frame: frame is map, the position's z is 0, and the orientation, which the target needs, turns about +z alone, by any finite angle.",
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+            timestamp: { $type: "time", $optional: true, $description: "The time on the clock of transforms at which the values hold. A command leaves it out for the latest time; a report leaves it out for values that hold at every time." },
+            position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+          },
+          search_radius_m: { $type: "f64", $description: "How far (m) from the target's position the match searches for the robot frame's origin." },
+          search_angle_rad: { $type: "f64", $description: "How far (rad) from the target's heading the match searches for the robot frame's heading; pi or more searches every heading." },
+        },
+        response_message_format: {
+          current_pose: {
+            $type: "object",
+            $description: "Where the match places the robot frame: frame is map, timestamp is the scan's time, the position's z is 0, and the orientation turns about +z alone.",
+            frame: { $type: "string", $description: "The frame of the record's values, as transforms names frames." },
+            timestamp: { $type: "time", $description: "The time on the clock of transforms at which the values hold." },
+            position: { $type: "array", $items: "f64", $length: 3, $description: "x, y, z (m)." },
+            orientation: { $type: "array", $items: "f64", $length: 4, $description: "A unit quaternion [x, y, z, w]." },
+          },
+        },
+        failure_kinds: ["no_match", "extrapolation"],
+      },
+      {
+        name: "reinitialize_global_localization",
+        description: "Start a search of the whole loaded map for where the robot frame stands: the call replaces the estimate with the search's, spread over the whole map, so the base is not localized from the call until the search narrows within the search's limits; a call while a search runs starts it over. It answers at once. The search runs until the base is localized, until set_initial_pose matches or load_map, start_mapping or a remove_map of the loaded map ends it, or until no scan arrives within the implementer's source timeout; get_map_state reports it. A search that ends because no scan arrived within the source timeout leaves the estimate where its last update placed it, carried by the base's odometry alone, and the base not localized until set_initial_pose matches or another search localizes it. Nothing moves: the search narrows as the base moves and its sensors see more, so the caller drives or turns the base. The call gets an error reply with `precondition_failed` while no map is loaded, while mapping runs, while set_initial_pose waits, and while describe_base names commanded odometry; and with `attempt_failed`, the message naming the cause, when the loaded map's grid holds no free cell.",
+      },
+    ],
+  },
+}

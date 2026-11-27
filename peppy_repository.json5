@@ -1,6 +1,16 @@
 {
   peppy_schema: "repository/v1",
   contracts: {
+    room_map: {
+      v1: {
+        path: "robot/room_map.json5"
+      }
+    },
+    lidar_2d: {
+      v1: {
+        path: "lidars/lidar_2d.json5"
+      }
+    },
     alert: {
       v1: {
         path: "system/alert.json5"
